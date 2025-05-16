@@ -18,9 +18,8 @@ builds:
         - cmd /c .\build-logic\post_build.bat
 release:
   draft: true
+  extra_files:
+    - glob: dist/SabaLauncher.msi
 snapshot:
   version_template: "1.0.0"
-archives:
-  - files:
-      - dist/SabaLauncher.msi
 version: 2
