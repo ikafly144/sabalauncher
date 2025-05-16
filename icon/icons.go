@@ -27,6 +27,13 @@ var (
 		}
 		return icon
 	}()
+	LicenseIcon *widget.Icon = func() *widget.Icon {
+		icon, err := widget.NewIcon(icons.ActionCopyright)
+		if err != nil {
+			panic(err)
+		}
+		return icon
+	}()
 )
 
 var (

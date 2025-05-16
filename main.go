@@ -16,6 +16,7 @@ import (
 	"github.com/ikafly144/sabalauncher/pages"
 	"github.com/ikafly144/sabalauncher/pages/account"
 	"github.com/ikafly144/sabalauncher/pages/launcher"
+	"github.com/ikafly144/sabalauncher/pages/licenses"
 	"github.com/ikafly144/sabalauncher/pkg/browser"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/ikafly144/sabalauncher/pkg/runcmd"
@@ -85,6 +86,7 @@ func loop(w *app.Window) error {
 	router.MinecraftAccount = cred
 	router.Register(1, launcher.New(&router))
 	router.Register(2, account.New(&router))
+	router.Register(3, licenses.New(&router))
 
 	if err := checkVersion(w, th, &ops); err != nil {
 		return err

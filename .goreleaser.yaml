@@ -14,13 +14,15 @@ builds:
     gcflags:
       - -trimpath
     hooks:
+      pre:
+        - go tool go-licenses save . --save_path pages/licenses/dist_licenses --force
       post:
-        - go-msi generate-templates --version {{.Version}} --out build-logic/ --src templates/
+        - go tool go-msi generate-templates --version {{.Version}} --out build-logic/ --src templates/
         - cmd /c .\build-logic\post_build.bat
 release:
   draft: true
   extra_files:
     - glob: dist/SabaLauncher.msi
 snapshot:
-  version_template: "{{.Version}}-{{.ShortCommit}}-{{.Date}}"
+  version_template: "{{.Version}}-{{.Commit}}"
 version: 2
