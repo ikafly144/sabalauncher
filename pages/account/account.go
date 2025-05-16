@@ -31,8 +31,9 @@ type Page struct {
 
 	copyClick, openClick widget.Clickable
 
-	success *bool
-	session msa.Session
+	success  *bool
+	session  msa.Session
+	loginErr error
 
 	deviceCode component.TextField
 
@@ -77,6 +78,9 @@ func (p *Page) Layout(gtx C, th *material.Theme) D {
 					Left:   unit.Dp(16),
 					Right:  unit.Dp(16),
 				}.Layout(gtx, func(gtx C) D {
+					if p.success != nil && !*p.success {
+						return material.Label(th, 24, fmt.Sprintf("アカウント: ログインに失敗しました (%s)", p.loginErr.Error())).Layout(gtx)
+					}
 					if p.MinecraftAccount == nil {
 						return material.Label(th, 24, "アカウント: ログインしていません").Layout(gtx)
 					}
@@ -93,6 +97,20 @@ func (p *Page) Layout(gtx C, th *material.Theme) D {
 				}
 				return applayout.DefaultInset.Layout(gtx, material.Button(th, &p.loginBtn, "ログインする").Layout)
 			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return applayout.DefaultInset.Layout(gtx, material.Body1(th, "Microsoftアカウントでログインするには、以下の手順に従ってください:").Layout)
+			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return layout.Inset{
+					Top:    unit.Dp(16),
+					Bottom: unit.Dp(16),
+					Left:   unit.Dp(16),
+					Right:  unit.Dp(16),
+				}.Layout(gtx, func(gtx C) D {
+					return material.Label(th, 16, "1. 上のボタンをクリックして、Microsoftアカウントでログインを開始します。\n2. 表示されたデバイスコードをコピーします。\n3. 下の水色のボタンをクリックしてログインページにアクセスし、デバイスコードを入力します。\n4. ログインが成功すると、アカウント情報が表示されます。").Layout(gtx)
+				})
+			}),
+
 			// show the device code if available
 			layout.Rigid(func(gtx C) D {
 				return layout.Flex{

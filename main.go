@@ -85,6 +85,9 @@ func loop(w *app.Window) error {
 }
 
 func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
+	if version == "devel" {
+		return nil
+	}
 	resp, err := http.Get(versionUrl)
 	if err != nil {
 		slog.Error("failed to get version", "err", err)
