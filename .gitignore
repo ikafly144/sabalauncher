@@ -1,0 +1,9 @@
+build/
+*.hmap
+
+*.exe
+*.dll
+
+__*
+
+.vscode/
