@@ -19,5 +19,8 @@ builds:
 release:
   draft: true
 snapshot:
-  version_template: "{{.Version}}-{{.ShortCommit}}-{{.Date}}"
+  version_template: "1.0.0"
+archives:
+  - files:
+      - dist/SabaLauncher.msi
 version: 2
