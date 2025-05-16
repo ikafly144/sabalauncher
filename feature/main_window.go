@@ -2,7 +2,8 @@ package feature
 
 import (
 	"image/color"
-	"launcher/window"
+
+	"github.com/ikafly144/sabalauncher/window"
 
 	"gioui.org/layout"
 	"gioui.org/widget"

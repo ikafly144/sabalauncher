@@ -1,0 +1,39 @@
+{
+    "product": "SabaLauncher",
+    "company": "ikafly144",
+    "license": "LICENSE",
+    "upgrade-code": "9be61d26-9bd9-434d-a834-88c616e67b70",
+    "files": {
+        "guid": "e2705c7d-9fdb-447f-8f4b-60f97bf68e7d",
+        "items": [
+            "dist\\sabalauncher_windows_amd64_v1\\sabalauncher.exe"
+        ]
+    },
+    "env": {
+        "guid": "9a300e82-5348-4bca-b93a-dcd076f85525",
+        "vars": [
+            {
+                "name": "PATH",
+                "value": "[INSTALLDIR]",
+                "permanent": "no",
+                "system": "no",
+                "action": "set",
+                "part": "last"
+            }
+        ]
+    },
+    "shortcuts": {
+        "guid": "fe61489d-f2d7-4a6a-8c5d-ab2fe676e3bb",
+        "items": [
+            {
+                "name": "SabaLauncher",
+                "description": "SabaLauncher",
+                "target": "[INSTALLDIR]\\sabalauncher.exe",
+                "wdir": "INSTALLDIR",
+                "arguments": "",
+                "icon": ""
+            }
+        ]
+    },
+    "choco": {}
+}

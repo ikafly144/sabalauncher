@@ -3,3 +3,21 @@ builds:
       - windows
     goarch:
       - amd64
+    ldflags:
+      - -s
+      - -w
+      - -H=windowsgui
+      - "-X main.version={{.Version}}"
+      - "-X main.commit={{.ShortCommit}}"
+      - "-X main.date={{.Date}}"
+    gcflags:
+      - -trimpath
+    hooks:
+      post:
+        - go-msi generate-templates --version {{.Version}} --out build-logic/ --src templates/
+        - cmd /c .\build-logic\post_build.bat
+release:
+  draft: true
+snapshot:
+  version_template: "{{.Version}}-{{.ShortCommit}}-{{.Date}}"
+version: 2

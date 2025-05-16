@@ -1,9 +1,10 @@
 package account
 
 import (
-	"launcher/pkg/msa"
-	"launcher/pkg/resource"
 	"log/slog"
+
+	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
 func (p *Page) startLogin() {

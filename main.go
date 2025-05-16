@@ -4,15 +4,16 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"launcher/pages"
-	"launcher/pages/account"
-	"launcher/pages/launcher"
-	"launcher/pkg/browser"
-	"launcher/pkg/resource"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/ikafly144/sabalauncher/pages"
+	"github.com/ikafly144/sabalauncher/pages/account"
+	"github.com/ikafly144/sabalauncher/pages/launcher"
+	"github.com/ikafly144/sabalauncher/pkg/browser"
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
@@ -29,7 +30,9 @@ type (
 
 var (
 	appName = "SabaLauncher"
-	version = "1.0.0"
+	version = "devel"
+	commit  = "unknown"
+	branch  = "unknown"
 )
 
 const versionUrl = "https://raw.githubusercontent.com/ikafly144/sabalauncher/master/meta/version.json"
@@ -55,7 +58,7 @@ func loop(w *app.Window) error {
 	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
 	var ops op.Ops
 
-	router := pages.NewRouter(appName, version)
+	router := pages.NewRouter(appName, fmt.Sprintf("%s-%s-%s", version, commit, branch))
 	cred, err := resource.LoadCredential()
 	if err != nil {
 		slog.Error("failed to load credential", "err", err)

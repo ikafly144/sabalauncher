@@ -1,4 +1,4 @@
-module launcher
+module github.com/ikafly144/sabalauncher
 
 go 1.24.2
 

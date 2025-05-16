@@ -3,8 +3,9 @@ package resource
 import (
 	"encoding/json"
 	"errors"
-	"launcher/pkg/osinfo"
 	"time"
+
+	"github.com/ikafly144/sabalauncher/pkg/osinfo"
 )
 
 type ClientManifest struct {

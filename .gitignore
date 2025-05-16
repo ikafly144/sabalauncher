@@ -1,5 +1,7 @@
 .env
 dist/
+dist*/
+build-logic/
 
 build/
 *.hmap

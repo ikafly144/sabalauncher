@@ -1,10 +1,11 @@
 package pages
 
 import (
-	"launcher/icon"
-	"launcher/pkg/msa"
 	"log"
 	"time"
+
+	"github.com/ikafly144/sabalauncher/icon"
+	"github.com/ikafly144/sabalauncher/pkg/msa"
 
 	"gioui.org/layout"
 	"gioui.org/op/paint"

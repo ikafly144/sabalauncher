@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"launcher/pkg/msa"
-	"launcher/pkg/osinfo"
 	"log/slog"
 	"net/http"
 	"os"
@@ -19,6 +17,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/ikafly144/sabalauncher/pkg/osinfo"
 )
 
 const (

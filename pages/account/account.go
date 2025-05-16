@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"image/color"
 	"io"
-	"launcher/applayout"
-	"launcher/icon"
-	"launcher/pages"
-	"launcher/pkg/browser"
-	"launcher/pkg/msa"
 	"strings"
+
+	"github.com/ikafly144/sabalauncher/applayout"
+	"github.com/ikafly144/sabalauncher/icon"
+	"github.com/ikafly144/sabalauncher/pages"
+	"github.com/ikafly144/sabalauncher/pkg/browser"
+	"github.com/ikafly144/sabalauncher/pkg/msa"
 
 	"gioui.org/io/clipboard"
 	"gioui.org/layout"

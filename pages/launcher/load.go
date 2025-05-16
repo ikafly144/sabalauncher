@@ -2,7 +2,6 @@ package launcher
 
 import (
 	"encoding/json"
-	"launcher/pkg/resource"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -10,6 +9,8 @@ import (
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
 var (

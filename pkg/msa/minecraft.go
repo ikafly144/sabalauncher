@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"launcher/pkg/browser"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/ikafly144/sabalauncher/pkg/browser"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

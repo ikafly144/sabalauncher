@@ -3,13 +3,14 @@ package launcher
 import (
 	"image"
 	"image/color"
-	"launcher/applayout"
-	"launcher/icon"
-	"launcher/pages"
-	"launcher/pkg/resource"
 	"log/slog"
 	"net/url"
 	"sync"
+
+	"github.com/ikafly144/sabalauncher/applayout"
+	"github.com/ikafly144/sabalauncher/icon"
+	"github.com/ikafly144/sabalauncher/pages"
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 
 	"gioui.org/gesture"
 	"gioui.org/io/event"

@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"launcher/pkg/msa"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ikafly144/sabalauncher/pkg/msa"
 
 	"gioui.org/op/paint"
 	"gioui.org/widget"

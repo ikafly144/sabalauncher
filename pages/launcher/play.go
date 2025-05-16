@@ -1,7 +1,7 @@
 package launcher
 
 // import (
-// 	"launcher/pkg/resource"
+// 	"github.com/ikafly144/sabalauncher/pkg/resource"
 // 	"log/slog"
 // 	"os"
 // 	"strconv"

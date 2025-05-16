@@ -3,12 +3,13 @@ package feature
 import (
 	"image/color"
 	"io"
-	"launcher/pkg/browser"
-	"launcher/pkg/msa"
-	"launcher/window"
 	"log/slog"
 	"strings"
 	"sync"
+
+	"github.com/ikafly144/sabalauncher/pkg/browser"
+	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/ikafly144/sabalauncher/window"
 
 	"gioui.org/app"
 	"gioui.org/io/clipboard"
