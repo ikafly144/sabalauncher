@@ -16,6 +16,9 @@
 
         <Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
 
+        <Icon Id="launcher_icon.ico" SourceFile="launcher_icon.ico"/>
+        <Property Id="ARPPRODUCTICON">launcher_icon.ico</Property>
+
         <Upgrade Id="{{.UpgradeCode}}">
             <UpgradeVersion Minimum="{{.VersionOk}}" OnlyDetect="yes" Property="NEWERVERSIONDETECTED" />
             <UpgradeVersion Minimum="0.0.0" Maximum="{{.VersionOk}}" IncludeMinimum="yes" IncludeMaximum="no" Property="OLDERVERSIONBEINGUPGRADED" />
@@ -104,6 +107,8 @@
             <UIRef Id="WixUI_HK" />
         </UI>
 
+        <WixVariable Id="WixUIDialogBmp" Value=".\launcher_dialog.jpg" />
+        <WixVariable Id="WixUIBannerBmp" Value=".\launcher_banner.jpg" />
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
 
         <!-- this should help to propagate env var changes -->
