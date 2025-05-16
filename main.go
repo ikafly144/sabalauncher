@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -107,7 +108,7 @@ func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
 			for {
 				switch e := w.Event().(type) {
 				case app.DestroyEvent:
-					return e.Err
+					return fmt.Errorf("new version available %s: %w", versionInfo.Version, e.Err)
 				case app.FrameEvent:
 					gtx := app.NewContext(ops, e)
 					layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -125,5 +126,5 @@ func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
 	} else {
 		slog.Error("failed to get version", "status", resp.StatusCode)
 	}
-	return nil
+	return errors.New("failed to get version")
 }

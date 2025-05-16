@@ -18,6 +18,7 @@ func (p *Page) startLogin() {
 		success := false
 		defer func() {
 			p.success = &success
+			p.session = nil
 		}()
 		if err := session.StartLogin(); err != nil {
 			slog.Error("Login failed", "error", err)
@@ -34,17 +35,16 @@ func (p *Page) startLogin() {
 			slog.Error("Failed to get Minecraft account", "error", err)
 			return
 		}
-		p.MinecraftAccount = a
 		if _, err := a.GetMinecraftAccount(); err != nil {
 			slog.Error("Failed to get Minecraft account", "error", err)
 			return
 		}
+		p.MinecraftAccount = a
 
 		if err := resource.SaveCredential(a); err != nil {
 			slog.Error("Failed to save credential", "error", err)
 		}
 
-		p.session = nil
 		success = true
 	}(p)
 }

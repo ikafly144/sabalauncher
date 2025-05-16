@@ -10,7 +10,6 @@ import (
 
 	"github.com/ikafly144/sabalauncher/pkg/browser"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -251,36 +250,36 @@ func (m *MinecraftAccount) GetMinecraftAccount() (*MinecraftAccountAuthResult, e
 	}
 	slog.Info("authResult", "authResult", authResult)
 
-	req2, err = http.NewRequest(http.MethodGet, "https://api.minecraftservices.com/entitlements/mcstore", nil)
-	if err != nil {
-		return nil, err
-	}
-	req2.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authResult.AccessToken))
-	req2.Header.Set("Accept", "application/json")
-	resp2, err = httpClient.Do(req2)
-	if err != nil {
-		return nil, err
-	}
-	defer resp2.Body.Close()
-	var mcStoreEntitlements MCStoreEntitlements
-	if resp2.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to authenticate 6: %s", resp2.Status)
-	}
-	if err := json.NewDecoder(resp2.Body).Decode(&mcStoreEntitlements); err != nil {
-		return nil, err
-	}
-	slog.Info("mcStoreEntitlements", "mcStoreEntitlements", mcStoreEntitlements)
-	if len(mcStoreEntitlements.Items) == 0 {
-		return nil, fmt.Errorf("failed to get mcstore entitlements: %s (Must own Minecraft!!)", resp2.Status)
-	}
-	if _, err := jwt.Parse(mcStoreEntitlements.Items[0].Signature, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
-		}
-		return jwt.ParseRSAPublicKeyFromPEM([]byte(MojangPublicKey))
-	}); err != nil {
-		return nil, fmt.Errorf("failed to parse mcstore entitlements: %s", err)
-	}
+	// req2, err = http.NewRequest(http.MethodGet, "https://api.minecraftservices.com/entitlements/mcstore", nil)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// req2.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authResult.AccessToken))
+	// req2.Header.Set("Accept", "application/json")
+	// resp2, err = httpClient.Do(req2)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer resp2.Body.Close()
+	// var mcStoreEntitlements MCStoreEntitlements
+	// if resp2.StatusCode != http.StatusOK {
+	// 	return nil, fmt.Errorf("failed to authenticate 6: %s", resp2.Status)
+	// }
+	// if err := json.NewDecoder(resp2.Body).Decode(&mcStoreEntitlements); err != nil {
+	// 	return nil, err
+	// }
+	// slog.Info("mcStoreEntitlements", "mcStoreEntitlements", mcStoreEntitlements)
+	// if len(mcStoreEntitlements.Items) == 0 {
+	// 	return nil, fmt.Errorf("failed to get mcstore entitlements: %s (Must own Minecraft!!)", resp2.Status)
+	// }
+	// if _, err := jwt.Parse(mcStoreEntitlements.Items[0].Signature, func(t *jwt.Token) (interface{}, error) {
+	// 	if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+	// 		return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+	// 	}
+	// 	return jwt.ParseRSAPublicKeyFromPEM([]byte(MojangPublicKey))
+	// }); err != nil {
+	// 	return nil, fmt.Errorf("failed to parse mcstore entitlements: %s", err)
+	// }
 
 	profile, err := authResult.GetMinecraftProfile()
 	if err != nil {
