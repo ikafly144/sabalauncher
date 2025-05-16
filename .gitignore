@@ -5,6 +5,7 @@ build-logic/
 
 build/
 *.hmap
+*.syso
 
 *.exe
 *.dll
