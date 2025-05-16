@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -33,6 +32,7 @@ var (
 	appName = "SabaLauncher"
 	version = "devel"
 	commit  = "unknown"
+	date    = "unknown"
 	branch  = "unknown"
 )
 
@@ -59,7 +59,7 @@ func loop(w *app.Window) error {
 	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
 	var ops op.Ops
 
-	router := pages.NewRouter(appName, fmt.Sprintf("%s-%s-%s", version, commit, branch))
+	router := pages.NewRouter(appName, fmt.Sprintf("%s-%s-%s-%s", version, commit, branch, date))
 	cred, err := resource.LoadCredential()
 	if err != nil {
 		slog.Error("failed to load credential", "err", err)
@@ -126,5 +126,5 @@ func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
 	} else {
 		slog.Error("failed to get version", "status", resp.StatusCode)
 	}
-	return errors.New("failed to get version")
+	return nil
 }

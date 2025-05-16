@@ -10,6 +10,7 @@ builds:
       - "-X main.version={{.Version}}"
       - "-X main.commit={{.ShortCommit}}"
       - "-X main.date={{.Date}}"
+      - "-X main.branch={{.Branch}}"
     gcflags:
       - -trimpath
     hooks:
