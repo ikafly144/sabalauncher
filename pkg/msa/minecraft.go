@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -209,9 +210,6 @@ func (m *MinecraftAccount) GetMinecraftAccount() (*MinecraftAccountAuthResult, e
 	}
 	defer resp2.Body.Close()
 	var xstsResult xstsResult
-	if resp2.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to authenticate 3: %s", resp2.Status)
-	}
 	if err := json.NewDecoder(resp2.Body).Decode(&xstsResult); err != nil {
 		return nil, err
 	}
@@ -219,6 +217,10 @@ func (m *MinecraftAccount) GetMinecraftAccount() (*MinecraftAccountAuthResult, e
 	if xstsResult.XErr != 0 {
 		_ = browser.Open(xstsResult.Redirect)
 		return nil, fmt.Errorf("failed to authenticate 4: %s", xstsResult.Message)
+	}
+	if resp2.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp2.Body)
+		return nil, fmt.Errorf("failed to authenticate 3 %s: %s", resp2.Status, string(body))
 	}
 
 	req := MinecraftAccountAuthRequest{
