@@ -41,6 +41,13 @@ var (
 	branch  = "unknown"
 )
 
+func buildInfo() string {
+	if version == "devel" {
+		return "unknown"
+	}
+	return fmt.Sprintf("%s-%s-%s", commit, date, branch)
+}
+
 const versionUrl = "https://raw.githubusercontent.com/ikafly144/sabalauncher/master/meta/version.json"
 const installerUrl = "https://github.com/ikafly144/sabalauncher/releases/download/{version}/SabaLauncher.msi"
 
@@ -70,7 +77,7 @@ func loop(w *app.Window) error {
 	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
 	var ops op.Ops
 
-	router := pages.NewRouter(appName, fmt.Sprintf("%s-%s-%s-%s", version, commit, branch, date))
+	router := pages.NewRouter(appName, fmt.Sprintf("%s-%s", version, buildInfo()))
 	cred, err := resource.LoadCredential()
 	if err != nil {
 		slog.Error("failed to load credential", "err", err)
