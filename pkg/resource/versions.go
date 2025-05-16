@@ -15,11 +15,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/ikafly144/sabalauncher/pkg/msa"
 	"github.com/ikafly144/sabalauncher/pkg/osinfo"
+	"github.com/ikafly144/sabalauncher/pkg/runcmd"
 )
 
 const (
@@ -627,12 +627,8 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stdout
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			HideWindow: true,
-		}
-		cmd.Dir = profile.Path
-	}
+	cmd.SysProcAttr = runcmd.GetSysProcAttr()
+	cmd.Dir = profile.Path
 
 	if err := cmd.Run(); err != nil {
 		slog.Error("Failed to run game command", "error", err)

@@ -12,9 +12,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/ikafly144/sabalauncher/pkg/runcmd"
 )
 
 const (
@@ -689,9 +689,7 @@ func (f *ForgeManifestLoader) installForge(dataPath string) error {
 	cmd.Dir = filepath.Join(filepath.Dir(f.installerJarPath))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		HideWindow: true,
-	}
+	cmd.SysProcAttr = runcmd.GetSysProcAttr()
 	if err := cmd.Run(); err != nil {
 		return err
 	}

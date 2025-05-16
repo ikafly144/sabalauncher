@@ -4,16 +4,21 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
+	"strings"
+	"sync"
 
 	"github.com/ikafly144/sabalauncher/pages"
 	"github.com/ikafly144/sabalauncher/pages/account"
 	"github.com/ikafly144/sabalauncher/pages/launcher"
 	"github.com/ikafly144/sabalauncher/pkg/browser"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/pkg/runcmd"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
@@ -37,6 +42,12 @@ var (
 )
 
 const versionUrl = "https://raw.githubusercontent.com/ikafly144/sabalauncher/master/meta/version.json"
+const installerUrl = "https://github.com/ikafly144/sabalauncher/releases/download/{version}/SabaLauncher.msi"
+
+type versionInfo struct {
+	Version string `json:"version"`
+	Url     string `json:"url"`
+}
 
 func main() {
 	flag.Parse()
@@ -96,18 +107,19 @@ func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
 	defer resp.Body.Close()
 	versionOk := resp.StatusCode == http.StatusOK
 	if versionOk {
-		var versionInfo struct {
-			Version string `json:"version"`
-			Url     string `json:"url"`
-		}
+		var versionInfo versionInfo
 		if err := json.NewDecoder(resp.Body).Decode(&versionInfo); err != nil {
 			slog.Error("failed to decode version", "err", err)
 		}
 		if versionInfo.Version != version && versionOk {
 			slog.Info("new version available", "version", versionInfo.Version)
-			if err := browser.Open(versionInfo.Url); err != nil {
-				slog.Error("failed to open browser", "err", err)
+			err := installNewVersion(versionInfo)
+			if err == nil {
+				slog.Info("install new version", "version", versionInfo.Version)
+				os.Exit(0)
 			}
+			slog.Error("failed to install new version", "err", err)
+			_ = browser.Open(versionInfo.Url)
 			for {
 				switch e := w.Event().(type) {
 				case app.DestroyEvent:
@@ -116,10 +128,13 @@ func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
 					gtx := app.NewContext(ops, e)
 					layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 						layout.Rigid(func(gtx C) D {
-							return material.H6(th, "New version available").Layout(gtx)
+							return material.H5(th, fmt.Sprintf("New version available: %s", versionInfo.Version)).Layout(gtx)
 						}),
 						layout.Rigid(func(gtx C) D {
-							return material.H6(th, versionInfo.Version).Layout(gtx)
+							return material.Body1(th, "An error occurred while automatically installing the new version. Please download it manually from the link below.").Layout(gtx)
+						}),
+						layout.Rigid(func(gtx C) D {
+							return material.Body1(th, versionInfo.Url).Layout(gtx)
 						}),
 					)
 					e.Frame(gtx.Ops)
@@ -128,6 +143,43 @@ func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
 		}
 	} else {
 		slog.Error("failed to get version", "status", resp.StatusCode)
+	}
+	return nil
+}
+
+func installNewVersion(versionInfo versionInfo) error {
+	resp, err := http.Get(strings.ReplaceAll(installerUrl, "{version}", versionInfo.Version))
+	if err != nil {
+		slog.Error("failed to get installer", "err", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		slog.Error("failed to get installer", "status", resp.StatusCode)
+		return err
+	}
+	dir := os.TempDir()
+	file, err := os.CreateTemp(dir, fmt.Sprintf("SabaLauncher-%s-*.msi", versionInfo.Version))
+	if err != nil {
+		slog.Error("failed to create installer", "err", err)
+		return err
+	}
+	cl := sync.OnceFunc(func() {
+		file.Close()
+	})
+	defer cl()
+	if _, err := io.Copy(file, resp.Body); err != nil {
+		slog.Error("failed to copy installer", "err", err)
+		return err
+	}
+	cl()
+	cmd := exec.Command("msiexec", "/passive", "/i", file.Name())
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Dir = dir
+	cmd.SysProcAttr = runcmd.GetSysProcAttr()
+	if err := cmd.Start(); err != nil {
+		slog.Error("failed to start installer", "err", err)
+		return err
 	}
 	return nil
 }
