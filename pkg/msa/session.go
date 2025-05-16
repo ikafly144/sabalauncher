@@ -43,7 +43,7 @@ type session struct {
 func (s *session) impl() {}
 
 func (s *session) StartLogin() error {
-	deviceCode, err := s.client.AcquireTokenByDeviceCode(context.Background(), []string{"XboxLive.signin"})
+	deviceCode, err := s.client.AcquireTokenByDeviceCode(context.Background(), []string{"XboxLive.signin", "XboxLive.offline_access"})
 	if err != nil {
 		return err
 	}
