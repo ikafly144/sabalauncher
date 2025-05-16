@@ -3,7 +3,9 @@ package msa
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
@@ -59,6 +61,13 @@ func (s *session) StartLogin() error {
 			return
 		}
 		slog.Info("Login successful", "result", result)
+		if len(result.DeclinedScopes) > 0 {
+			slog.Warn("Login with declined scopes", "declinedScopes", result.DeclinedScopes)
+		}
+		if !slices.Contains(result.GrantedScopes, "XboxLive.signin") || !slices.Contains(result.GrantedScopes, "XboxLive.offline_access") {
+			s.result = nil
+			s.resultError = fmt.Errorf("missing scopes: %v", result.GrantedScopes)
+		}
 		s.result = &result
 		s.resultError = nil
 	}()
