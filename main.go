@@ -46,7 +46,7 @@ func buildInfo() string {
 	if version == "devel" {
 		return "unknown"
 	}
-	return fmt.Sprintf("%s-%s-%s", commit, date, branch)
+	return fmt.Sprintf("%s-%s-%s", branch, commit, date)
 }
 
 const versionUrl = "https://raw.githubusercontent.com/ikafly144/sabalauncher/master/meta/version.json"

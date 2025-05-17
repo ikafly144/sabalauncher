@@ -17,13 +17,13 @@ type Loader struct {
 func (newLoader *Loader) update(oldLoader *Loader, packZip *zip.Reader, profilePath string, worker *DownloadWorker) error {
 	worker.addTask(func() error {
 		if newLoader.Initialize != nil && (oldLoader.Initialize == nil || oldLoader.Initialize.UpdatedAt.IsZero()) {
-			slog.Info("profile override updating")
+			slog.Info("profile initializing")
 			if err := newLoader.Initialize.update(packZip, profilePath); err != nil {
 				return fmt.Errorf("failed to update initialize: %w", err)
 			}
 		}
 		if newLoader.Override != nil && (oldLoader.Override == nil || oldLoader.Override.UpdatedAt.Before(newLoader.Override.UpdatedAt)) {
-			slog.Info("profile initializing")
+			slog.Info("profile override updating")
 			if err := newLoader.Override.update(packZip, profilePath); err != nil {
 				return fmt.Errorf("failed to update overrides: %w", err)
 			}
@@ -64,6 +64,7 @@ type InitializeManifest struct {
 func (i *InitializeManifest) update(packZip *zip.Reader, profilePath string) error {
 	for _, file := range packZip.File {
 		if !strings.HasPrefix(file.Name, i.Initializes) {
+			slog.Info("file not in initializes", "name", file.Name, "initializes", i.Initializes)
 			continue
 		}
 		name := filepath.Join(profilePath, strings.TrimPrefix(file.Name, i.Initializes))
