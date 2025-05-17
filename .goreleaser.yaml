@@ -23,6 +23,8 @@ release:
   draft: true
   extra_files:
     - glob: dist/SabaLauncher.msi
+env_files:
+  github_token: .config/goreleaser/github_token
 snapshot:
   version_template: "{{.Version}}-{{.Commit}}"
 version: 2
