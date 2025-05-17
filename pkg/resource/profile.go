@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,6 +66,7 @@ func (p *Profile) UnmarshalJSON(data []byte) error {
 		// load icon as base64 img
 		img, _, err := image.Decode(base64.NewDecoder(base64.StdEncoding, strings.NewReader(p.Icon)))
 		if err != nil {
+			slog.Error("Failed to decode icon", "error", err)
 			// placeholder image
 			// black square
 			img = image.NewUniform(color.RGBA{R: 0, G: 0, B: 0, A: 255})
