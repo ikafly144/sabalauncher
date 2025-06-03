@@ -185,7 +185,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 														p.booted = false
 														p.bootError = nil
 														p.playModal.Appear(gtx.Now)
-														go p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
+														p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
 														p.playModal.Widget = (func(gtx layout.Context, __th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
 															__p := __th.Palette
 															if anim.Animating() || anim.State == component.Invisible {
@@ -210,8 +210,10 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																			slog.Error("Failed to start game", "error", err)
 																			p.bootError = err
 																			p.success = json.Ptr(false)
+																		} else {
+																			p.success = json.Ptr(true)
 																		}
-																		p.success = json.Ptr(true)
+																		p.booted = false
 																	}()
 																}
 															}

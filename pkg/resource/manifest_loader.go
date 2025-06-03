@@ -94,6 +94,10 @@ func (v *VanillaManifestLoader) StartSetup(dataPath string, profile string) {
 	v.err = nil
 	v.done = false
 	v.currentProgressFunc = nil
+	v.currentStatus = "初期化中"
+	v.currentGoal = 0
+	v.currentProgress = 0
+	v.status = 0
 	go func() {
 		if err := v.setup(dataPath); err != nil {
 			slog.Error("Failed to setup", "error", err)
@@ -345,6 +349,10 @@ func (f *ForgeManifestLoader) StartSetup(dataPath string, profilePath string) {
 	f.v.done = false
 	f.v.currentProgressFunc = nil
 	f.err = nil
+	f.v.currentStatus = "初期化中"
+	f.v.currentGoal = 0
+	f.v.currentProgress = 0
+	f.v.status = 0
 	go func() {
 		if err := f.setup(dataPath, profilePath); err != nil {
 			slog.Error("Failed to setup", "error", err)

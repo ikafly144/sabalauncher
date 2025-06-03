@@ -2,7 +2,9 @@ package resource
 
 import (
 	"archive/zip"
+	"crypto/sha512"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -51,7 +53,7 @@ func (oldLoader *modLoader) loadMod(packZip *zip.Reader, newLoader *modLoader, p
 	worker := &DownloadWorker{}
 	for i := range newLoader.Mods {
 		oldMod, ok := oldMods[newLoader.Mods[i].key()]
-		if !ok {
+		if !ok || oldMod == nil {
 			oldMod = nil
 			slog.Info("new mod", "key", newLoader.Mods[i].key())
 		}
@@ -193,14 +195,6 @@ func (c *CurseForgeModInstance) update(profilePath string, oldInstance ModInstan
 	if _, ok := oldInstance.(*CurseForgeModInstance); !ok {
 		oldInstance = nil
 	}
-	if oldInstance != nil && oldInstance.(*CurseForgeModInstance).FileId == c.FileId {
-		slog.Info("mod file is already up to date", "fileId", c.FileId)
-		return nil
-	}
-	if oldInstance != nil && oldInstance.getCurrentModFileName() != nil {
-		slog.Info("removing old mod file", "fileName", *oldInstance.getCurrentModFileName())
-		os.Remove(filepath.Join(profilePath, "mods", *oldInstance.getCurrentModFileName()))
-	}
 	url := strings.ReplaceAll(CurseForgeBaseURL+CurseForgeModFilePath, "{modId}", fmt.Sprintf("%d", c.ModId))
 	url = strings.ReplaceAll(url, "{fileId}", fmt.Sprintf("%d", c.FileId))
 	httpClient := &http.Client{}
@@ -230,9 +224,20 @@ func (c *CurseForgeModInstance) update(profilePath string, oldInstance ModInstan
 	if modFile.Data.DownloadURL == "" {
 		return fmt.Errorf("mod file url is empty")
 	}
-	if modFile.Data.ID == c.CurrentFileId {
-		slog.Info("mod file is already up to date", "fileId", c.CurrentFileId)
-		return nil
+
+	if oldInstance != nil && oldInstance.getCurrentModFileName() != nil && oldInstance.(*CurseForgeModInstance).CurrentFileId != modFile.Data.ID {
+		slog.Info("removing old mod file", "fileName", *oldInstance.getCurrentModFileName())
+		os.Remove(filepath.Join(profilePath, "mods", *oldInstance.getCurrentModFileName()))
+	}
+	if oldInstance != nil && modFile.Data.ID == oldInstance.(*CurseForgeModInstance).CurrentFileId {
+		if _, err := os.Stat(filepath.Join(profilePath, "mods", modFile.Data.FileName)); os.IsExist(err) || err == nil {
+			slog.Info("mod file is already up to date", "fileId", modFile.Data.ID, "fileName", modFile.Data.FileName)
+			c.CurrentFileName = modFile.Data.FileName
+			c.CurrentFileId = modFile.Data.ID
+			return nil
+		} else {
+			slog.Info("mod file not found, downloading", "fileId", c.CurrentFileId, "fileName", modFile.Data.FileName, "err", err)
+		}
 	}
 	slog.Info("downloading mod file", "fileId", modFile.Data.ID, "fileName", modFile.Data.FileName)
 
@@ -381,14 +386,6 @@ func (m *ModrinthModInstance) update(profilePath string, oldLoader ModInstance) 
 	if _, ok := oldLoader.(*ModrinthModInstance); !ok {
 		oldLoader = nil
 	}
-	if oldLoader != nil && oldLoader.(*ModrinthModInstance).VersionId == m.VersionId {
-		slog.Info("mod file is already up to date", "versionId", m.VersionId)
-		return nil
-	}
-	if oldLoader != nil && oldLoader.getCurrentModFileName() != nil {
-		slog.Info("removing old mod file", "fileName", *oldLoader.getCurrentModFileName())
-		os.Remove(filepath.Join(profilePath, "mods", *oldLoader.getCurrentModFileName()))
-	}
 	url := strings.ReplaceAll(ModrinthBaseURL+ModrinthModFilePath, "{projectId}", m.ProjectId)
 	url = strings.ReplaceAll(url, "{versionId}", m.VersionId)
 	resp, err := http.Get(url)
@@ -404,15 +401,9 @@ func (m *ModrinthModInstance) update(profilePath string, oldLoader ModInstance) 
 		return fmt.Errorf("failed to decode mod file: %w", err)
 	}
 
-	if modFile.Files == nil {
+	if len(modFile.Files) == 0 {
 		return fmt.Errorf("mod file files is empty")
 	}
-	if modFile.ID == m.CurrentVersionId {
-		slog.Info("mod file is already up to date", "versionId", m.CurrentVersionId)
-		return nil
-	}
-	slog.Info("downloading mod file", "versionId", modFile.ID, "fileName", modFile.Name)
-
 	matchedIndex := -1
 	for i, file := range modFile.Files {
 		if file.FileName == m.FileName {
@@ -423,6 +414,33 @@ func (m *ModrinthModInstance) update(profilePath string, oldLoader ModInstance) 
 	if matchedIndex == -1 {
 		return fmt.Errorf("mod file name %s not found in mod file", m.FileName)
 	}
+
+	if oldLoader != nil && oldLoader.getCurrentModFileName() != nil && oldLoader.(*ModrinthModInstance).VersionId != modFile.ID {
+		slog.Info("removing old mod file", "fileName", *oldLoader.getCurrentModFileName())
+		os.Remove(filepath.Join(profilePath, "mods", *oldLoader.getCurrentModFileName()))
+	}
+	if oldLoader != nil && modFile.ID == oldLoader.(*ModrinthModInstance).VersionId {
+		if f, err := os.OpenFile(filepath.Join(profilePath, "mods", modFile.Files[0].FileName), os.O_RDONLY, 0644); err == nil {
+			defer f.Close()
+			s := sha512.New()
+			if _, err := io.Copy(s, f); err != nil {
+				return fmt.Errorf("failed to calculate hash: %w", err)
+			}
+			if modFile.Files[matchedIndex].Hashes.SHA512 == hex.EncodeToString(s.Sum(nil)) {
+				slog.Info("mod file is already up to date", "versionId", modFile.ID, "fileName", modFile.Files[0].FileName)
+				m.CurrentFileName = modFile.Files[matchedIndex].FileName
+				m.CurrentVersionId = modFile.ID
+				return nil
+			} else {
+				slog.Info("mod file hash mismatch, removing old file", "versionId", m.CurrentVersionId, "fileName", modFile.Files[0].FileName)
+				os.Remove(filepath.Join(profilePath, "mods", modFile.Files[0].FileName))
+			}
+		} else {
+			slog.Info("mod file not found, downloading", "versionId", m.CurrentVersionId, "fileName", modFile.Files[0].FileName)
+		}
+	}
+	slog.Info("downloading mod file", "versionId", modFile.ID, "fileName", modFile.Name)
+
 	if modFile.Files[matchedIndex].URL == "" {
 		return fmt.Errorf("mod file url is empty")
 	}
