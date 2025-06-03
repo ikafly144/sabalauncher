@@ -141,7 +141,9 @@ func (v *VanillaManifestLoader) setup(dataPath string) error {
 			}
 		}()
 	}
-	worker.Wait()
+	if err := worker.Wait(); err != nil {
+		return err
+	}
 	v.currentProgress = 1
 	v.status++
 
@@ -163,7 +165,9 @@ func (v *VanillaManifestLoader) setup(dataPath string) error {
 			}
 		}()
 	}
-	worker.Wait()
+	if err := worker.Wait(); err != nil {
+		return err
+	}
 	v.currentProgress = 1
 	v.status++
 
@@ -182,7 +186,9 @@ func (v *VanillaManifestLoader) setup(dataPath string) error {
 			}
 		}()
 	}
-	worker.Wait()
+	if err := worker.Wait(); err != nil {
+		return err
+	}
 	v.status++
 
 	worker, err = v.downloadLibraries(v.manifest, dataPath)
@@ -200,7 +206,9 @@ func (v *VanillaManifestLoader) setup(dataPath string) error {
 			}
 		}()
 	}
-	worker.Wait()
+	if err := worker.Wait(); err != nil {
+		return err
+	}
 	v.status++
 
 	return nil
@@ -385,7 +393,9 @@ func (f *ForgeManifestLoader) setup(dataPath string, profilePath string) error {
 			}
 		}()
 	}
-	worker.Wait()
+	if err := worker.Wait(); err != nil {
+		return err
+	}
 	v.currentProgress = 1
 	v.status++
 
@@ -409,7 +419,9 @@ func (f *ForgeManifestLoader) setup(dataPath string, profilePath string) error {
 				}
 			}()
 		}
-		worker.Wait()
+		if err := worker.Wait(); err != nil {
+			return err
+		}
 		v.status++
 
 		v.currentStatus = "Forgeインストーラーの実行中"
@@ -457,7 +469,9 @@ func (f *ForgeManifestLoader) setup(dataPath string, profilePath string) error {
 			}
 		}()
 	}
-	worker.Wait()
+	if err := worker.Wait(); err != nil {
+		return err
+	}
 	v.status++
 
 	worker, err = v.downloadLibraries(manifest, dataPath)
@@ -475,7 +489,9 @@ func (f *ForgeManifestLoader) setup(dataPath string, profilePath string) error {
 			}
 		}()
 	}
-	worker.Wait()
+	if err := worker.Wait(); err != nil {
+		return err
+	}
 	v.status++
 
 	if f.PackURL != "" || f.Pack != nil {
