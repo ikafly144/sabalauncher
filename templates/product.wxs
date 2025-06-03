@@ -23,7 +23,7 @@
             <UpgradeVersion Minimum="{{.VersionOk}}" OnlyDetect="yes" Property="NEWERVERSIONDETECTED" />
             <UpgradeVersion Minimum="0.0.0" Maximum="{{.VersionOk}}" IncludeMinimum="yes" IncludeMaximum="no" Property="OLDERVERSIONBEINGUPGRADED" />
         </Upgrade>
-        <Condition Message="A newer version of this software is already installed.">NOT NEWERVERSIONDETECTED</Condition>
+        <Condition Message="新しいバージョンがすでにインストールされています。">NOT NEWERVERSIONDETECTED</Condition>
 
         <Directory Id="TARGETDIR" Name="SourceDir">
 
@@ -60,60 +60,65 @@
                             {{if gt ($e.Icon | len) 0}}
                             <Icon Id="Icon{{$i}}" SourceFile="{{$e.Icon}}" />
                             {{end}}
-                        </Shortcut>
-                        <RegistryValue Root="HKCU" Key="Software\{{$.Company}}\{{$.Product}}" Name="installed{{$i}}" Type="integer" Value="1" KeyPath="yes" />
+                    </Shortcut>
+                    <RegistryValue Root="HKCU" Key="Software\{{$.Company}}\{{$.Product}}" Name="installed{{$i}}" Type="integer" Value="1" KeyPath="yes" />
                         {{end}}
-                        <RemoveFolder Id="ProgramMenuSubfolder" On="uninstall" />
-                    </Component>
-                </Directory>
+                    <RemoveFolder Id="ProgramMenuSubfolder" On="uninstall" />
+                </Component>
             </Directory>
-            {{end}}
         </Directory>
+            {{end}}
+    </Directory>
         {{range $i, $e := .InstallHooks}}
-        <SetProperty Id="CustomInstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomInstallExec{{$i}}" Sequence="execute" />
-        <CustomAction Id="CustomInstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no" />
+    <SetProperty Id="CustomInstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomInstallExec{{$i}}" Sequence="execute" />
+    <CustomAction Id="CustomInstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no" />
         {{end}}
       {{range $i, $e := .UninstallHooks}}
-        <SetProperty Id="CustomUninstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomUninstallExec{{$i}}" Sequence="execute" />
-        <CustomAction Id="CustomUninstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no" />
+    <SetProperty Id="CustomUninstallExec{{$i}}" Value="{{$e.CookedCommand}}" Before="CustomUninstallExec{{$i}}" Sequence="execute" />
+    <CustomAction Id="CustomUninstallExec{{$i}}" BinaryKey="WixCA" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no" />
         {{end}}
-        <InstallExecuteSequence>
-            <RemoveExistingProducts After="InstallValidate" />
+    <InstallExecuteSequence>
+        <RemoveExistingProducts After="InstallValidate" />
             {{range $i, $e := .InstallHooks}}
-            <Custom Action="CustomInstallExec{{$i}}" After="{{if eq $i 0}}InstallFiles{{else}}CustomInstallExec{{dec $i}}{{end}}">NOT Installed AND NOT REMOVE</Custom>
+        <Custom Action="CustomInstallExec{{$i}}" After="{{if eq $i 0}}InstallFiles{{else}}CustomInstallExec{{dec $i}}{{end}}">NOT Installed AND NOT REMOVE</Custom>
             {{end}}
          {{range $i, $e := .UninstallHooks}}
-            <Custom Action="CustomUninstallExec{{$i}}" After="{{if eq $i 0}}InstallInitialize{{else}}CustomUninstallExec{{dec $i}}{{end}}">REMOVE ~= "ALL"</Custom>
+        <Custom Action="CustomUninstallExec{{$i}}" After="{{if eq $i 0}}InstallInitialize{{else}}CustomUninstallExec{{dec $i}}{{end}}">REMOVE ~= "ALL"</Custom>
             {{end}}
-        </InstallExecuteSequence>
+    </InstallExecuteSequence>
 
-        <Feature Id="DefaultFeature" Level="1">
+    <Feature Id="DefaultFeature" Level="1">
             {{if gt (.Env.Vars | len) 0}}
-            <ComponentRef Id="ENVS" />
+        <ComponentRef Id="ENVS" />
             {{end}}
          {{if gt (.Files.Items | len) 0}}
-            <ComponentRef Id="ApplicationFiles" />
+        <ComponentRef Id="ApplicationFiles" />
             {{end}}
          {{if gt (.Shortcuts.Items | len) 0}}
-            <ComponentRef Id="ApplicationShortcuts" />
+        <ComponentRef Id="ApplicationShortcuts" />
             {{end}}
          {{range $i, $e := .Directories}}
-            <ComponentGroupRef Id="AppFiles{{$i}}" />
+        <ComponentGroupRef Id="AppFiles{{$i}}" />
             {{end}}
-        </Feature>
+    </Feature>
 
-        <UI>
-            <!-- Define the installer UI -->
-            <UIRef Id="WixUI_HK" />
-        </UI>
+    <UI>
+        <!-- Define the installer UI -->
+        <UIRef Id="WixUI_HK" />
+    </UI>
 
-        <WixVariable Id="WixUIDialogBmp" Value=".\launcher_dialog.jpg" />
-        <WixVariable Id="WixUIBannerBmp" Value=".\launcher_banner.jpg" />
-        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+    <WixVariable Id="WixUIDialogBmp" Value=".\launcher_dialog.jpg" />
+    <WixVariable Id="WixUIBannerBmp" Value=".\launcher_banner.jpg" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="SabaLauncherを起動する" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"/>
 
-        <!-- this should help to propagate env var changes -->
-        <CustomActionRef Id="WixBroadcastEnvironmentChange" />
+    <Property Id="WixShellExecTarget" Value="[#sabalauncher.exe]" />
+    <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" />
 
-    </Product>
+    <!-- this should help to propagate env var changes -->
+    <CustomActionRef Id="WixBroadcastEnvironmentChange" />
+
+</Product>
 
 </Wix>

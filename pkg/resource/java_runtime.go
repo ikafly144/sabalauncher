@@ -194,6 +194,25 @@ func installJavaRuntime(target string, dataDir string, worker *DownloadWorker) e
 		case JFileEntry:
 			path := filepath.Join(dataDir, "runtime", target, osName(), name)
 			_ = os.MkdirAll(filepath.Dir(path), 0755)
+			if _, err := os.Stat(path); e.Downloads.Raw.Sha1 != "" && os.IsExist(err) {
+				// Verify the SHA1 checksum
+				file, err := os.Open(path)
+				if err != nil {
+					return err
+				}
+				defer file.Close()
+				hasher := sha1.New()
+				if _, err := io.Copy(hasher, file); err != nil {
+					return err
+				}
+				sum := hasher.Sum(nil)
+				if fmt.Sprintf("%x", sum) != e.Downloads.Raw.Sha1 {
+					slog.Info("java runtime file checksum mismatch", "file", path, "expected", e.Downloads.Raw.Sha1)
+					if err := os.Remove(path); err != nil { // Remove the file to force re-download
+						return err
+					}
+				}
+			}
 			if _, err := os.Stat(path); os.IsNotExist(err) {
 				worker.addTask(func() error {
 					// File does not exist, download it
@@ -245,21 +264,6 @@ func installJavaRuntime(target string, dataDir string, worker *DownloadWorker) e
 					}
 					return nil
 				})
-			} else if e.Downloads.Raw.Sha1 != "" {
-				// Verify the SHA1 checksum
-				file, err := os.Open(path)
-				if err != nil {
-					return err
-				}
-				defer file.Close()
-				hasher := sha1.New()
-				if _, err := io.Copy(hasher, file); err != nil {
-					return err
-				}
-				sum := hasher.Sum(nil)
-				if fmt.Sprintf("%x", sum) != e.Downloads.Raw.Sha1 {
-					return fmt.Errorf("SHA1 checksum mismatch for %s: expected %s, got %x", name, e.Downloads.Raw.Sha1, sum)
-				}
 			}
 		case JLinkEntry:
 			path := filepath.Join(dataDir, "runtime", target, osName(), name)

@@ -122,6 +122,7 @@ type DownloadWorker struct {
 	w      sync.WaitGroup
 	remain int
 	tasks  []func() error
+	err    error
 }
 
 func (w *DownloadWorker) addTask(task func() error) {
@@ -136,13 +137,10 @@ func (w *DownloadWorker) addTask(task func() error) {
 }
 
 func (w *DownloadWorker) Run() error {
-	for {
-		if err := w.run(); err != nil {
-			slog.Error("Unexpected error in download worker", "error", err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		break
+	if err := w.run(); err != nil {
+		w.err = err
+		slog.Error("Download worker encountered an error", "error", err)
+		return fmt.Errorf("download worker failed: %w", err)
 	}
 	return nil
 }
@@ -183,8 +181,27 @@ func (w *DownloadWorker) run() error {
 	return nil
 }
 
-func (w *DownloadWorker) Wait() {
-	w.w.Wait()
+func (w *DownloadWorker) Wait() error {
+	wait := func() <-chan struct{} {
+		done := make(chan struct{})
+		go func() {
+			w.w.Wait()
+			close(done)
+		}()
+		return done
+	}()
+	for {
+		select {
+		case <-wait:
+			return nil
+		default:
+			if w.err != nil {
+				slog.Error("Download worker encountered an error", "error", w.err)
+				return w.err
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 }
 
 func (w *DownloadWorker) Remain() int {

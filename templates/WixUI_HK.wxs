@@ -32,7 +32,7 @@
          <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999">1</Publish>
 
          <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" {{if gt (.License | len) 0}} Value="LicenseAgreementDlg_HK" {{else}} Value="InstallDirDlg" {{end}}>NOT Installed</Publish>
-         <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">Installed AND PATCH</Publish>
+<Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">Installed AND PATCH</Publish>
 
          <Publish Dialog="LicenseAgreementDlg_HK" Control="Back" Event="NewDialog" Value="WelcomeDlg">1</Publish>
          <Publish Dialog="LicenseAgreementDlg_HK" Control="Next" Event="NewDialog" Value="InstallDirDlg">LicenseAccepted = "1"</Publish>
@@ -56,6 +56,8 @@
          <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
          <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
          <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg">1</Publish>
+
+         <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
       </UI>
 
       <UIRef Id="WixUI_Common" />

@@ -575,7 +575,9 @@ func (f *ForgeManifestLoader) setup(dataPath string, profilePath string) error {
 				}
 			}()
 		}
-		ov.Wait()
+		if err := ov.Wait(); err != nil {
+			return err
+		}
 
 		_, _ = manifestFile.Seek(0, 0)
 		_ = manifestFile.Truncate(0)
