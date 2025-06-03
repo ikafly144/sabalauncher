@@ -621,7 +621,7 @@ func (f *ForgeManifestLoader) Boot(dataPath string, profile *Profile, account *m
 	if f.bootManifest == nil {
 		return fmt.Errorf("boot manifest is not set")
 	}
-	f.v.currentProgress = 15
+	f.v.status = 15
 	auth, err := account.GetMinecraftAccount()
 	if err != nil {
 		slog.Info("Failed to get Minecraft account", "error", err)
@@ -631,7 +631,7 @@ func (f *ForgeManifestLoader) Boot(dataPath string, profile *Profile, account *m
 		return fmt.Errorf("account is not set")
 	}
 
-	f.v.currentProgress = 16
+	f.v.status = 16
 	if err := BootGame(f.bootManifest, profile, auth, dataPath); err != nil {
 		return err
 	}
