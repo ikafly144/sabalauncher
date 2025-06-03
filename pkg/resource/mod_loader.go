@@ -393,11 +393,11 @@ func (m *ModrinthModInstance) update(profilePath string, oldLoader ModInstance) 
 	url = strings.ReplaceAll(url, "{versionId}", m.VersionId)
 	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to get mod file: %w", err)
+		return fmt.Errorf("failed to get mod file id: %s: %w", m.VersionId, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to get mod file: %s", resp.Status)
+		return fmt.Errorf("failed to get mod file id: %s: %s", m.VersionId, resp.Status)
 	}
 	var modFile ModrinthVersionInfoResponse
 	if err := json.NewDecoder(resp.Body).Decode(&modFile); err != nil {

@@ -621,6 +621,7 @@ func (f *ForgeManifestLoader) Boot(dataPath string, profile *Profile, account *m
 	if f.bootManifest == nil {
 		return fmt.Errorf("boot manifest is not set")
 	}
+	f.v.currentProgress = 15
 	auth, err := account.GetMinecraftAccount()
 	if err != nil {
 		slog.Info("Failed to get Minecraft account", "error", err)
@@ -629,6 +630,8 @@ func (f *ForgeManifestLoader) Boot(dataPath string, profile *Profile, account *m
 	if auth == nil {
 		return fmt.Errorf("account is not set")
 	}
+
+	f.v.currentProgress = 16
 	if err := BootGame(f.bootManifest, profile, auth, dataPath); err != nil {
 		return err
 	}
@@ -651,7 +654,7 @@ func (f *ForgeManifestLoader) CurrentProgress() float64 {
 }
 
 func (f *ForgeManifestLoader) TotalProgress() float64 {
-	return float64(f.v.status) / float64(7)
+	return float64(f.v.status) / float64(16)
 }
 
 const forgeDownloadURL = "https://maven.minecraftforge.net/net/minecraftforge/forge/${version}/forge-${version}-installer.jar"
