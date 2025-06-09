@@ -118,13 +118,13 @@ func NewMinecraftAccount(s Session) (*MinecraftAccount, error) {
 	session := s.(*session)
 	accounts, err := session.client.Accounts(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get accounts: %w", err)
+		return nil, fmt.Errorf("アカウントの取得に失敗しました: %w", err)
 	}
 	if len(accounts) > 1 {
-		return nil, fmt.Errorf("multiple accounts found, please select one: %v", accounts)
+		return nil, fmt.Errorf("複数のアカウントが見つかりました。1つを選択してください（開発者に報告してください）: %v", accounts)
 	}
 	if len(accounts) == 0 {
-		return nil, fmt.Errorf("no accounts found, please login first")
+		return nil, fmt.Errorf("アカウントが見つかりません。ログインしてください")
 	}
 	slog.Info("Already logged in with account", "account", accounts[0])
 	result, err := session.client.AcquireTokenSilent(context.Background(), []string{"XboxLive.signin", "XboxLive.offline_access"}, public.WithSilentAccount(accounts[0]))
