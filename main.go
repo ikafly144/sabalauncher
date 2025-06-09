@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/ikafly144/sabalauncher/pages/launcher"
 	"github.com/ikafly144/sabalauncher/pages/licenses"
 	"github.com/ikafly144/sabalauncher/pkg/browser"
+	"github.com/ikafly144/sabalauncher/pkg/msa"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/ikafly144/sabalauncher/pkg/runcmd"
 
@@ -79,11 +81,12 @@ func loop(w *app.Window) error {
 	var ops op.Ops
 
 	router := pages.NewRouter(appName, fmt.Sprintf("%s-%s", version, buildInfo()))
-	cred, err := resource.LoadCredential()
+	cache, err := msa.NewCacheAccessor(filepath.Join(resource.DataDir, "msa_cache.json"))
 	if err != nil {
-		slog.Error("failed to load credential", "err", err)
+		slog.Error("failed to create cache accessor", "err", err)
+		return err
 	}
-	router.MinecraftAccount = cred
+	router.Cache = cache
 	router.Register(1, launcher.New(&router))
 	router.Register(2, account.New(&router))
 	router.Register(3, licenses.New(&router))

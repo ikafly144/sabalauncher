@@ -2,6 +2,7 @@ package msa
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 	"github.com/ikafly144/sabalauncher/pkg/browser"
 
 	"github.com/google/uuid"
@@ -112,7 +114,23 @@ func (m *MinecraftAccountAuthResult) GetMinecraftProfile() (*MinecraftProfile, e
 	return &mcProfile, nil
 }
 
-func NewMinecraftAccount(auth string, expiresIn time.Time) (*MinecraftAccount, error) {
+func NewMinecraftAccount(s Session) (*MinecraftAccount, error) {
+	session := s.(*session)
+	accounts, err := session.client.Accounts(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get accounts: %w", err)
+	}
+	if len(accounts) > 1 {
+		return nil, fmt.Errorf("multiple accounts found, please select one: %v", accounts)
+	}
+	slog.Info("Already logged in with account", "account", accounts[0])
+	result, err := session.client.AcquireTokenSilent(context.Background(), []string{"XboxLive.signin", "XboxLive.offline_access"}, public.WithSilentAccount(accounts[0]))
+	if err != nil {
+		slog.Warn("Failed to acquire token silently", "error", err)
+		return nil, fmt.Errorf("failed to acquire token silently: %w", err)
+	}
+	auth := result.AccessToken
+	expiresIn := result.ExpiresOn
 	if auth == "" {
 		return nil, fmt.Errorf("auth is empty")
 	}
@@ -282,18 +300,6 @@ func (m *MinecraftAccount) GetMinecraftAccount() (*MinecraftAccountAuthResult, e
 	// }); err != nil {
 	// 	return nil, fmt.Errorf("failed to parse mcstore entitlements: %s", err)
 	// }
-
-	profile, err := authResult.GetMinecraftProfile()
-	if err != nil {
-		return nil, err
-	}
-
-	if m.Username == "" {
-		m.Username = profile.Username
-	}
-	if m.UUID == uuid.Nil {
-		m.UUID = profile.UUID
-	}
 
 	return &authResult, nil
 }

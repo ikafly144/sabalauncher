@@ -10,6 +10,7 @@ import (
 	"github.com/ikafly144/sabalauncher/applayout"
 	"github.com/ikafly144/sabalauncher/icon"
 	"github.com/ikafly144/sabalauncher/pages"
+	"github.com/ikafly144/sabalauncher/pkg/msa"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 
 	"gioui.org/gesture"
@@ -206,13 +207,27 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																} else if !p.booted {
 																	p.booted = true
 																	go func() {
-																		if err := p.Profiles[index].Manifest.Boot(resource.DataDir, &p.Profiles[index].Profile, p.MinecraftAccount); err != nil {
+																		success := false
+																		defer func() {
+																			p.success = &success
+																		}()
+																		session, err := msa.NewSession(p.Cache)
+																		if err != nil {
+																			slog.Error("Failed to create session", "error", err)
+																			p.bootError = err
+																			return
+																		}
+																		account, err := msa.NewMinecraftAccount(session)
+																		if err != nil {
+																			slog.Error("Failed to create Minecraft account", "error", err)
+																			p.bootError = err
+																			return
+																		}
+																		if err := p.Profiles[index].Manifest.Boot(resource.DataDir, &p.Profiles[index].Profile, account); err != nil {
 																			slog.Error("Failed to start game", "error", err)
 																			p.bootError = err
-																			p.success = json.Ptr(false)
-																		} else {
-																			p.success = json.Ptr(true)
 																		}
+																		success = true
 																		p.booted = false
 																	}()
 																}

@@ -4,11 +4,10 @@ import (
 	"log/slog"
 
 	"github.com/ikafly144/sabalauncher/pkg/msa"
-	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
 func (p *Page) startLogin() {
-	session, err := msa.NewSession()
+	session, err := msa.NewSession(p.Cache)
 	if err != nil {
 		return
 	}
@@ -26,31 +25,33 @@ func (p *Page) startLogin() {
 			p.loginErr = err
 			return
 		}
-		result, err := p.session.AuthResult()
-		if err != nil {
+		if _, err := p.session.AuthResult(); err != nil {
 			slog.Error("Failed to get auth result", "error", err)
 			p.loginErr = err
 			return
 		}
 
-		a, err := msa.NewMinecraftAccount(result.AccessToken, result.ExpiresOn)
+		a, err := msa.NewMinecraftAccount(session)
 		if err != nil {
 			slog.Error("Failed to get Minecraft account", "error", err)
 			p.loginErr = err
 			return
 		}
-		if _, err := a.GetMinecraftAccount(); err != nil {
+		ma, err := a.GetMinecraftAccount()
+		if err != nil {
 			slog.Error("Failed to get Minecraft account", "error", err)
 			p.loginErr = err
 			return
 		}
-		p.MinecraftAccount = a
 
-		if err := resource.SaveCredential(a); err != nil {
-			slog.Error("Failed to save credential", "error", err)
+		profile, err := ma.GetMinecraftProfile()
+		if err != nil {
+			slog.Error("Failed to get Minecraft profile", "error", err)
 			p.loginErr = err
+			return
 		}
 
+		p.accountName = &profile.Username
 		success = true
 	}(p)
 }

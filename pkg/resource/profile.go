@@ -11,8 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ikafly144/sabalauncher/pkg/msa"
-
 	"gioui.org/op/paint"
 	"gioui.org/widget"
 )
@@ -86,30 +84,4 @@ type Manifest struct {
 	MinecraftVersion string `json:"minecraftVersion"`
 	JavaVersion      int    `json:"javaVersion"`
 	MaxMemory        int    `json:"maxMemory"`
-}
-
-func SaveCredential(msp *msa.MinecraftAccount) error {
-	// Save the credential to the profile
-	f, err := os.Create(filepath.Join(DataDir, "account.json"))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if err := json.NewEncoder(f).Encode(msp); err != nil {
-		return err
-	}
-	return nil
-}
-
-func LoadCredential() (*msa.MinecraftAccount, error) {
-	f, err := os.Open(filepath.Join(DataDir, "account.json"))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	var msp msa.MinecraftAccount
-	if err := json.NewDecoder(f).Decode(&msp); err != nil {
-		return nil, err
-	}
-	return &msp, nil
 }

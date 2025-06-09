@@ -21,7 +21,6 @@ type Page interface {
 }
 
 type Router struct {
-	*msa.MinecraftAccount
 	pages   map[any]Page
 	current any
 	*component.ModalNavDrawer
@@ -29,6 +28,7 @@ type Router struct {
 	*component.AppBar
 	*component.ModalLayer
 	NonModalDrawer, BottomBar bool
+	Cache                     *msa.CacheAccessor
 }
 
 func NewRouter(name, description string) Router {

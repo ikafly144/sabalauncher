@@ -4,10 +4,14 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"slices"
 	"sync"
 
+	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 )
 
@@ -21,8 +25,72 @@ type Session interface {
 	impl()
 }
 
-func NewSession() (Session, error) {
-	client, err := public.New(msaClientID, public.WithAuthority("https://login.microsoftonline.com/consumers"))
+var _ cache.ExportReplace = (*CacheAccessor)(nil)
+
+func NewCacheAccessor(path string) (*CacheAccessor, error) {
+	return &CacheAccessor{path: path}, nil
+}
+
+type CacheAccessor struct {
+	path string
+}
+
+// Export writes the binary representation of the cache (cache.Marshal()) to external storage.
+// This is considered opaque. Context cancellations should be honored as in Replace.
+func (c *CacheAccessor) Export(ctx context.Context, cache cache.Marshaler, hints cache.ExportHints) error {
+	if c.path == "" {
+		return fmt.Errorf("cache path is not set")
+	}
+	slog.Info("Exporting cache", "path", c.path, "partitionKey", hints.PartitionKey)
+	data, err := cache.Marshal()
+	if err != nil {
+		return fmt.Errorf("failed to marshal cache: %w", err)
+	}
+
+	_ = os.MkdirAll(filepath.Dir(c.path), 0755)
+	file, err := os.Create(c.path)
+	if err != nil {
+		return fmt.Errorf("failed to create cache file: %w", err)
+	}
+	defer file.Close()
+
+	if _, err := file.Write(data); err != nil {
+		return fmt.Errorf("failed to write cache data: %w", err)
+	}
+	slog.Info("Cache exported", "path", c.path, "partitionKey", hints.PartitionKey)
+
+	return nil
+}
+
+// Replace replaces the cache with what is in external storage. Implementors should honor
+// Context cancellations and return context.Canceled or context.DeadlineExceeded in those cases.
+func (c *CacheAccessor) Replace(ctx context.Context, cache cache.Unmarshaler, hints cache.ReplaceHints) error {
+	if c.path == "" {
+		return fmt.Errorf("cache path is not set")
+	}
+
+	_ = os.MkdirAll(filepath.Dir(c.path), 0755)
+	file, err := os.Open(c.path)
+	if err != nil && os.IsNotExist(err) {
+		slog.Warn("Cache file does not exist, creating new one", "path", c.path, "partitionKey", hints.PartitionKey)
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to open cache file: %w", err)
+	}
+	defer file.Close()
+	slog.Info("Replacing cache", "path", c.path, "partitionKey", hints.PartitionKey)
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("failed to read cache file: %w", err)
+	}
+	if err := cache.Unmarshal(bytes); err != nil {
+		return fmt.Errorf("failed to unmarshal cache data: %w", err)
+	}
+	return nil
+}
+
+func NewSession(c *CacheAccessor) (Session, error) {
+	client, err := public.New(msaClientID, public.WithAuthority("https://login.microsoftonline.com/consumers"), public.WithCache(c))
 	if err != nil {
 		return nil, err
 	}

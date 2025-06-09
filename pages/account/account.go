@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"io"
+	"log/slog"
 	"strings"
 
 	"github.com/ikafly144/sabalauncher/applayout"
@@ -37,6 +38,8 @@ type Page struct {
 
 	deviceCode component.TextField
 
+	accountName *string
+
 	widget.List
 	*pages.Router
 }
@@ -47,7 +50,32 @@ func New(router *pages.Router) *Page {
 	p := &Page{
 		Router: router,
 	}
+	go refreshAccount(p)
 	return p
+}
+
+func refreshAccount(p *Page) {
+	session, err := msa.NewSession(p.Cache)
+	if err != nil {
+		slog.Error("Failed to create session", "error", err)
+		return
+	}
+	a, err := msa.NewMinecraftAccount(session)
+	if err != nil {
+		slog.Error("Failed to create Minecraft account", "error", err)
+		return
+	}
+	ma, err := a.GetMinecraftAccount()
+	if err != nil {
+		slog.Error("Failed to get Minecraft account", "error", err)
+		return
+	}
+	profile, err := ma.GetMinecraftProfile()
+	if err != nil {
+		slog.Error("Failed to get Minecraft profile", "error", err)
+		return
+	}
+	p.accountName = &profile.Username
 }
 
 func (p *Page) Actions() []component.AppBarAction {
@@ -79,23 +107,29 @@ func (p *Page) Layout(gtx C, th *material.Theme) D {
 					Right:  unit.Dp(16),
 				}.Layout(gtx, func(gtx C) D {
 					if p.success != nil && !*p.success {
+						if p.loginErr == nil {
+							return material.Label(th, 24, "アカウント: ログインに失敗しました").Layout(gtx)
+						}
 						return material.Label(th, 24, fmt.Sprintf("アカウント: ログインに失敗しました (%s)", p.loginErr.Error())).Layout(gtx)
 					}
-					if p.MinecraftAccount == nil {
+					if p.accountName == nil {
 						return material.Label(th, 24, "アカウント: ログインしていません").Layout(gtx)
 					}
-					return material.Label(th, 24, fmt.Sprintf("アカウント: ログイン済み (%s)", p.MinecraftAccount.Username)).Layout(gtx)
+					return material.Label(th, 24, fmt.Sprintf("アカウント: ログイン済み (%s)", *p.accountName)).Layout(gtx)
 				})
 			}),
 			layout.Rigid(func(gtx C) D {
-				if p.loginBtn.Clicked(gtx) && p.session == nil && (p.success == nil || !*p.success) {
+				if p.loginBtn.Clicked(gtx) && p.session == nil {
 					p.startLogin()
 				}
 				gtx.Execute(op.InvalidateCmd{})
-				if p.MinecraftAccount != nil {
+				if p.accountName != nil {
 					return applayout.DefaultInset.Layout(gtx, material.Button(th, &p.loginBtn, "別のアカウントでログインする").Layout)
 				}
-				return applayout.DefaultInset.Layout(gtx, material.Button(th, &p.loginBtn, "ログインする").Layout)
+				if p.session == nil {
+					return applayout.DefaultInset.Layout(gtx, material.Button(th, &p.loginBtn, "ログインする").Layout)
+				}
+				return applayout.DefaultInset.Layout(gtx, material.Button(th, &p.loginBtn, "ログイン中...").Layout)
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return applayout.DefaultInset.Layout(gtx, material.Body1(th, "Microsoftアカウントでログインするには、以下の手順に従ってください:").Layout)
