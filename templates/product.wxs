@@ -105,6 +105,8 @@
     <UI>
         <!-- Define the installer UI -->
         <UIRef Id="WixUI_HK" />
+
+        <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed</Publish>
     </UI>
 
     <WixVariable Id="WixUIDialogBmp" Value=".\launcher_dialog.jpg" />
@@ -113,7 +115,7 @@
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="SabaLauncherを起動する" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"/>
 
-    <Property Id="WixShellExecTarget" Value="[#sabalauncher.exe]" />
+    <Property Id="WixShellExecTarget" Value="[#ApplicationFile0]" />
     <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" />
 
     <!-- this should help to propagate env var changes -->
