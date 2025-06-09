@@ -123,6 +123,9 @@ func NewMinecraftAccount(s Session) (*MinecraftAccount, error) {
 	if len(accounts) > 1 {
 		return nil, fmt.Errorf("multiple accounts found, please select one: %v", accounts)
 	}
+	if len(accounts) == 0 {
+		return nil, fmt.Errorf("no accounts found, please login first")
+	}
 	slog.Info("Already logged in with account", "account", accounts[0])
 	result, err := session.client.AcquireTokenSilent(context.Background(), []string{"XboxLive.signin", "XboxLive.offline_access"}, public.WithSilentAccount(accounts[0]))
 	if err != nil {
