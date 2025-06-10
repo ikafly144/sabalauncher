@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -11,9 +11,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-github/v72/github"
 	"github.com/ikafly144/sabalauncher/pages"
 	"github.com/ikafly144/sabalauncher/pages/account"
 	"github.com/ikafly144/sabalauncher/pages/launcher"
@@ -37,11 +38,18 @@ type (
 )
 
 var (
-	appName = "SabaLauncher"
-	version = "devel"
-	commit  = "unknown"
-	date    = "unknown"
-	branch  = "unknown"
+	appName        = "SabaLauncher"
+	version        = "devel"
+	currentVersion = func() *semver.Version {
+		v, err := semver.NewVersion(version)
+		if err != nil {
+			panic(fmt.Sprintf("failed to parse current version %s: %v", version, err))
+		}
+		return v
+	}()
+	commit = "unknown"
+	date   = "unknown"
+	branch = "unknown"
 )
 
 func buildInfo() string {
@@ -111,66 +119,78 @@ func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
 	if version == "devel" {
 		return nil
 	}
-	resp, err := http.Get(versionUrl)
+
+	client := github.NewClient(nil)
+
+	release, _, err := client.Repositories.GetLatestRelease(context.Background(), "ikafly144", "sabalauncher")
 	if err != nil {
-		slog.Error("failed to get version", "err", err)
+		slog.Error("failed to get latest release", "err", err)
 		return nil
 	}
-	defer resp.Body.Close()
-	versionOk := resp.StatusCode == http.StatusOK
-	if versionOk {
-		var versionInfo versionInfo
-		if err := json.NewDecoder(resp.Body).Decode(&versionInfo); err != nil {
-			slog.Error("failed to decode version", "err", err)
-		}
-		if versionInfo.Version != version && versionOk {
-			slog.Info("new version available", "version", versionInfo.Version)
-			err := installNewVersion(versionInfo)
-			if err == nil {
-				slog.Info("install new version", "version", versionInfo.Version)
-				os.Exit(0)
-			}
-			slog.Error("failed to install new version", "err", err)
-			_ = browser.Open(versionInfo.Url)
-			for {
-				switch e := w.Event().(type) {
-				case app.DestroyEvent:
-					return fmt.Errorf("new version available %s: %w", versionInfo.Version, e.Err)
-				case app.FrameEvent:
-					gtx := app.NewContext(ops, e)
-					layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-						layout.Rigid(func(gtx C) D {
-							return material.H5(th, fmt.Sprintf("New version available: %s", versionInfo.Version)).Layout(gtx)
-						}),
-						layout.Rigid(func(gtx C) D {
-							return material.Body1(th, "An error occurred while automatically installing the new version. Please download it manually from the link below.").Layout(gtx)
-						}),
-						layout.Rigid(func(gtx C) D {
-							return material.Body1(th, versionInfo.Url).Layout(gtx)
-						}),
-					)
-					e.Frame(gtx.Ops)
-				}
-			}
-		}
-	} else {
-		slog.Error("failed to get version", "status", resp.StatusCode)
+	latestVersion, err := semver.NewVersion(release.GetTagName())
+	if err != nil {
+		slog.Error("failed to parse latest version", "err", err)
+		return nil
 	}
+	if latestVersion.GreaterThan(currentVersion) {
+		assets, _, err := client.Repositories.ListReleaseAssets(context.Background(), "ikafly144", "sabalauncher", release.GetID(), nil)
+		if err != nil {
+			slog.Error("failed to list release assets", "err", err)
+			return nil
+		}
+		var assetID int64
+		for _, asset := range assets {
+			if asset.GetName() == "SabaLauncher.msi" {
+				assetID = asset.GetID()
+				break
+			}
+		}
+		if assetID == 0 {
+			slog.Error("failed to find installer asset in release", "release", release.GetTagName())
+			return nil
+		} else {
+			if err := installNewVersion(client, release.GetTagName(), assetID); err == nil {
+				slog.Info("install new version", "version", release.GetTagName())
+				os.Exit(0)
+			} else {
+				slog.Error("failed to install new version", "err", err)
+			}
+		}
+		_ = browser.Open(release.GetURL())
+		for {
+			switch e := w.Event().(type) {
+			case app.DestroyEvent:
+				return fmt.Errorf("new version available %s: %w", release.GetTagName(), e.Err)
+			case app.FrameEvent:
+				gtx := app.NewContext(ops, e)
+				layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+					layout.Rigid(func(gtx C) D {
+						return material.H5(th, fmt.Sprintf("新しいバージョンがあります: %s", release.GetTagName())).Layout(gtx)
+					}),
+					layout.Rigid(func(gtx C) D {
+						return material.Body1(th, "新しいバージョンの自動インストール中にエラーが発生しました。以下のリンクから手動でダウンロードしてください。").Layout(gtx)
+					}),
+					layout.Rigid(func(gtx C) D {
+						return material.Body1(th, release.GetURL()).Layout(gtx)
+					}),
+				)
+				e.Frame(gtx.Ops)
+			}
+		}
+	}
+
 	return nil
 }
 
-func installNewVersion(versionInfo versionInfo) error {
-	resp, err := http.Get(strings.ReplaceAll(installerUrl, "{version}", versionInfo.Version))
+func installNewVersion(client *github.Client, versionTag string, assetID int64) error {
+	installer, _, err := client.Repositories.DownloadReleaseAsset(context.Background(), "ikafly144", "sabalauncher", assetID, http.DefaultClient)
 	if err != nil {
-		slog.Error("failed to get installer", "err", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		slog.Error("failed to get installer", "status", resp.StatusCode)
+		slog.Error("failed to download installer", "err", err)
 		return err
 	}
+	defer installer.Close()
 	dir := os.TempDir()
-	file, err := os.CreateTemp(dir, fmt.Sprintf("SabaLauncher-%s-*.msi", versionInfo.Version))
+	file, err := os.CreateTemp(dir, fmt.Sprintf("SabaLauncher-%s-*.msi", versionTag))
 	if err != nil {
 		slog.Error("failed to create installer", "err", err)
 		return err
@@ -179,7 +199,7 @@ func installNewVersion(versionInfo versionInfo) error {
 		file.Close()
 	})
 	defer cl()
-	if _, err := io.Copy(file, resp.Body); err != nil {
+	if _, err := io.Copy(file, installer); err != nil {
 		slog.Error("failed to copy installer", "err", err)
 		return err
 	}
