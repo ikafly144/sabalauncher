@@ -146,7 +146,7 @@ func (v *VanillaManifestLoader) CurrentStatus() string {
 
 func (v *VanillaManifestLoader) CurrentProgress() float64 {
 	if v.state != nil {
-		return float64(v.state.Progress())
+		return float64(v.state.CurrentProgress())
 	}
 	return 0.0
 }
@@ -283,7 +283,7 @@ func (f *ForgeManifestLoader) CurrentStatus() string {
 
 func (f *ForgeManifestLoader) CurrentProgress() float64 {
 	if f.state != nil {
-		return float64(f.state.Progress())
+		return float64(f.state.CurrentProgress())
 	}
 	return 0.0
 }
