@@ -136,13 +136,27 @@ func (w *DownloadWorker) addTask(task func() error) {
 	w.tasks = append(w.tasks, task)
 }
 
-func (w *DownloadWorker) Run() error {
-	if err := w.run(); err != nil {
+func (w *DownloadWorker) Run() (err error) {
+	const (
+		maxProcCount = 8
+	)
+	go func() {
+		for range maxProcCount {
+			if e := w.run(); e != nil {
+				w.err = e
+				slog.Error("Download worker encountered an error", "error", e)
+				if err != nil {
+					e = fmt.Errorf("%w: %w", err, e)
+				}
+				err = e
+			}
+		}
+	}()
+	if err := w.Wait(); err != nil {
+		slog.Error("Download worker failed", "error", err)
 		w.err = err
-		slog.Error("Download worker encountered an error", "error", err)
-		return fmt.Errorf("download worker failed: %w", err)
 	}
-	return nil
+	return err
 }
 
 func (w *DownloadWorker) run() error {

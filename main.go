@@ -37,9 +37,11 @@ type (
 	D = layout.Dimensions
 )
 
+const devVersion = "0.0.0-dev"
+
 var (
 	appName        = "SabaLauncher"
-	version        = "devel"
+	version        = devVersion
 	currentVersion = func() *semver.Version {
 		v, err := semver.NewVersion(version)
 		if err != nil {
@@ -53,18 +55,10 @@ var (
 )
 
 func buildInfo() string {
-	if version == "devel" {
+	if version == devVersion {
 		return "unknown"
 	}
-	return fmt.Sprintf("%s-%s-%s", branch, commit, date)
-}
-
-const versionUrl = "https://raw.githubusercontent.com/ikafly144/sabalauncher/master/meta/version.json"
-const installerUrl = "https://github.com/ikafly144/sabalauncher/releases/download/{version}/SabaLauncher.msi"
-
-type versionInfo struct {
-	Version string `json:"version"`
-	Url     string `json:"url"`
+	return fmt.Sprintf("%s+%s-%s", branch, commit, date)
 }
 
 func main() {
@@ -116,7 +110,7 @@ func loop(w *app.Window) error {
 }
 
 func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
-	if version == "devel" {
+	if version == devVersion {
 		return nil
 	}
 
