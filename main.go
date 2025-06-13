@@ -58,7 +58,7 @@ func buildInfo() string {
 	if version == devVersion {
 		return "unknown"
 	}
-	return fmt.Sprintf("%s+%s-%s", branch, commit, date)
+	return fmt.Sprintf("%s-%s-%s", branch, commit, date)
 }
 
 func main() {
@@ -82,7 +82,7 @@ func loop(w *app.Window) error {
 	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
 	var ops op.Ops
 
-	router := pages.NewRouter(appName, fmt.Sprintf("%s-%s", version, buildInfo()))
+	router := pages.NewRouter(appName, fmt.Sprintf("%s+%s", version, buildInfo()))
 	cache, err := msa.NewCacheAccessor(filepath.Join(resource.DataDir, "msa_cache.json"))
 	if err != nil {
 		slog.Error("failed to create cache accessor", "err", err)
