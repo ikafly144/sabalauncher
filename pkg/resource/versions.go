@@ -140,8 +140,8 @@ func (w *DownloadWorker) Run() (err error) {
 	const (
 		maxProcCount = 8
 	)
-	go func() {
-		for range maxProcCount {
+	for range maxProcCount {
+		go func() {
 			if e := w.run(); e != nil {
 				w.err = e
 				slog.Error("Download worker encountered an error", "error", e)
@@ -150,8 +150,8 @@ func (w *DownloadWorker) Run() (err error) {
 				}
 				err = e
 			}
-		}
-	}()
+		}()
+	}
 	if err := w.Wait(); err != nil {
 		slog.Error("Download worker failed", "error", err)
 		w.err = err

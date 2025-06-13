@@ -1,10 +1,15 @@
 package resource
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/ikafly144/sabalauncher/pkg/msa"
 )
@@ -233,6 +238,79 @@ func (f *ForgeManifestLoader) StartSetup(dataPath string, profilePath string) {
 			f.err = err
 			return
 		}
+
+		// マニフェストファイルを開く
+
+		manifestFile, err := os.OpenFile(filepath.Join(profilePath, "manifest.json"), os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			slog.Error("Failed to open manifest file", "error", err)
+			f.err = err
+			return
+		}
+		defer manifestFile.Close()
+		var oldPack modLoader
+		if info, err := manifestFile.Stat(); err == nil && info.Size() == 0 {
+			if err := json.NewEncoder(manifestFile).Encode(&oldPack); err != nil {
+				slog.Error("Failed to encode mod loader manifest", "error", err)
+				f.err = err
+				return
+			}
+			_, _ = manifestFile.Seek(0, 0)
+		} else if err != nil {
+			slog.Error("Failed to stat manifest file", "error", err)
+			f.err = err
+			return
+		}
+		if err := json.NewDecoder(manifestFile).Decode(&oldPack); err != nil {
+			slog.Error("Failed to decode mod loader manifest", "error", err)
+			f.err = err
+			return
+		}
+
+		// ZIPリーダーを初期化する
+
+		var zipReader *zip.Reader = nil
+		if f.PackURL != "" {
+			resp, err := http.Get(f.PackURL)
+			if err != nil {
+				slog.Error("Failed to download mod pack", "error", err)
+				f.err = err
+				return
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				slog.Error("Failed to download mod pack", "error", resp.Status)
+				f.err = fmt.Errorf("failed to download mod pack: %s", resp.Status)
+				return
+			}
+			zipFile, err := os.CreateTemp(os.TempDir(), f.forgeVersionDirName()+"-*.zip")
+			if err != nil {
+				slog.Error("Failed to create temp zip file", "error", err)
+				f.err = err
+				return
+			}
+			if _, err = io.Copy(zipFile, resp.Body); err != nil {
+				_ = zipFile.Close()
+				slog.Error("Failed to copy response body to zip file", "error", err)
+				f.err = err
+				return
+			}
+			if err := zipFile.Close(); err != nil {
+				slog.Error("Failed to close zip file", "error", err)
+				f.err = err
+				return
+			}
+			r, err := zip.OpenReader(zipFile.Name())
+			if err != nil {
+				slog.Error("Failed to open zip file", "error", err)
+				f.err = err
+				return
+			}
+			defer os.Remove(zipFile.Name())
+			defer r.Close()
+			zipReader = &r.Reader
+		}
+
 		f.state.AddStep(&JavaSetupStep{
 			manifest: m,
 		})
@@ -244,6 +322,11 @@ func (f *ForgeManifestLoader) StartSetup(dataPath string, profilePath string) {
 		})
 		f.state.AddStep(&LibraryDownloadStep{
 			manifest: &forgeManifest,
+		})
+		f.state.AddStep(&ModDownloadStep{
+			zipReader: zipReader,
+			oldMods:   &oldPack,
+			newMods:   f.Pack,
 		})
 		if err := f.state.Do(&SetupContext{
 			dataPath:    dataPath,
