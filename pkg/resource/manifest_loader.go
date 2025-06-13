@@ -84,6 +84,8 @@ func (v *VanillaManifestLoader) VersionName() string {
 func (v *VanillaManifestLoader) StartSetup(dataPath string, profile string) {
 	v.state = NewState("Vanillaのセットアップ", "vanilla_setup")
 	go func() {
+		_ = os.MkdirAll(dataPath, 0755)
+		_ = os.MkdirAll(profile, 0755)
 		ver, err := GetVersion(v.VersionID)
 		if err != nil {
 			slog.Error("Failed to get version", "error", err)
@@ -226,6 +228,8 @@ func (f *ForgeManifestLoader) Error() error {
 func (f *ForgeManifestLoader) StartSetup(dataPath string, profilePath string) {
 	f.state = NewState("Forgeのセットアップ", "forge_setup")
 	go func() {
+		_ = os.MkdirAll(dataPath, 0755)
+		_ = os.MkdirAll(profilePath, 0755)
 		ver, err := GetVersion(f.VanillaVersion)
 		if err != nil {
 			slog.Error("Failed to get version", "error", err)
