@@ -1,6 +1,8 @@
 package resource
 
 import (
+	"bytes"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -42,6 +44,21 @@ func (p *Profile) DeleteManifestCache(profilePath string) error {
 	return os.RemoveAll(filepath.Join(profilePath, "manifest.json"))
 }
 
+//go:embed default_icon.png
+var defaultIconData []byte
+var defaultIconImage image.Image
+
+func init() {
+	img, _, err := image.Decode(bytes.NewReader(defaultIconData))
+	if err != nil {
+		slog.Error("Failed to decode default icon", "error", err)
+		// fallback to a black square
+		defaultIconImage = image.NewUniform(color.RGBA{R: 0, G: 0, B: 0, A: 255})
+	} else {
+		defaultIconImage = img
+	}
+}
+
 func (p *Profile) UnmarshalJSON(data []byte) error {
 	type Alias Profile
 	aux := &struct {
@@ -60,6 +77,7 @@ func (p *Profile) UnmarshalJSON(data []byte) error {
 	if p.Version != CurrentProfileVersion {
 		return fmt.Errorf("unsupported profile version: %d", p.Version)
 	}
+	p.IconImage = defaultIconImage
 	if p.Icon != "" {
 		// load icon as base64 img
 		img, _, err := image.Decode(base64.NewDecoder(base64.StdEncoding, strings.NewReader(p.Icon)))
@@ -67,7 +85,7 @@ func (p *Profile) UnmarshalJSON(data []byte) error {
 			slog.Error("Failed to decode icon", "error", err)
 			// placeholder image
 			// black square
-			img = image.NewUniform(color.RGBA{R: 0, G: 0, B: 0, A: 255})
+			img = defaultIconImage
 		}
 		p.IconImage = img
 	}
