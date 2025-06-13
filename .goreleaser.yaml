@@ -26,5 +26,5 @@ release:
 env_files:
   github_token: .config/goreleaser/github_token
 snapshot:
-  version_template: "{{.Version}}+{{.Commit}}"
+  version_template: "1.4.0"
 version: 2

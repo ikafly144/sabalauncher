@@ -109,9 +109,9 @@
         <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed</Publish>
     </UI>
 
-    <!-- <InstallExecuteSequence>
-        <Custom Action='LaunchApplication' After='InstallFinalize'>UILevel = 4 OR UILevel = 3 OR UILevel = 2</Custom>
-    </InstallExecuteSequence> -->
+    <InstallExecuteSequence>
+        <Custom Action='LaunchApplication' After='InstallFinalize'>(UILevel = 4 OR UILevel = 3 OR UILevel = 2) AND NOT Installed</Custom>
+    </InstallExecuteSequence>
 
     <WixVariable Id="WixUIDialogBmp" Value=".\launcher_dialog.jpg" />
     <WixVariable Id="WixUIBannerBmp" Value=".\launcher_banner.jpg" />
