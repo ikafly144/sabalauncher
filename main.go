@@ -66,6 +66,8 @@ func buildInfo() string {
 }
 
 func init() {
+	logging.MaxSizeMB = 8
+	logging.WithStdout = true
 	slog.SetDefault(logging.NewLogger(filepath.Join(resource.DataDir, "log", "latest.log")))
 }
 
