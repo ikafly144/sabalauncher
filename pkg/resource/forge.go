@@ -61,8 +61,8 @@ func InstallForge(installerPath, dataPath string) error {
 	}
 	cmd := exec.Command("java", "-jar", installerPath, "--installClient", dataPath)
 	cmd.Dir = filepath.Join(filepath.Dir(installerPath))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
+	cmd.Stderr = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()
 	if err := cmd.Run(); err != nil {
 		return err

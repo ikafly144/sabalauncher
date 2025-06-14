@@ -7,6 +7,7 @@ require (
 	gioui.org/x v0.8.1
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.4.2
 	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/bugph0bia/go-logging v1.0.0
 	github.com/disgoorg/json v1.2.0
 	github.com/google/go-github/v72 v72.0.0
 	github.com/google/uuid v1.3.0
@@ -54,6 +55,7 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/src-d/go-billy.v4 v4.3.2 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

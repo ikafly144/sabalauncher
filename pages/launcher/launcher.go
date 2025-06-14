@@ -167,7 +167,15 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 												Axis:      layout.Vertical,
 											}.Layout(gtx,
 												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-													return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(th, 16, p.Profiles[index].Name).Layout)
+													return layout.Inset{
+														Top:    unit.Dp(16),
+														Left:   unit.Dp(16),
+														Right:  unit.Dp(16),
+														Bottom: unit.Dp(8),
+													}.Layout(gtx, material.Label(th, 16, p.Profiles[index].Name).Layout)
+												}),
+												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+													return layout.UniformInset(unit.Dp(8)).Layout(gtx, material.Body2(th, p.Profiles[index].Description).Layout)
 												}),
 												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 													return layout.UniformInset(unit.Dp(8)).Layout(gtx, material.Body2(th, "バージョン: "+p.Profiles[index].Manifest.VersionName()).Layout)

@@ -26,9 +26,10 @@ const (
 )
 
 type Profile struct {
-	Name      string      `json:"name"`
-	Icon      string      `json:"icon"`
-	IconImage image.Image `json:"-"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Icon        string      `json:"icon"`
+	IconImage   image.Image `json:"-"`
 	// Path to the profile
 	Path          string `json:"-"`
 	ServerAddress string `json:"server_address,omitempty"`

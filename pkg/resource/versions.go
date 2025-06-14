@@ -656,8 +656,8 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 
 	cmd := exec.Command(cmds[0], cmds[1:]...)
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stdout
+	cmd.Stdout = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
+	cmd.Stderr = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()
 	cmd.Dir = profile.Path
 

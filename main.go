@@ -11,9 +11,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/bugph0bia/go-logging"
 	"github.com/google/go-github/v72/github"
 	"github.com/ikafly144/sabalauncher/pages"
 	"github.com/ikafly144/sabalauncher/pages/account"
@@ -39,6 +41,8 @@ type (
 
 const devVersion = "0.0.0-dev"
 
+var installerRegex = regexp.MustCompile(`SabaLauncher-(\d+\.\d+\.\d+)(-(\d+))?\.msi`)
+
 var (
 	appName        = "SabaLauncher"
 	version        = devVersion
@@ -59,6 +63,10 @@ func buildInfo() string {
 		return "unknown"
 	}
 	return fmt.Sprintf("%s-%s-%s", branch, commit, date)
+}
+
+func init() {
+	slog.SetDefault(logging.NewLogger(filepath.Join(resource.DataDir, "log", "latest.log")))
 }
 
 func main() {
@@ -134,7 +142,7 @@ func checkVersion(w *app.Window, th *material.Theme, ops *op.Ops) error {
 		}
 		var assetID int64
 		for _, asset := range assets {
-			if asset.GetName() == "SabaLauncher.msi" {
+			if asset.GetName() == "SabaLauncher.msi" || installerRegex.MatchString(asset.GetName()) {
 				assetID = asset.GetID()
 				break
 			}
@@ -199,8 +207,8 @@ func installNewVersion(client *github.Client, versionTag string, assetID int64) 
 	}
 	cl()
 	cmd := exec.Command("msiexec", "/passive", "/i", file.Name())
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
+	cmd.Stderr = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
 	cmd.Dir = dir
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()
 	if err := cmd.Start(); err != nil {
