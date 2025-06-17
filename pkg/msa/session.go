@@ -128,6 +128,25 @@ func (s *session) StartLogin() error {
 			s.resultError = err
 			return
 		}
+		accounts, err := s.client.Accounts(context.Background())
+		if err != nil {
+			s.result = nil
+			s.resultError = fmt.Errorf("failed to get accounts: %w", err)
+		} else if len(accounts) == 0 {
+			s.result = nil
+			s.resultError = fmt.Errorf("no accounts found after login")
+		}
+		if len(accounts) > 1 {
+			for _, account := range accounts {
+				if account.Key() != result.Account.Key() {
+					slog.Info("Multiple accounts found", "account", account)
+					if err := s.client.RemoveAccount(context.Background(), account); err != nil {
+						slog.Error("Failed to remove account", "account", account, "error", err)
+					}
+					break
+				}
+			}
+		}
 		slog.Info("Login successful", "result", result)
 		if len(result.DeclinedScopes) > 0 {
 			slog.Warn("Login with declined scopes", "declinedScopes", result.DeclinedScopes)

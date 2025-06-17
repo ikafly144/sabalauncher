@@ -121,7 +121,20 @@ func NewMinecraftAccount(s Session) (*MinecraftAccount, error) {
 		return nil, fmt.Errorf("アカウントの取得に失敗しました: %w", err)
 	}
 	if len(accounts) > 1 {
-		return nil, fmt.Errorf("複数のアカウントが見つかりました。1つを選択してください（開発者に報告してください）: %v", accounts)
+		var err error
+		for _, account := range accounts {
+			e := session.client.RemoveAccount(context.Background(), account)
+			if e != nil {
+				slog.Error("Failed to remove account", "account", account, "error", e)
+				err = e
+			} else {
+				slog.Info("Removed account", "account", account)
+			}
+		}
+		if err != nil {
+			slog.Error("Failed to remove multiple accounts", "error", err)
+		}
+		return nil, fmt.Errorf("複数のアカウントが見つかりました。再ログインしてください。: %v", accounts)
 	}
 	if len(accounts) == 0 {
 		return nil, fmt.Errorf("アカウントが見つかりません。ログインしてください")
