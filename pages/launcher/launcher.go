@@ -1,11 +1,15 @@
 package launcher
 
 import (
+	"archive/zip"
 	"image"
 	"image/color"
 	"log/slog"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/ikafly144/sabalauncher/applayout"
 	"github.com/ikafly144/sabalauncher/icon"
@@ -46,6 +50,9 @@ type Page struct {
 	success       *bool
 	booted        bool
 	bootError     error
+	saveLogButton widget.Clickable
+	saveLog       atomic.Bool
+	saveError     error
 	// playStatus        string
 	// playDownloadTotal int
 	// worker            *resource.DownloadWorker
@@ -115,6 +122,40 @@ func (p *Page) NavItem() component.NavItem {
 
 func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	gtx.Execute(op.InvalidateCmd{})
+	if p.saveLogButton.Clicked(gtx) && !p.saveLog.Load() {
+		go func() {
+			p.saveLog.Store(true)
+			defer p.saveLog.Store(false)
+
+			file, err := p.Router.Explorer.CreateFile("launcher_log.zip")
+			if err != nil {
+				slog.Error("Failed to create log file", "error", err)
+				p.saveError = err
+				return
+			}
+			defer file.Close()
+
+			dir := os.DirFS(filepath.Join(resource.DataDir, "log"))
+			zip.NewWriter(file)
+			zw := zip.NewWriter(file)
+			defer func() {
+				if err := zw.Close(); err != nil {
+					slog.Error("Failed to close zip writer", "error", err)
+					p.saveError = err
+				}
+			}()
+			if err := zw.AddFS(dir); err != nil {
+				slog.Error("Failed to add files to zip", "error", err)
+				p.saveError = err
+				return
+			}
+			if err := zw.Flush(); err != nil {
+				slog.Error("Failed to flush zip writer", "error", err)
+				p.saveError = err
+				return
+			}
+		}()
+	}
 	p.List.Axis = layout.Vertical
 	layout.Flex{
 		Alignment: layout.Middle,
@@ -196,6 +237,12 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 														p.playModal.Appear(gtx.Now)
 														p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
 														p.playModal.Widget = (func(gtx layout.Context, __th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
+															for {
+																_, ok := p.playModalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)
+																if !ok {
+																	break
+																}
+															}
 															__p := __th.Palette
 															if anim.Animating() || anim.State == component.Invisible {
 																revealed := anim.Revealed(gtx)
@@ -253,6 +300,9 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																		break
 																	}
 																}
+																pr := clip.Rect(image.Rectangle{Max: gtx.Constraints.Max})
+																defer pr.Push(gtx.Ops).Pop()
+																event.Op(gtx.Ops, p.playModalDrag)
 																dims := layout.Background{}.Layout(gtx,
 																	func(gtx layout.Context) layout.Dimensions {
 																		return component.Rect{
@@ -274,12 +324,34 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																				}),
 																				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 																					if p.bootError != nil {
-																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, p.bootError.Error()).Layout)
+																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+																							return layout.Flex{
+																								Axis: layout.Vertical,
+																							}.Layout(gtx,
+																								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																									return material.Label(&th, 28, p.bootError.Error()).Layout(gtx)
+																								}),
+																								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																									return material.Button(&th, &p.saveLogButton, "ログを保存").Layout(gtx)
+																								}),
+																							)
+																						})
 																					}
 																					if p.booted && p.success == nil {
 																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, "ゲームを起動中").Layout)
 																					} else if p.success != nil && *p.success {
-																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, "ゲームが終了しました").Layout)
+																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+																							return layout.Flex{
+																								Axis: layout.Vertical,
+																							}.Layout(gtx,
+																								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																									return material.Label(&th, 28, "ゲームが終了しました").Layout(gtx)
+																								}),
+																								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																									return material.Button(&th, &p.saveLogButton, "ログを保存").Layout(gtx)
+																								}),
+																							)
+																						})
 																					}
 																					if p.Profiles[index].Manifest.Error() != nil {
 																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, p.Profiles[index].Manifest.Error().Error()).Layout)
@@ -290,9 +362,11 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																		})
 																	},
 																)
-																if p.success == nil {
-																	p.playModalDrag.Add(gtx.Ops)
+																if p.success != nil {
+																	defer pointer.PassOp{}.Push(gtx.Ops).Pop()
+																	defer clip.Rect(image.Rectangle{Max: gtx.Constraints.Max}).Push(gtx.Ops).Pop()
 																}
+																p.playModalDrag.Add(gtx.Ops)
 																return dims
 															})
 														})
@@ -321,7 +395,6 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 				__p := __th.Palette
 				animating := anim.Animating() || anim.State == component.Invisible
 				if animating {
-					slog.Info("animating", "state", anim.State.String())
 					revealed := anim.Revealed(gtx)
 					currentAlpha := uint8(float32(255) * revealed)
 					if currentAlpha < 10 {

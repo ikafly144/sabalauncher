@@ -32,6 +32,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/widget/material"
+	"gioui.org/x/explorer"
 )
 
 type (
@@ -94,6 +95,7 @@ func loop(w *app.Window) error {
 	var ops op.Ops
 
 	router := pages.NewRouter(appName, fmt.Sprintf("%s+%s", version, buildInfo()))
+	router.Explorer = explorer.NewExplorer(w)
 	cache, err := msa.NewCacheAccessor(filepath.Join(resource.DataDir, "msa_cache.json"))
 	if err != nil {
 		slog.Error("failed to create cache accessor", "err", err)

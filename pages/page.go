@@ -11,6 +11,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
+	"gioui.org/x/explorer"
 )
 
 type Page interface {
@@ -29,6 +30,7 @@ type Router struct {
 	*component.ModalLayer
 	NonModalDrawer, BottomBar bool
 	Cache                     *msa.CacheAccessor
+	Explorer                  *explorer.Explorer
 }
 
 func NewRouter(name, description string) Router {
