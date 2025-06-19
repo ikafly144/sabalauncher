@@ -300,9 +300,11 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																		break
 																	}
 																}
-																pr := clip.Rect(image.Rectangle{Max: gtx.Constraints.Max})
-																defer pr.Push(gtx.Ops).Pop()
-																event.Op(gtx.Ops, p.playModalDrag)
+																if p.success != nil {
+																	pr := clip.Rect(image.Rectangle{Max: gtx.Constraints.Max})
+																	defer pr.Push(gtx.Ops).Pop()
+																	event.Op(gtx.Ops, p.playModalDrag)
+																}
 																dims := layout.Background{}.Layout(gtx,
 																	func(gtx layout.Context) layout.Dimensions {
 																		return component.Rect{
@@ -365,8 +367,9 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																if p.success != nil {
 																	defer pointer.PassOp{}.Push(gtx.Ops).Pop()
 																	defer clip.Rect(image.Rectangle{Max: gtx.Constraints.Max}).Push(gtx.Ops).Pop()
+																} else {
+																	p.playModalDrag.Add(gtx.Ops)
 																}
-																p.playModalDrag.Add(gtx.Ops)
 																return dims
 															})
 														})
