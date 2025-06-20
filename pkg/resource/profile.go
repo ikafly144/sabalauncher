@@ -9,6 +9,7 @@ import (
 	"image"
 	"image/color"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,7 +28,8 @@ const (
 
 type Profile struct {
 	Name        string      `json:"name"`
-	Description string      `json:"description"`
+	DisplayName string      `json:"display_name,omitempty"`
+	Description string      `json:"description,omitempty"`
 	Icon        string      `json:"icon"`
 	IconImage   image.Image `json:"-"`
 	// Path to the profile
@@ -39,6 +41,13 @@ type Profile struct {
 	Manifest ManifestLoader `json:"manifest"`
 
 	Version int `json:"version,omitempty"`
+}
+
+func (p *Profile) Display() string {
+	if p.DisplayName != "" {
+		return p.DisplayName
+	}
+	return p.Name
 }
 
 func (p *Profile) DeleteManifestCache(profilePath string) error {
@@ -71,12 +80,12 @@ func (p *Profile) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
+	if p.Version != CurrentProfileVersion {
+		return fmt.Errorf("unsupported profile version: %d", p.Version)
+	}
 	aux.Alias.Manifest = aux.Manifest.ManifestLoader
 	if p.Path == "" {
 		p.Path = filepath.Join(DataDir, "profile", p.Name)
-	}
-	if p.Version != CurrentProfileVersion {
-		return fmt.Errorf("unsupported profile version: %d", p.Version)
 	}
 	p.IconImage = defaultIconImage
 	if p.Icon != "" {
@@ -91,6 +100,32 @@ func (p *Profile) UnmarshalJSON(data []byte) error {
 		p.IconImage = img
 	}
 	return nil
+}
+
+func (p *Profile) Fetch() error {
+	if p.Source == "" {
+		return nil // No source to fetch from
+	}
+	resp, err := http.Get(p.Source)
+	if err != nil {
+		slog.Error("Failed to fetch profile from source", "source", p.Source, "error", err)
+		return err
+	}
+	defer resp.Body.Close()
+	var profiles []Profile
+	if err := json.NewDecoder(resp.Body).Decode(&profiles); err != nil {
+		slog.Error("Failed to decode fetched profile", "source", p.Source, "error", err)
+		return err
+	}
+	for _, profile := range profiles {
+		if profile.Name == p.Name {
+			profile.Source = p.Source // Ensure the source is set
+			*p = profile              // Update the current profile with the fetched one
+			return nil
+		}
+	}
+	slog.Error("Profile not found in fetched data", "name", p.Name, "source", p.Source)
+	return fmt.Errorf("profile %s not found in fetched data from %s", p.Name, p.Source)
 }
 
 func (p *Profile) GetIcon() *widget.Image {

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/ikafly144/sabalauncher/pkg/resource"
@@ -58,6 +60,13 @@ func (p *Page) loadProfiles() {
 	if len(profilesTP) > 0 {
 		newProfiles = append(newProfiles, profilesTP...)
 	}
+	sort.SliceStable(newProfiles, func(i, j int) bool {
+		cmp := strings.Compare(newProfiles[i].Name, newProfiles[j].Name)
+		if cmp != 0 {
+			return cmp < 0
+		}
+		return newProfiles[i].Source < newProfiles[j].Source
+	})
 	p.Profiles = newProfiles
 	slog.Info("Loaded profiles", "profiles", p.Profiles)
 }

@@ -213,7 +213,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 														Left:   unit.Dp(16),
 														Right:  unit.Dp(16),
 														Bottom: unit.Dp(8),
-													}.Layout(gtx, material.Label(th, 16, p.Profiles[index].Name).Layout)
+													}.Layout(gtx, material.Label(th, 16, p.Profiles[index].Display()).Layout)
 												}),
 												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 													return layout.UniformInset(unit.Dp(8)).Layout(gtx, material.Body2(th, p.Profiles[index].Description).Layout)
@@ -235,7 +235,12 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 														p.booted = false
 														p.bootError = nil
 														p.playModal.Appear(gtx.Now)
-														p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
+														go func() {
+															if err := p.Profiles[index].Fetch(); err != nil {
+																slog.Error("Failed to fetch profile", "error", err)
+															}
+															p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
+														}()
 														p.playModal.Widget = (func(gtx layout.Context, __th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
 															for {
 																_, ok := p.playModalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)

@@ -215,7 +215,13 @@ func (f *ForgeManifestLoader) forgeVersionDirName() string {
 }
 
 func (f *ForgeManifestLoader) IsDone() bool {
-	return f.state.IsDone()
+	if f.err != nil {
+		return true
+	}
+	if f.state != nil {
+		return f.state.IsDone()
+	}
+	return false
 }
 
 func (f *ForgeManifestLoader) Error() error {
@@ -368,7 +374,10 @@ func (f *ForgeManifestLoader) Boot(dataPath string, profile *Profile, account *m
 }
 
 func (f *ForgeManifestLoader) CurrentStatus() string {
-	return f.state.FriendlyName()
+	if f.state != nil {
+		return f.state.FriendlyName()
+	}
+	return "初期化中"
 }
 
 func (f *ForgeManifestLoader) CurrentProgress() float64 {
