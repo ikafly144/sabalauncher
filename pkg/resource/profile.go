@@ -135,7 +135,21 @@ func (p *Profile) Fetch() error {
 	for _, profile := range profiles {
 		if profile.Name == p.Name {
 			profile.Source = p.Source // Ensure the source is set
-			*p = profile              // Update the current profile with the fetched one
+			u, err := url.Parse(profile.Source)
+			if err != nil {
+				slog.Error("Invalid source URL", "source", profile.Source, "error", err)
+				return fmt.Errorf("invalid source URL: %w", err)
+			}
+			if u.Scheme == "" {
+				slog.Error("Invalid source URL scheme", "source", profile.Source)
+				return fmt.Errorf("invalid source URL scheme: %s", profile.Source)
+			}
+			if u.Host == "" {
+				slog.Error("Invalid source URL host", "source", profile.Source)
+				return fmt.Errorf("invalid source URL host: %s", profile.Source)
+			}
+			profile.Path = filepath.Join(DataDir, "profiles", u.Host, profile.Name)
+			*p = profile // Update the current profile with the fetched one
 			return nil
 		}
 	}
