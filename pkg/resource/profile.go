@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,7 +86,21 @@ func (p *Profile) UnmarshalJSON(data []byte) error {
 	}
 	aux.Alias.Manifest = aux.Manifest.ManifestLoader
 	if p.Path == "" {
-		p.Path = filepath.Join(DataDir, "profile", p.Name)
+		p.Path = filepath.Join(DataDir, "profiles", "local", p.Name)
+	}
+
+	if p.Source != "" {
+		u, err := url.Parse(p.Source)
+		if err != nil {
+			return fmt.Errorf("invalid source URL: %w", err)
+		}
+		if u.Scheme == "" {
+			return fmt.Errorf("invalid source URL: %w", err)
+		}
+		if u.Host == "" {
+			return fmt.Errorf("invalid source URL: %w", err)
+		}
+		p.Path = filepath.Join(DataDir, "profiles", u.Host, p.Name)
 	}
 	p.IconImage = defaultIconImage
 	if p.Icon != "" {
