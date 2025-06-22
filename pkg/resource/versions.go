@@ -636,7 +636,17 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 			}
 			gameArgs = append(gameArgs, arg.String())
 		case GameArgumentRule:
-			if len(arg.Rules) != 1 || !arg.Rules[0].Action.Allowed() || !arg.Rules[0].Features.IsQuickPlayMultiplayer {
+			if !slices.ContainsFunc(arg.Rules, func(rule GameArgumentRuleType) bool {
+				if !rule.Action.Allowed() {
+					return false
+				}
+				switch {
+				case rule.Features.IsQuickPlayMultiplayer:
+					return profile.ServerAddress != ""
+				default:
+					return false
+				}
+			}) {
 				slog.Info("Skipping game argument", "argument", arg)
 				continue
 			}
