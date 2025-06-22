@@ -71,6 +71,11 @@ func init() {
 	logging.WithStdout = true
 	logging.MaxBackups = 200
 	slog.SetDefault(logging.NewLogger(filepath.Join(resource.DataDir, "log", "latest.log")))
+	if err := resource.Login(); err != nil {
+		slog.Error("failed to login to Discord RPC", "err", err)
+	} else {
+		slog.Info("Discord RPC logged in")
+	}
 }
 
 func main() {
@@ -84,6 +89,7 @@ func main() {
 		if err := loop(w); err != nil {
 			log.Fatal(err)
 		}
+		resource.Logout()
 		os.Exit(0)
 	}()
 	app.Main()

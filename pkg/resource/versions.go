@@ -671,9 +671,20 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()
 	cmd.Dir = profile.Path
 
+	activity, err := SetActivity(profile, mcProfile)
+	if err != nil {
+		slog.Error("Failed to set activity", "error", err)
+	}
+
 	if err := cmd.Run(); err != nil {
 		slog.Error("Failed to run game command", "error", err)
 		return err
+	}
+
+	if activity != nil {
+		if err := EndActivity(activity); err != nil {
+			slog.Error("Failed to end activity", "error", err)
+		}
 	}
 
 	return nil
