@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
 	github.com/ulikunitz/xz v0.5.12
-	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0
+	golang.org/x/exp/shiny v0.0.0-20250620022241-b7579e27df2b
 )
 
 require (
