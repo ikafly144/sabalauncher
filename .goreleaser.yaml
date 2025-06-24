@@ -18,7 +18,7 @@ builds:
         - go tool go-licenses save . --save_path pages/licenses/dist_licenses --force
       post:
         - go tool go-msi generate-templates --version {{.Version}} --out build-logic/ --src templates/
-        - cmd /c .\build-logic\post_build.bat
+        - cmd /c .\scripts\post_build.bat
 release:
   draft: true
   extra_files:
