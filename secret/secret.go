@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io/fs"
 	"strings"
+
+	"golang.org/x/exp/slog"
 )
 
 //go:generate go run github.com/ikafly144/sabalauncher/secret/gen
@@ -12,12 +14,13 @@ import (
 //go:embed local/*
 var localRaw embed.FS
 
-var localEntry map[string]string
+var localEntry = make(map[string]string)
 
 func init() {
 	entry, err := fs.ReadDir(localRaw, "local")
 	if err != nil {
-		panic(err)
+		slog.Error("failed to read local secrets", "error", err)
+		return
 	}
 	for _, e := range entry {
 		if e.IsDir() {
@@ -28,12 +31,16 @@ func init() {
 		}
 		f, err := localRaw.Open("local/" + e.Name())
 		if err != nil {
-			panic(err)
+			slog.Error("failed to open local secret file", "file", e.Name(), "error", err)
+			// ファイルが開けなかった場合はスキップ
+			continue
 		}
 		defer f.Close()
 		var m map[string]string
 		if err := json.NewDecoder(f).Decode(&m); err != nil {
-			panic(err)
+			slog.Error("failed to decode local secret file", "file", e.Name(), "error", err)
+			// JSONのデコードに失敗した場合はスキップ
+			continue
 		}
 		if localEntry == nil {
 			localEntry = make(map[string]string)
