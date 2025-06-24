@@ -66,5 +66,6 @@ func GetSecret(key string) (value string) {
 	if v, ok := localEntry[key]; ok {
 		return v
 	}
+	slog.Warn("secret not found", "key", key)
 	return ""
 }
