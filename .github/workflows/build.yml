@@ -1,4 +1,4 @@
-name: build SabaLauncher
+name: Build SabaLauncher
 on:
   pull_request:
     branches:
