@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ドキュメント - SabaLauncher</title>
+    <meta name="description" content="SabaLauncherの詳細なドキュメントとセットアップガイド">
+    <link rel="icon" type="image/x-icon" href="assets/launcher_icon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        .docs-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.8;
+        }
+
+        .docs-nav {
+            background: #f7fafc;
+            padding: 2rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .docs-nav .container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: #4a5568;
+        }
+
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .docs-sidebar {
+            position: fixed;
+            top: 100px;
+            left: 2rem;
+            width: 250px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+        }
+
+        .docs-sidebar h3 {
+            margin-bottom: 1rem;
+            color: #1a202c;
+            font-size: 1.1rem;
+        }
+
+        .docs-sidebar ul {
+            list-style: none;
+        }
+
+        .docs-sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .docs-sidebar a {
+            color: #4a5568;
+            text-decoration: none;
+            display: block;
+            padding: 0.25rem 0;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .docs-sidebar a:hover {
+            color: #667eea;
+            background-color: rgba(102, 126, 234, 0.1);
+            padding-left: 0.5rem;
+        }
+
+        .docs-main {
+            margin-left: 300px;
+            padding: 2rem;
+        }
+
+        .docs-content h1,
+        .docs-content h2,
+        .docs-content h3,
+        .docs-content h4 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .docs-content h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+        }
+
+        .docs-content h2 {
+            font-size: 2rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+        }
+
+        .docs-content h3 {
+            font-size: 1.5rem;
+        }
+
+        .docs-content h4 {
+            font-size: 1.25rem;
+        }
+
+        .docs-content p {
+            margin-bottom: 1rem;
+        }
+
+        .docs-content code {
+            background: #f7fafc;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #e53e3e;
+        }
+
+        .docs-content pre {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        .docs-content pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+
+        .docs-content ul,
+        .docs-content ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+
+        .docs-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #ebf8ff;
+            border-color: #3182ce;
+            color: #2c5282;
+        }
+
+        .alert-warning {
+            background: #fffbeb;
+            border-color: #d69e2e;
+            color: #744210;
+        }
+
+        .alert-danger {
+            background: #fed7d7;
+            border-color: #e53e3e;
+            color: #742a2a;
+        }
+
+        @media (max-width: 1024px) {
+            .docs-sidebar {
+                display: none;
+            }
+
+            .docs-main {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <img src="assets/launcher_icon.ico" alt="SabaLauncher Logo" class="nav-logo">
+                    <span class="nav-title">SabaLauncher</span>
+                </div>
+                <ul class="nav-menu">
+                    <li class="nav-item"><a href="index.html" class="nav-link">ホーム</a></li>
+                    <li class="nav-item"><a href="docs.html" class="nav-link">ドキュメント</a></li>
+                    <li class="nav-item"><a href="https://github.com/ikafly144/sabalauncher" class="nav-link"
+                            target="_blank">GitHub</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Docs Navigation -->
+    <section class="docs-nav">
+        <div class="container">
+            <nav class="breadcrumb">
+                <a href="index.html">ホーム</a>
+                <span>›</span>
+                <span>ドキュメント</span>
+            </nav>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="docs-main">
+        <!-- Sidebar -->
+        <aside class="docs-sidebar">
+            <h3>目次</h3>
+            <ul>
+                <li><a href="#getting-started">はじめての方へ</a></li>
+                <li><a href="#installation">インストール</a></li>
+                <li><a href="#login">ログイン</a></li>
+                <li><a href="#joining-server">サーバー参加</a></li>
+                <li><a href="#playing">ゲームプレイ</a></li>
+                <li><a href="#updates">アップデート</a></li>
+                <li><a href="#troubleshooting">困ったときは</a></li>
+            </ul>
+        </aside> <!-- Content -->
+        <main class="docs-content">
+            <h1>SabaLauncher 使い方ガイド</h1>
+
+            <section id="getting-started">
+                <h2>はじめての方へ</h2>
+                <p>SabaLauncherは、Minecraftサーバーの参加者向けに設計されたランチャーです。管理者が提供するプロファイルURLを追加するだけで、面倒なModpack環境の構築が全自動で完了します。
+                </p>
+
+                <h3>SabaLauncherの特徴</h3>
+                <ul>
+                    <li><strong>簡単セットアップ:</strong> プロファイルURLを追加するだけ</li>
+                    <li><strong>全自動環境構築:</strong> Modpackのダウンロードとインストールが自動</li>
+                    <li><strong>自動アップデート:</strong> サーバー管理者の更新が自動で反映</li>
+                    <li><strong>複数サーバー対応:</strong> 複数のサーバープロファイルを管理可能</li>
+                    <li><strong>安全性:</strong> 公式Microsoft認証でアカウント保護</li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <strong>重要:</strong> このランチャーを使用するには、サーバー管理者からプロファイルURLを提供してもらう必要があります。
+                </div>
+            </section>
+
+            <section id="installation">
+                <h2>インストール</h2>
+
+                <h3>ステップ1: ダウンロード</h3>
+                <ol>
+                    <li><a href="https://github.com/ikafly144/sabalauncher/releases/latest"
+                            target="_blank">こちら</a>から最新版のMSIファイルをダウンロード</li>
+                    <li>ダウンロードした<code>SabaLauncher.msi</code>をダブルクリック</li>
+                </ol>
+
+                <h3>ステップ2: インストール</h3>
+                <ol>
+                    <li>インストールウィザードが開始されます</li>
+                    <li>「次へ」をクリックして進めます</li>
+                    <li>ライセンス条項を確認し、同意にチェックを入れます</li>
+                    <li>インストール先を確認し、「インストール」をクリック</li>
+                    <li>インストール完了後、「完了」をクリック</li>
+                </ol>
+
+                <h3>ステップ3: 起動</h3>
+                <p>スタートメニューから「SabaLauncher」を選択して起動します。</p>
+
+                <div class="alert alert-warning">
+                    <strong>セキュリティ警告について:</strong> Windows Defenderが警告を表示する場合がありますが、「詳細情報」→「実行」で起動できます。
+                </div>
+            </section>
+
+            <section id="login">
+                <h2>Microsoftアカウントでログイン</h2>
+
+                <h3>初回ログイン</h3>
+                <ol>
+                    <li>SabaLauncherを起動します</li>
+                    <li>「Microsoftアカウントでログイン」ボタンをクリック</li>
+                    <li>ブラウザが自動で開きます</li>
+                    <li>Microsoftアカウントでログインします</li>
+                    <li>Minecraftの購入確認が行われます</li>
+                    <li>認証完了後、ランチャーに戻ります</li>
+                </ol>
+
+                <div class="alert alert-info">
+                    <strong>注意:</strong> Minecraftを購入済みのMicrosoftアカウントが必要です。アカウントをお持ちでない場合は、<a
+                        href="https://www.minecraft.net/" target="_blank">公式サイト</a>から購入してください。
+                </div>
+            </section>
+
+            <section id="joining-server">
+                <h2>サーバーへの参加方法</h2>
+
+                <h3>プロファイルURLの追加</h3>
+                <ol>
+                    <li>サーバー管理者からプロファイルURLを受け取ります</li>
+                    <li>ランチャーで「プロファイルを追加」をクリック</li>
+                    <li>「配布URL」を選択します</li>
+                    <li>管理者から提供されたURLを入力します</li>
+                    <li>「追加」ボタンをクリックします</li>
+                </ol>
+
+                <h3>自動環境構築</h3>
+                <p>プロファイル追加後、以下が自動で実行されます：</p>
+                <ul>
+                    <li>Modpackの情報取得</li>
+                    <li>必要なMinecraftバージョンのダウンロード</li>
+                    <li>Forgeの自動インストール</li>
+                    <li>Modファイルのダウンロード</li>
+                    <li>設定ファイルの配置</li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <strong>ヒント:</strong> 初回セットアップは時間がかかります。ダウンロード進捗バーが表示されるので、完了まで待ちましょう。
+                </div>
+            </section>
+
+            <section id="playing">
+                <h2>ゲームの起動とプレイ</h2>
+
+                <h3>ゲーム起動</h3>
+                <ol>
+                    <li>ランチャーでプレイしたいプロファイルを選択</li>
+                    <li>「プレイ」ボタンをクリック</li>
+                    <li>起動準備とファイルチェックが実行されます</li>
+                    <li>Minecraftが自動で起動します</li>
+                </ol>
+
+                <h3>マルチプレイサーバーへの接続</h3>
+                <p>ゲーム起動後は通常のMinecraftと同じです：</p>
+                <ol>
+                    <li>Minecraftのメニューで「マルチプレイ」を選択</li>
+                    <li>「サーバーを追加」でサーバーアドレスを入力</li>
+                    <li>サーバーに接続してゲームを楽しみます</li>
+                </ol>
+
+                <h3>Discord Rich Presence</h3>
+                <p>Discordを起動している場合、プレイ状況が自動でフレンドに表示されます。</p>
+            </section>
+
+            <section id="updates">
+                <h2>アップデートについて</h2>
+
+                <h3>自動アップデート</h3>
+                <p>サーバー管理者がModpackを更新した場合：</p>
+                <ul>
+                    <li>次回プレイ時に自動でアップデートが実行されます</li>
+                    <li>新しいModや設定ファイルが自動でダウンロードされます</li>
+                    <li>古いファイルは自動で削除されます</li>
+                    <li>特別な操作は必要ありません</li>
+                </ul>
+
+                <h3>手動アップデートチェック</h3>
+                <p>手動でアップデートを確認したい場合：</p>
+                <ol>
+                    <li>プロファイルを右クリック</li>
+                    <li>「キャッシュを削除」を選択</li>
+                    <li>次回起動時に最新版がダウンロードされます</li>
+                </ol>
+            </section>
+
+            <section id="troubleshooting">
+                <h2>困ったときは</h2>
+
+                <h3>よくある問題と解決方法</h3>
+
+                <h4>Q: ログインできません</h4>
+                <p><strong>A:</strong> 以下を確認してください：</p>
+                <ul>
+                    <li>インターネット接続を確認</li>
+                    <li>Minecraftを購入済みか確認</li>
+                    <li>ブラウザでMicrosoftアカウントにログインできるか確認</li>
+                    <li>ファイアウォールがランチャーをブロックしていないか確認</li>
+                </ul>
+
+                <h4>Q: プロファイルURLが追加できません</h4>
+                <p><strong>A:</strong> 以下を確認してください：</p>
+                <ul>
+                    <li>URLが正しく入力されているか確認</li>
+                    <li>サーバー管理者にURLが有効か確認</li>
+                    <li>インターネット接続を確認</li>
+                </ul>
+
+                <h4>Q: ゲームが起動しません</h4>
+                <p><strong>A:</strong> 以下を試してください：</p>
+                <ul>
+                    <li>ランチャーを管理者権限で実行</li>
+                    <li>ウイルス対策ソフトの除外設定を確認</li>
+                    <li>プロファイルの再ダウンロード（キャッシュ削除）</li>
+                    <li>Javaが正しくインストールされているか確認</li>
+                </ul>
+
+                <h4>Q: ゲームが重い・カクつきます</h4>
+                <p><strong>A:</strong> 以下を試してください：</p>
+                <ul>
+                    <li>他のアプリケーションを終了</li>
+                    <li>Minecraftの設定で描画距離を下げる</li>
+                    <li>F3キーでフレームレートを確認</li>
+                </ul>
+
+                <h3>エラーログの確認</h3>
+                <p>問題が解決しない場合は、以下の場所でログファイルを確認できます：</p>
+                <pre><code>C:\Users\[ユーザー名]\AppData\Roaming\SabaLauncher\logs\</code></pre>
+
+                <h3>サポートへの問い合わせ</h3>
+                <p>それでも解決しない場合は、<a href="https://github.com/ikafly144/sabalauncher/issues"
+                        target="_blank">GitHubのIssues</a>で報告してください。以下の情報を含めると解決が早くなります：</p>
+                <ul>
+                    <li>問題の詳細説明</li>
+                    <li>エラーメッセージ（あれば）</li>
+                    <li>ログファイルの内容</li>
+                    <li>Windowsのバージョン</li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <strong>ヒント:</strong> まずはサーバー管理者に相談してみましょう。同じサーバーの他の参加者も同様の問題を抱えている可能性があります。
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <img src="assets/launcher_icon.ico" alt="SabaLauncher Logo" class="footer-logo">
+                        <span class="footer-title">SabaLauncher</span>
+                    </div>
+                    <p class="footer-description">
+                        Minecraft Java Edition用のモダンでシンプルなランチャー
+                    </p>
+                </div>
+
+                <div class="footer-section">
+                    <h4>リンク</h4>
+                    <ul class="footer-links">
+                        <li><a href="https://github.com/ikafly144/sabalauncher" target="_blank">GitHub</a></li>
+                        <li><a href="https://github.com/ikafly144/sabalauncher/releases" target="_blank">リリース</a></li>
+                        <li><a href="https://github.com/ikafly144/sabalauncher/issues" target="_blank">バグ報告</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2025 ikafly144. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
