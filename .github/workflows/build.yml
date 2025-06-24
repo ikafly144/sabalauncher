@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2025
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,6 +29,7 @@ jobs:
           .\scripts\gen_local.bat > .\secret\local\keys.json
       - name: Install Wix Toolset
         run: |-
+          winget upgrade winget --accept-package-agreements --accept-source-agreements --disable-interactivity
           winget install --id WixToolset.WixToolset -e --accept-source-agreements --accept-package-agreements
       - name: Build SabaLauncher
         uses: goreleaser/goreleaser-action@v6
