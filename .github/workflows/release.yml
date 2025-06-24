@@ -1,16 +1,13 @@
 name: Release SabaLauncher
 on:
-  push:
-    branches:
-      - master
-    tags:
-      - "*.*.*"
+  create:
 
 permissions:
   contents: write
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/master' && startsWith(github.event.ref, 'refs/tags/')
     runs-on: windows-2025
     steps:
       - name: Checkout code
