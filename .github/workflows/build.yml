@@ -30,7 +30,7 @@ jobs:
       - name: Install Wix Toolset
         run: |-
           winget upgrade winget --accept-package-agreements --accept-source-agreements --disable-interactivity
-          winget install --id WixToolset.WixToolset -e --accept-source-agreements --accept-package-agreements
+          winget install --id WiXToolset.WiXToolset -e --accept-source-agreements --accept-package-agreements
       - name: Build SabaLauncher
         uses: goreleaser/goreleaser-action@v6
         with:
