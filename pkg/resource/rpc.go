@@ -7,10 +7,10 @@ import (
 
 	"github.com/hugolgst/rich-go/client"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/ikafly144/sabalauncher/secret"
 )
 
-//go:embed __client_id.txt
-var clientID string
+var clientID = secret.GetSecret("DISCORD_CLIENT_ID")
 
 func Login() error {
 	if err := client.Login(clientID); err != nil {

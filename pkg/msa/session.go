@@ -2,7 +2,6 @@ package msa
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,10 +12,10 @@ import (
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
+	"github.com/ikafly144/sabalauncher/secret"
 )
 
-//go:embed __msa_client.txt
-var msaClientID string
+var msaClientID = secret.GetSecret("MSA_CLIENT_ID")
 
 type Session interface {
 	StartLogin() error
