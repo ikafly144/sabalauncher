@@ -1,6 +1,8 @@
 name: Release SabaLauncher
 on:
-  create:
+  push:
+    tags:
+      - "*.*.*"
 
 permissions:
   contents: write
