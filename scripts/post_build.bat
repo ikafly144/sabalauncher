@@ -1,3 +1,5 @@
+mkdir build-logic
+copy assets\* build-logic\
 cd build-logic
 
 candle LicenseAgreementDlg_HK.wxs WixUI_HK.wxs product.wxs
