@@ -27,9 +27,6 @@ jobs:
           MSA_CLIENT_ID: ${{ secrets.MSA_CLIENT_ID }}
         run: |-
           .\scripts\gen_local.bat > .\secret\local\keys.json
-      - name: Install Winget
-        run: |-
-          winget upgrade winget --accept-package-agreements --accept-source-agreements --disable-interactivity
       - name: Install Wix Toolset
         run: |-
           winget install --id WiXToolset.WiXToolset -e --accept-source-agreements --accept-package-agreements
