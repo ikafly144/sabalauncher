@@ -40,7 +40,7 @@ type (
 	D = layout.Dimensions
 )
 
-const devVersion = "0.0.0-dev"
+const devVersion = "0.0.0-indev"
 
 var installerRegex = regexp.MustCompile(`SabaLauncher-(\d+\.\d+\.\d+)(-(\d+))?\.msi`)
 
@@ -100,7 +100,7 @@ func loop(w *app.Window) error {
 	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
 	var ops op.Ops
 
-	router := pages.NewRouter(appName, fmt.Sprintf("%s+%s", version, buildInfo()))
+	router := pages.NewRouter(fmt.Sprintf("%s %s", appName, version), buildInfo())
 	router.Explorer = explorer.NewExplorer(w)
 	cache, err := msa.NewCacheAccessor(filepath.Join(resource.DataDir, "msa_cache.json"))
 	if err != nil {
