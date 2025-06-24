@@ -54,6 +54,33 @@
             flex-wrap: wrap;
         }
 
+        /* Override button styles for error page */
+        .error-actions .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: transparent;
+        }
+
+        .error-actions .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8, #6a4190);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .error-actions .btn-outline {
+            background: transparent;
+            color: #667eea;
+            border-color: #667eea;
+        }
+
+        .error-actions .btn-outline:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
         .floating-icon {
             position: absolute;
             opacity: 0.1;
@@ -112,16 +139,21 @@
     <header class="header">
         <nav class="nav">
             <div class="nav-container">
-                <div class="nav-brand">
+                <a href="index.html" class="nav-brand">
                     <img src="assets/launcher_icon.ico" alt="SabaLauncher Logo" class="nav-logo">
                     <span class="nav-title">SabaLauncher</span>
-                </div>
+                </a>
                 <ul class="nav-menu">
                     <li class="nav-item"><a href="index.html" class="nav-link">ホーム</a></li>
                     <li class="nav-item"><a href="docs.html" class="nav-link">ドキュメント</a></li>
                     <li class="nav-item"><a href="https://github.com/ikafly144/sabalauncher" class="nav-link"
                             target="_blank">GitHub</a></li>
                 </ul>
+                <div class="nav-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
             </div>
         </nav>
     </header>
@@ -161,30 +193,22 @@
                         <polyline points="10,9 9,9 8,9"></polyline>
                     </svg>
                 </a>
-                <button type="button" onclick="history.back()" class="btn btn-outline"></button>
-                <span>前のページに戻る</span>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="15,18 9,12 15,6"></polyline>
-                </svg>
-                </a>
-            </div>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
                 <button type="button" onclick="history.back()" class="btn btn-outline">
                     <span>前のページに戻る</span>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="15,18 9,12 15,6"></polyline>
                     </svg>
                 </button>
-                <div class="footer-brand">
+            </div>
+        </div>
+    </main> <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <a href="index.html" class="footer-brand">
                     <img src="assets/launcher_icon.ico" alt="SabaLauncher Logo" class="footer-logo">
                     <span class="footer-title">SabaLauncher</span>
-                </div>
+                </a>
                 <p class="footer-description">
                     Minecraft Java Edition用のモダンでシンプルなランチャー
                 </p>
@@ -202,7 +226,6 @@
 
         <div class="footer-bottom">
             <p>&copy; 2025 ikafly144. All rights reserved.</p>
-        </div>
         </div>
     </footer>
 

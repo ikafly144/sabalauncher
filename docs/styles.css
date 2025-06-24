@@ -508,6 +508,74 @@ body {
     color: #5a67d8;
 }
 
+/* Disclaimer Section */
+.disclaimer {
+    background: #f7fafc;
+    padding: 5rem 0;
+}
+
+.disclaimer-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.disclaimer-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+}
+
+.disclaimer-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.disclaimer-card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.disclaimer-card h3::before {
+    content: '⚠️';
+    font-size: 1rem;
+}
+
+.disclaimer-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.disclaimer-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    color: #4a5568;
+    line-height: 1.6;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.disclaimer-list li:last-child {
+    border-bottom: none;
+}
+
+.disclaimer-list li::before {
+    content: '•';
+    color: #667eea;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+}
+
 /* Footer */
 .footer {
     background: #1a202c;
@@ -527,6 +595,7 @@ body {
     align-items: center;
     gap: 12px;
     margin-bottom: 1rem;
+    text-decoration: none;
 }
 
 .footer-logo {
@@ -626,7 +695,7 @@ body {
     }
 
     .nav-toggle.nav-toggle-active span:nth-child(3) {
-        transform: rotate(-45deg) translate(7px, -6px);
+        transform: rotate(-45deg) translate(5px, -5px);
     }
 
     .hero-container {
@@ -653,6 +722,11 @@ body {
 
     .docs-grid {
         grid-template-columns: 1fr;
+    }
+
+    .disclaimer-content {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
     }
 
     .section-title {
