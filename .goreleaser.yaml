@@ -21,7 +21,6 @@ builds:
         - go tool go-msi generate-templates --version {{.Version}} --out build-logic/ --src templates/
         - cmd /c .\scripts\post_build.bat
 release:
-  draft: true
   extra_files:
     - glob: dist/SabaLauncher.msi
 env_files:
