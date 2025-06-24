@@ -3,7 +3,6 @@ package resource
 import (
 	"archive/zip"
 	"crypto/sha512"
-	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -15,10 +14,11 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/ikafly144/sabalauncher/secret"
 )
 
-//go:embed __curseforge_api_key.txt
-var curseForgeAPIKey string
+var curseForgeAPIKey = secret.GetSecret("CURSEFORGE_API_KEY")
 
 type modLoader struct {
 	Loader

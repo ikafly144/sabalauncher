@@ -1,0 +1,47 @@
+name: Build SabaLauncher
+on:
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2025
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "^1.24"
+      - name: Generate Local Keys
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          MSA_CLIENT_ID: ${{ secrets.MSA_CLIENT_ID }}
+        run: |-
+          .\scripts\gen_local.bat > .\secret\local\keys.json
+      - name: Install Wix Toolset
+        run: |-
+          winget install --id WiXToolset.WiXToolset -e --accept-source-agreements --accept-package-agreements || true
+      - name: Build SabaLauncher
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          # either 'goreleaser' (default) or 'goreleaser-pro'
+          distribution: goreleaser
+          # 'latest', 'nightly', or a semver
+          version: "~> v2"
+          args: build --clean --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SabaLauncher Snapshot Installer
+          path: |
+            dist/SabaLauncher.msi
