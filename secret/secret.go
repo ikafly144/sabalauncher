@@ -29,18 +29,23 @@ func init() {
 		if strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
-		f, err := localRaw.Open("local/" + e.Name())
-		if err != nil {
-			slog.Error("failed to open local secret file", "file", e.Name(), "error", err)
-			// ファイルが開けなかった場合はスキップ
-			continue
-		}
-		defer f.Close()
 		var m map[string]string
-		if err := json.NewDecoder(f).Decode(&m); err != nil {
-			slog.Error("failed to decode local secret file", "file", e.Name(), "error", err)
-			// JSONのデコードに失敗した場合はスキップ
-			continue
+		if func() bool {
+			f, err := localRaw.Open("local/" + e.Name())
+			if err != nil {
+				slog.Error("failed to open local secret file", "file", e.Name(), "error", err)
+				// ファイルが開けなかった場合はスキップ
+				return false
+			}
+			defer f.Close()
+			if err := json.NewDecoder(f).Decode(&m); err != nil {
+				slog.Error("failed to decode local secret file", "file", e.Name(), "error", err)
+				// JSONのデコードに失敗した場合はスキップ
+				return false
+			}
+			return true
+		}() {
+			continue // ファイルが開けなかった、またはJSONのデコードに失敗した場合はスキップ
 		}
 		if localEntry == nil {
 			localEntry = make(map[string]string)
