@@ -17,6 +17,7 @@ builds:
       pre:
         - go tool go-licenses save . --save_path pages/licenses/dist_licenses --force
       post:
+        - go tool go-msi to-rtf --src LICENSE --out build-logic/LICENSE.rtf
         - go tool go-msi generate-templates --version {{.Version}} --out build-logic/ --src templates/
         - cmd /c .\scripts\post_build.bat
 release:
@@ -26,5 +27,5 @@ release:
 env_files:
   github_token: .config/goreleaser/github_token
 snapshot:
-  version_template: "{{.Version}}+{{.Commit}}"
+  version_template: "{{ incminor .Version }}-SNAPSHOT+{{ .ShortCommit }}"
 version: 2
