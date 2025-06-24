@@ -1,0 +1,6 @@
+# Minimal robots.txt for GitHub Pages
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://ikafly144.github.io/sabalauncher/sitemap.xml
