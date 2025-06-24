@@ -13,3 +13,5 @@ build/
 __*
 
 .vscode/
+
+secret/local/*.json
