@@ -43,3 +43,9 @@ jobs:
           args: build --clean --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SabaLauncher Snapshot Installer
+          path: |
+            dist/SabaLauncher.msi
