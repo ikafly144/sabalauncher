@@ -37,9 +37,10 @@ jobs:
       - name: Copy assets to docs
         run: |
           if [ -d "assets" ]; then
-            cp -r assets docs/ || true
+            cp -r assets docs/
+          else
+            echo "No assets directory found, skipping copy"
           fi
-
       - name: Verify docs structure
         run: |
           echo "Docs directory contents:"

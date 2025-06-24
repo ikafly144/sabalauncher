@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const code = block.querySelector('code');
             if (code) {
                 try {
-                    await navigator.clipboard.writeText(code.textContent.replace(/<br>/g, '\n'));
+                    await navigator.clipboard.writeText(code.textContent);
                     copyButton.textContent = 'コピー済み!';
                     copyButton.style.background = 'rgba(16, 185, 129, 0.8)';
 
@@ -310,10 +310,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Analytics (placeholder for future implementation)
 function trackEvent(category, action, label) {
-    if (typeof gtag !== 'undefined') {
+    if (typeof gtag !== 'undefined' && typeof category === 'string' && typeof action === 'string') {
         gtag('event', action, {
             event_category: category,
-            event_label: label
+            event_label: String(label || '')
         });
     }
 }
