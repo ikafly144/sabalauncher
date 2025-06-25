@@ -28,7 +28,6 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/component"
-	"github.com/disgoorg/json"
 )
 
 type (
@@ -263,7 +262,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 															if p.Profiles[index].Manifest.IsDone() && p.success == nil {
 																if p.Profiles[index].Manifest.Error() != nil {
 																	slog.Error("Failed to start game", "error", p.Profiles[index].Manifest.Error())
-																	p.success = json.Ptr(false)
+																	p.success = new(bool)
 																} else if !p.booted {
 																	p.booted = true
 																	go func() {
