@@ -53,7 +53,7 @@ func (p *Page) Overflow() []component.OverflowAction {
 	return []component.OverflowAction{}
 }
 
-//go:generate go tool go-licenses save . --save_path dist_licenses --force
+//go:generate go tool go-licenses save . --save_path dist_licenses --force --ignore github.com/ikafly144/sabalauncher
 
 //go:embed dist_licenses
 var licenses embed.FS
