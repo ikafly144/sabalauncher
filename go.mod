@@ -6,7 +6,7 @@ require (
 	gioui.org v0.8.0
 	gioui.org/x v0.8.1
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.4.2
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/bugph0bia/go-logging v1.0.0
 	github.com/google/go-github/v72 v72.0.0
 	github.com/google/go-github/v73 v73.0.0
