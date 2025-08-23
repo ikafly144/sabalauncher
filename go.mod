@@ -13,7 +13,7 @@ require (
 	github.com/google/go-github/v74 v74.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
-	github.com/ulikunitz/xz v0.5.12
+	github.com/ulikunitz/xz v0.5.13
 	golang.org/x/exp v0.0.0-20240707233637-46b078467d37
 	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0
 )
