@@ -17,10 +17,10 @@ jobs:
           fetch-depth: 0
       - name: Get Branch
         id: get_branch
-        shell: pwsh
         run: |
-          $branch = git branch -r --contains ${{ github.ref }} --format "%(refname:lstrip=3)"
-          "name=$branch" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $raw = git branch -r --contains ${{ github.ref }}
+          $branch = ($raw -replace 'origin/', '').Trim()
+          echo "name=$branch" >> $env:GITHUB_OUTPUT
       - run: git checkout --progress --force ${{ steps.get_branch.outputs.name }}
       - name: Setup Go
         uses: actions/setup-go@v5
