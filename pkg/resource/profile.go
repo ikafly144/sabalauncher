@@ -17,6 +17,7 @@ import (
 
 	"gioui.org/op/paint"
 	"gioui.org/widget"
+	sigar "github.com/cloudfoundry/gosigar"
 )
 
 var (
@@ -27,21 +28,24 @@ const (
 	CurrentProfileVersion = 1
 )
 
+type PublicProfile struct {
+	Name                string         `json:"name"`
+	DisplayName         string         `json:"display_name,omitempty"`
+	Description         string         `json:"description,omitempty"`
+	Icon                string         `json:"icon"`
+	ServerAddress       string         `json:"server_address,omitempty"`
+	Manifest            ManifestLoader `json:"manifest"`
+	RecommendedMemoryMB uint64         `json:"recommended_memory_mb,omitempty"`
+	Version             int            `json:"version,omitempty"`
+}
+
 type Profile struct {
-	Name        string      `json:"name"`
-	DisplayName string      `json:"display_name,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Icon        string      `json:"icon"`
-	IconImage   image.Image `json:"-"`
+	PublicProfile
+	IconImage image.Image `json:"-"`
 	// Path to the profile
-	Path          string `json:"-"`
-	ServerAddress string `json:"server_address,omitempty"`
+	Path string `json:"-"`
 
 	Source string `json:"source,omitempty"`
-
-	Manifest ManifestLoader `json:"manifest"`
-
-	Version int `json:"version,omitempty"`
 }
 
 func (p *Profile) Display() string {
@@ -127,10 +131,17 @@ func (p *Profile) Fetch() error {
 		return err
 	}
 	defer resp.Body.Close()
-	var profiles []Profile
-	if err := json.NewDecoder(resp.Body).Decode(&profiles); err != nil {
+	var publicProfiles []PublicProfile
+	if err := json.NewDecoder(resp.Body).Decode(&publicProfiles); err != nil {
 		slog.Error("Failed to decode fetched profile", "source", p.Source, "error", err)
 		return err
+	}
+	profiles := make([]Profile, len(publicProfiles))
+	for i, publicProfile := range publicProfiles {
+		profiles[i] = Profile{
+			PublicProfile: publicProfile,
+			Path:          filepath.Join(DataDir, "profiles", publicProfile.Name),
+		}
 	}
 	for _, profile := range profiles {
 		if profile.Name == p.Name {
@@ -158,9 +169,36 @@ func (p *Profile) Fetch() error {
 }
 
 func (p *Profile) GetIcon() *widget.Image {
-	return &widget.Image{
-		Src: paint.NewImageOp(p.IconImage),
+	return &widget.Image{Src: paint.NewImageOp(p.IconImage)}
+}
+
+func getMem() (sigar.Mem, error) {
+	var s sigar.ConcreteSigar
+	return s.GetMem()
+}
+
+func (p *Profile) CheckMemory() (bool, error) {
+	mem, err := getMem()
+	if err != nil {
+		return false, err
 	}
+	return mem.Total > 2*(p.RecommendedMemoryMB*1024*1024), nil
+}
+
+const DEFAULT_MEMORY_SIZE = 2048
+
+func (p *Profile) ActualMemory() (uint64, error) {
+	if p.RecommendedMemoryMB == 0 {
+		return DEFAULT_MEMORY_SIZE, nil
+	}
+	mem, err := getMem()
+	if err != nil {
+		return 0, err
+	}
+	if mem.Total > 2*(p.RecommendedMemoryMB*1024*1024) {
+		return p.RecommendedMemoryMB, nil
+	}
+	return mem.Total / (2 * 1024 * 1024), nil
 }
 
 type Manifest struct {

@@ -566,8 +566,11 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		"classpath_separator": classpathSeparator,
 	}
 	cmds = append(cmds, javaPath)
-	memory := 4096
-	cmds = append(cmds, "-Xmx"+strconv.Itoa(memory)+"M")
+	memory, err := profile.ActualMemory()
+	if err != nil {
+		return fmt.Errorf("failed to get actual memory: %w", err)
+	}
+	cmds = append(cmds, "-Xmx"+strconv.FormatUint(memory, 10)+"M")
 
 	cmds = append(cmds, defaultJvmArgs...)
 

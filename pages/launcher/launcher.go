@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"archive/zip"
+	"fmt"
 	"image"
 	"image/color"
 	"log/slog"
@@ -52,6 +53,7 @@ type Page struct {
 	saveLogButton widget.Clickable
 	saveLog       atomic.Bool
 	saveError     error
+	confirmBtn    *widget.Clickable
 	// playStatus        string
 	// playDownloadTotal int
 	// worker            *resource.DownloadWorker
@@ -155,6 +157,9 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 			}
 		}()
 	}
+	if p.confirmBtn != nil && p.confirmBtn.Clicked(gtx) {
+		p.confirmBtn = nil
+	}
 	p.List.Axis = layout.Vertical
 	layout.Flex{
 		Alignment: layout.Middle,
@@ -234,6 +239,17 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 														p.booted = false
 														p.bootError = nil
 														p.playModal.Appear(gtx.Now)
+
+														memoryOk, err := p.Profiles[index].CheckMemory()
+														if err != nil {
+															slog.Error("Failed to check memory", "error", err)
+															p.bootError = err
+															p.success = new(bool)
+														}
+														if !memoryOk {
+															p.confirmBtn = new(widget.Clickable)
+														}
+
 														if err := p.Profiles[index].Fetch(); err != nil {
 															slog.Error("Failed to fetch profile", "error", err)
 														}
@@ -257,7 +273,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																}
 															}
 															th := th.WithPalette(__p)
-															if p.Profiles[index].Manifest.IsDone() && p.success == nil {
+															if p.Profiles[index].Manifest.IsDone() && p.success == nil && p.confirmBtn == nil {
 																if p.Profiles[index].Manifest.Error() != nil {
 																	slog.Error("Failed to start game", "error", p.Profiles[index].Manifest.Error())
 																	p.success = new(bool)
@@ -302,7 +318,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																		break
 																	}
 																}
-																if p.success != nil {
+																if p.success != nil || p.confirmBtn != nil {
 																	pr := clip.Rect(image.Rectangle{Max: gtx.Constraints.Max})
 																	defer pr.Push(gtx.Ops).Pop()
 																	event.Op(gtx.Ops, p.playModalDrag)
@@ -327,6 +343,22 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																					return applayout.DefaultInset.Layout(gtx, material.ProgressBar(&th, float32(p.Profiles[index].Manifest.CurrentProgress())).Layout)
 																				}),
 																				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																					if p.confirmBtn != nil {
+																						return layout.Flex{
+																							Axis: layout.Vertical,
+																						}.Layout(gtx,
+																							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																								mem, err := p.Profiles[index].ActualMemory()
+																								if err != nil {
+																									return material.Caption(&th, fmt.Sprintf("メモリの取得に失敗しました: %v", err)).Layout(gtx)
+																								}
+																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 16, fmt.Sprintf("推奨割り当てメモリ%dMBに対して、\nシステムの搭載メモリに十分な余裕がないため、%dMBを割り当てて起動します。\n これにより、動作が不安定になる場合があります。", p.Profiles[index].RecommendedMemoryMB, mem)).Layout)
+																							}),
+																							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Button(&th, p.confirmBtn, "確認しました").Layout)
+																							}),
+																						)
+																					}
 																					if p.bootError != nil {
 																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 																							return layout.Flex{
@@ -366,7 +398,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																		})
 																	},
 																)
-																if p.success != nil {
+																if p.success != nil || p.confirmBtn != nil {
 																	defer pointer.PassOp{}.Push(gtx.Ops).Pop()
 																	defer clip.Rect(image.Rectangle{Max: gtx.Constraints.Max}).Push(gtx.Ops).Pop()
 																} else {
