@@ -16,7 +16,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/bugph0bia/go-logging"
-	"github.com/google/go-github/v72/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/ikafly144/sabalauncher/pages"
 	"github.com/ikafly144/sabalauncher/pages/account"
 	"github.com/ikafly144/sabalauncher/pages/launcher"
