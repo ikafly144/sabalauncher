@@ -234,12 +234,10 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 														p.booted = false
 														p.bootError = nil
 														p.playModal.Appear(gtx.Now)
-														go func() {
-															if err := p.Profiles[index].Fetch(); err != nil {
-																slog.Error("Failed to fetch profile", "error", err)
-															}
-															p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
-														}()
+														if err := p.Profiles[index].Fetch(); err != nil {
+															slog.Error("Failed to fetch profile", "error", err)
+														}
+														p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
 														p.playModal.Widget = (func(gtx layout.Context, __th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
 															for {
 																_, ok := p.playModalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)
