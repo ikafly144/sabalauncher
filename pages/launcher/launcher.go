@@ -157,7 +157,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 			}
 		}()
 	}
-	if p.confirmBtn != nil && p.confirmBtn.Clicked(gtx) {
+	if p.confirmBtn != nil && (p.confirmBtn.Clicked(gtx) || !p.playModal.Visible()) {
 		p.confirmBtn = nil
 	}
 	p.List.Axis = layout.Vertical
