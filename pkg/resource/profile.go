@@ -32,11 +32,11 @@ type PublicProfile struct {
 	Name                string         `json:"name"`
 	DisplayName         string         `json:"display_name,omitempty"`
 	Description         string         `json:"description,omitempty"`
-	Icon                string         `json:"icon"`
+	Icon                string         `json:"icon,omitempty"`
 	ServerAddress       string         `json:"server_address,omitempty"`
 	Manifest            ManifestLoader `json:"manifest"`
 	RecommendedMemoryMB uint64         `json:"recommended_memory_mb,omitempty"`
-	Version             int            `json:"version,omitempty"`
+	Version             int            `json:"version"`
 }
 
 type Profile struct {
