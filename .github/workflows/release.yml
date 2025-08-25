@@ -15,6 +15,12 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - name: Get Branch
+        id: get_branch
+        run: |
+          branch=$(git branch -r --contains ${{ github.ref }} --format "%(refname:lstrip=3)")
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+      - run: git checkout --progress --force ${{ steps.get_branch.outputs.name }}
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
