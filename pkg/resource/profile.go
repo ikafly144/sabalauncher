@@ -61,8 +61,8 @@ type PublicProfiles []PublicProfile
 
 func (p PublicProfiles) Convert() ([]Profile, error) {
 	var profiles []Profile
-	for _, pub := range p {
-		profile, err := convert(pub)
+	for i := range p {
+		profile, err := convert(p[i])
 		if err != nil {
 			return nil, err
 		}
@@ -117,16 +117,11 @@ type Profile struct {
 }
 
 func (p *Profile) UnmarshalJSON(data []byte) error {
-	type Alias Profile
-	aux := &struct {
-		*Alias
-	}{
-		Alias: (*Alias)(p),
-	}
-	if err := json.Unmarshal(data, &aux); err != nil {
+	var pub PublicProfile
+	if err := json.Unmarshal(data, &pub); err != nil {
 		return err
 	}
-	profile, err := convert(aux.PublicProfile)
+	profile, err := convert(pub)
 	if err != nil {
 		return err
 	}
@@ -170,17 +165,15 @@ func (p *Profile) Fetch() error {
 		return err
 	}
 	defer resp.Body.Close()
-	var publicProfiles []PublicProfile
+	var publicProfiles PublicProfiles
 	if err := json.NewDecoder(resp.Body).Decode(&publicProfiles); err != nil {
 		slog.Error("Failed to decode fetched profile", "source", p.Source, "error", err)
 		return err
 	}
-	profiles := make([]Profile, len(publicProfiles))
-	for i, publicProfile := range publicProfiles {
-		profiles[i] = Profile{
-			PublicProfile: publicProfile,
-			Path:          filepath.Join(DataDir, "profiles", publicProfile.Name),
-		}
+	profiles, err := publicProfiles.Convert()
+	if err != nil {
+		slog.Error("Failed to convert public profiles", "error", err)
+		return err
 	}
 	for _, profile := range profiles {
 		if profile.Name == p.Name {

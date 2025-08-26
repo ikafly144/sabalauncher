@@ -20,9 +20,8 @@ var (
 )
 
 var (
-	profilesOnline = []Profile{}
-	profilesLocal  = []Profile{}
-	sources        = []string{}
+	profilesLocal = []Profile{}
+	sources       = []string{}
 )
 
 func (p *Page) loadProfiles() {
@@ -30,7 +29,6 @@ func (p *Page) loadProfiles() {
 		return
 	}
 	defer p.loading.Unlock()
-	profilesOnline = []Profile{}
 	profilesLocal = []Profile{}
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		slog.Error("Failed to create data directory", "error", err)
@@ -55,11 +53,9 @@ func (p *Page) loadProfiles() {
 		slog.Error("Failed to load profiles", "error", err)
 		return
 	}
-	newProfiles := make([]Profile, 0, len(profilesLocal)+len(profilesOnline))
+	newProfiles := make([]Profile, 0, len(profilesLocal)+len(profilesTP))
 	newProfiles = append(newProfiles, profilesLocal...)
-	if len(profilesTP) > 0 {
-		newProfiles = append(newProfiles, profilesTP...)
-	}
+	newProfiles = append(newProfiles, profilesTP...)
 	sort.SliceStable(newProfiles, func(i, j int) bool {
 		cmp := strings.Compare(newProfiles[i].Name, newProfiles[j].Name)
 		if cmp != 0 {
@@ -71,7 +67,7 @@ func (p *Page) loadProfiles() {
 	slog.Info("Loaded profiles", "profiles", p.Profiles)
 }
 
-func (p *Page) loadFromProfileSources() []Profile {
+func (p *Page) loadFromProfileSources() (result []Profile) {
 	source, err := os.OpenFile(filepath.Join(dataDir, "sources.json"), os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		slog.Error("Failed to open sources.json", "error", err)
@@ -103,15 +99,19 @@ func (p *Page) loadFromProfileSources() []Profile {
 			slog.Error("Failed to get source", "status", resp.StatusCode)
 			continue
 		}
-		var publicProfiles resource.PublicProfiles
-		if err := json.NewDecoder(resp.Body).Decode(&publicProfiles); err != nil {
-			slog.Error("Failed to decode source", "error", err)
-			continue
-		}
-		profiles, err := publicProfiles.Convert()
-		if err != nil {
-			slog.Error("Failed to convert public profiles", "error", err)
-			continue
+		var profiles []resource.Profile
+		{
+			var publicProfiles resource.PublicProfiles
+			if err := json.NewDecoder(resp.Body).Decode(&publicProfiles); err != nil {
+				slog.Error("Failed to decode source", "error", err)
+				continue
+			}
+			p, err := publicProfiles.Convert()
+			if err != nil {
+				slog.Error("Failed to convert public profiles", "error", err)
+				continue
+			}
+			profiles = p
 		}
 		p := make([]Profile, len(profiles))
 		for i := range profiles {
@@ -136,9 +136,9 @@ func (p *Page) loadFromProfileSources() []Profile {
 			}
 			p[i].Path = filepath.Join(dataDir, "profiles", u.Host, p[i].Name)
 		}
-		profilesOnline = append(profilesOnline, p...)
+		result = append(result, p...)
 	}
-	return profilesOnline
+	return result
 }
 
 func (p *Page) addProfileSource(url url.URL) {
