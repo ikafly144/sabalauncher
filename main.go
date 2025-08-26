@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"image/color"
 	"io"
 	"log"
 	"log/slog"
@@ -97,6 +98,7 @@ func main() {
 
 func loop(w *app.Window) error {
 	th := material.NewTheme()
+	th.Bg = color.NRGBA{R: 0xf0, G: 0xf0, B: 0xf0, A: 0xff}
 	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
 	var ops op.Ops
 

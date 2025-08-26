@@ -189,241 +189,258 @@ func (p *Page) Layout(gtx C, th *material.Theme) D {
 						}
 					}()
 				}
-				return layout.Stack{}.Layout(gtx,
-					layout.Stacked(func(gtx C) D {
-						return layout.Flex{
-							Alignment: layout.Middle,
-							Axis:      layout.Vertical,
-						}.Layout(gtx,
-							layout.Rigid(func(gtx C) D {
-								gtx.Constraints.Min.X = gtx.Constraints.Max.X
-								return applayout.DefaultInset.Layout(gtx, func(gtx C) D {
-									return layout.Flex{
-										Alignment: layout.Start,
-										Axis:      layout.Horizontal,
-									}.Layout(gtx,
-										layout.Rigid(func(gtx C) D {
-											gtx.Constraints = layout.Exact(image.Pt(gtx.Dp(128), gtx.Dp(128)))
-											return p.Profiles[index].GetIcon().Layout(gtx)
-										}),
-										layout.Rigid(func(gtx C) D {
+				return layout.Background{}.Layout(gtx,
+					func(gtx C) D {
+						return layout.Inset{
+							Top:    unit.Dp(4),
+							Bottom: unit.Dp(4),
+							Left:   unit.Dp(4),
+							Right:  unit.Dp(12),
+						}.Layout(gtx, component.Rect{
+							Color: color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xFF},
+							Size:  gtx.Constraints.Min,
+						}.Layout)
+					},
+					func(gtx C) D {
+						return (layout.Stack{}.Layout(gtx,
+							layout.Stacked(func(gtx C) D {
+								return layout.Flex{
+									Alignment: layout.Middle,
+									Axis:      layout.Vertical,
+								}.Layout(gtx,
+									layout.Rigid(func(gtx C) D {
+										gtx.Constraints.Min.X = gtx.Constraints.Max.X
+										return applayout.DefaultInset.Layout(gtx, func(gtx C) D {
 											return layout.Flex{
 												Alignment: layout.Start,
-												Axis:      layout.Vertical,
+												Axis:      layout.Horizontal,
 											}.Layout(gtx,
 												layout.Rigid(func(gtx C) D {
-													return layout.Inset{
-														Top:    unit.Dp(16),
-														Left:   unit.Dp(16),
-														Right:  unit.Dp(16),
-														Bottom: unit.Dp(8),
-													}.Layout(gtx, material.Label(th, 16, p.Profiles[index].Display()).Layout)
+													gtx.Constraints = layout.Exact(image.Pt(gtx.Dp(128), gtx.Dp(128)))
+													return p.Profiles[index].GetIcon().Layout(gtx)
 												}),
 												layout.Rigid(func(gtx C) D {
-													return layout.UniformInset(unit.Dp(8)).Layout(gtx, material.Body2(th, p.Profiles[index].Description).Layout)
-												}),
-												layout.Rigid(func(gtx C) D {
-													return layout.UniformInset(unit.Dp(8)).Layout(gtx, material.Body2(th, "バージョン: "+p.Profiles[index].Manifest.VersionName()).Layout)
-												}),
-											)
-										}),
-										layout.Rigid(func(gtx C) D {
-											op.Offset(image.Pt(gtx.Constraints.Max.X-gtx.Dp(90), 0)).Add(gtx.Ops)
-											return layout.Flex{
-												Alignment: layout.Start,
-												Axis:      layout.Vertical,
-											}.Layout(gtx,
-												layout.Rigid(func(gtx C) D {
-													if p.Profiles[index].playBtn.Clicked(gtx) {
-														p.success = nil
-														p.booted = false
-														p.bootError = nil
-														p.playModal.Appear(gtx.Now)
-
-														memoryOk, err := p.Profiles[index].CheckMemory()
-														if err != nil {
-															slog.Error("Failed to check memory", "error", err)
-															p.bootError = err
-															p.success = new(bool)
-														}
-														if !memoryOk {
-															p.confirmBtn = new(widget.Clickable)
-														}
-
-														if err := p.Profiles[index].Fetch(); err != nil {
-															slog.Error("Failed to fetch profile", "error", err)
-														}
-														p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
-														p.playModal.Widget = (func(gtx C, __th *material.Theme, anim *component.VisibilityAnimation) D {
-															for {
-																_, ok := p.playModalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)
-																if !ok {
-																	break
-																}
-															}
-															__p := __th.Palette
-															if anim.Animating() || anim.State == component.Invisible {
-																revealed := anim.Revealed(gtx)
-																currentAlpha := uint8(float32(255) * revealed)
-																__p = material.Palette{
-																	Bg:         component.WithAlpha(__th.Bg, currentAlpha),
-																	Fg:         component.WithAlpha(__th.Fg, currentAlpha),
-																	ContrastBg: component.WithAlpha(__th.ContrastBg, currentAlpha),
-																	ContrastFg: component.WithAlpha(__th.ContrastFg, currentAlpha),
-																}
-															}
-															th := th.WithPalette(__p)
-															if p.Profiles[index].Manifest.IsDone() && p.success == nil && p.confirmBtn == nil {
-																if p.Profiles[index].Manifest.Error() != nil {
-																	slog.Error("Failed to start game", "error", p.Profiles[index].Manifest.Error())
-																	p.success = new(bool)
-																} else if !p.booted {
-																	p.booted = true
-																	go func() {
-																		success := false
-																		defer func() {
-																			p.success = &success
-																		}()
-																		session, err := msa.NewSession(p.Cache)
-																		if err != nil {
-																			slog.Error("Failed to create session", "error", err)
-																			p.bootError = err
-																			return
-																		}
-																		account, err := msa.NewMinecraftAccount(session)
-																		if err != nil {
-																			slog.Error("Failed to create Minecraft account", "error", err)
-																			p.bootError = err
-																			return
-																		}
-																		if err := p.Profiles[index].Manifest.Boot(resource.DataDir, &p.Profiles[index].Profile, account); err != nil {
-																			slog.Error("Failed to start game", "error", err)
-																			p.bootError = err
-																		}
-																		success = true
-																		p.booted = false
-																	}()
-																}
-															}
-															gtx.Execute(op.InvalidateCmd{})
+													return layout.Flex{
+														Alignment: layout.Start,
+														Axis:      layout.Vertical,
+													}.Layout(gtx,
+														layout.Rigid(func(gtx C) D {
 															return layout.Inset{
-																Top:    unit.Dp(80),
-																Bottom: unit.Dp(80),
-																Left:   unit.Dp(gtx.Metric.PxToDp(gtx.Constraints.Max.X/2) - 200),
-																Right:  unit.Dp(gtx.Metric.PxToDp(gtx.Constraints.Max.X/2) - 200),
-															}.Layout(gtx, func(gtx C) D {
-																for p.success == nil {
-																	_, ok := p.playModalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)
-																	if !ok {
-																		break
+																Top:    unit.Dp(16),
+																Left:   unit.Dp(16),
+																Right:  unit.Dp(16),
+																Bottom: unit.Dp(8),
+															}.Layout(gtx, material.Label(th, 16, p.Profiles[index].Display()).Layout)
+														}),
+														layout.Rigid(func(gtx C) D {
+															return layout.UniformInset(unit.Dp(8)).Layout(gtx, material.Body2(th, p.Profiles[index].Description).Layout)
+														}),
+														layout.Rigid(func(gtx C) D {
+															return layout.UniformInset(unit.Dp(8)).Layout(gtx, material.Body2(th, "バージョン: "+p.Profiles[index].Manifest.VersionName()).Layout)
+														}),
+													)
+												}),
+												layout.Rigid(func(gtx C) D {
+													op.Offset(image.Pt(gtx.Constraints.Max.X-gtx.Dp(90), 0)).Add(gtx.Ops)
+													return layout.Flex{
+														Alignment: layout.Start,
+														Axis:      layout.Vertical,
+													}.Layout(gtx,
+														layout.Rigid(func(gtx C) D {
+															if p.Profiles[index].playBtn.Clicked(gtx) {
+																p.success = nil
+																p.booted = false
+																p.bootError = nil
+																p.playModal.Appear(gtx.Now)
+
+																memoryOk, err := p.Profiles[index].CheckMemory()
+																if err != nil {
+																	slog.Error("Failed to check memory", "error", err)
+																	p.bootError = err
+																	p.success = new(bool)
+																}
+																if !memoryOk {
+																	p.confirmBtn = new(widget.Clickable)
+																}
+
+																if err := p.Profiles[index].Fetch(); err != nil {
+																	slog.Error("Failed to fetch profile", "error", err)
+																}
+																p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
+																p.playModal.Widget = (func(gtx C, __th *material.Theme, anim *component.VisibilityAnimation) D {
+																	for {
+																		_, ok := p.playModalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)
+																		if !ok {
+																			break
+																		}
 																	}
-																}
-																if p.success != nil || p.confirmBtn != nil {
-																	pr := clip.Rect(image.Rectangle{Max: gtx.Constraints.Max})
-																	defer pr.Push(gtx.Ops).Pop()
-																	event.Op(gtx.Ops, p.playModalDrag)
-																}
-																dims := layout.Background{}.Layout(gtx,
-																	func(gtx C) D {
-																		return component.Rect{
-																			Color: th.Bg,
-																			Size:  gtx.Constraints.Max,
-																		}.Layout(gtx)
-																	},
-																	func(gtx C) D {
-																		return applayout.DefaultInset.Layout(gtx, func(gtx C) D {
-																			return layout.Flex{
-																				Alignment: layout.Middle,
-																				Axis:      layout.Vertical,
-																			}.Layout(gtx,
-																				layout.Rigid(func(gtx C) D {
-																					return applayout.DefaultInset.Layout(gtx, material.ProgressBar(&th, float32(p.Profiles[index].Manifest.TotalProgress())).Layout)
-																				}),
-																				layout.Rigid(func(gtx C) D {
-																					return applayout.DefaultInset.Layout(gtx, material.ProgressBar(&th, float32(p.Profiles[index].Manifest.CurrentProgress())).Layout)
-																				}),
-																				layout.Rigid(func(gtx C) D {
-																					if p.confirmBtn != nil {
-																						return layout.Flex{
-																							Axis: layout.Vertical,
-																						}.Layout(gtx,
-																							layout.Rigid(func(gtx C) D {
-																								mem, err := p.Profiles[index].ActualMemory()
-																								if err != nil {
-																									return material.Caption(&th, fmt.Sprintf("メモリの取得に失敗しました: %v", err)).Layout(gtx)
-																								}
-																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 16, fmt.Sprintf("推奨割り当てメモリ%dMBに対して、\nシステムの搭載メモリに十分な余裕がないため、%dMBを割り当てて起動します。\n これにより、動作が不安定になる場合があります。", p.Profiles[index].RecommendedMemoryMB, mem)).Layout)
-																							}),
-																							layout.Rigid(func(gtx C) D {
-																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Button(&th, p.confirmBtn, "確認しました").Layout)
-																							}),
-																						)
-																					}
-																					if p.bootError != nil {
-																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx C) D {
-																							return layout.Flex{
-																								Axis: layout.Vertical,
-																							}.Layout(gtx,
-																								layout.Rigid(func(gtx C) D {
-																									return material.Label(&th, 28, p.bootError.Error()).Layout(gtx)
-																								}),
-																								layout.Rigid(func(gtx C) D {
-																									return material.Button(&th, &p.saveLogButton, "ログを保存").Layout(gtx)
-																								}),
-																							)
-																						})
-																					}
-																					if p.booted && p.success == nil {
-																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, "ゲームを起動中").Layout)
-																					} else if p.success != nil && *p.success {
-																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx C) D {
-																							return layout.Flex{
-																								Axis: layout.Vertical,
-																							}.Layout(gtx,
-																								layout.Rigid(func(gtx C) D {
-																									return material.Label(&th, 28, "ゲームが終了しました").Layout(gtx)
-																								}),
-																								layout.Rigid(func(gtx C) D {
-																									return material.Button(&th, &p.saveLogButton, "ログを保存").Layout(gtx)
-																								}),
-																							)
-																						})
-																					}
-																					if p.Profiles[index].Manifest.Error() != nil {
-																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, p.Profiles[index].Manifest.Error().Error()).Layout)
-																					}
-																					return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, p.Profiles[index].Manifest.CurrentStatus()).Layout)
-																				}),
-																			)
-																		})
-																	},
-																)
-																if p.success != nil || p.confirmBtn != nil {
-																	defer pointer.PassOp{}.Push(gtx.Ops).Pop()
-																	defer clip.Rect(image.Rectangle{Max: gtx.Constraints.Max}).Push(gtx.Ops).Pop()
-																} else {
-																	p.playModalDrag.Add(gtx.Ops)
-																}
-																return dims
-															})
-														})
-													}
-													return applayout.DefaultInset.Layout(gtx, material.Button(th, &p.Profiles[index].playBtn, "プレイ").Layout)
+																	__p := __th.Palette
+																	if anim.Animating() || anim.State == component.Invisible {
+																		revealed := anim.Revealed(gtx)
+																		currentAlpha := uint8(float32(255) * revealed)
+																		__p = material.Palette{
+																			Bg:         component.WithAlpha(__th.Bg, currentAlpha),
+																			Fg:         component.WithAlpha(__th.Fg, currentAlpha),
+																			ContrastBg: component.WithAlpha(__th.ContrastBg, currentAlpha),
+																			ContrastFg: component.WithAlpha(__th.ContrastFg, currentAlpha),
+																		}
+																	}
+																	th := th.WithPalette(__p)
+																	if p.Profiles[index].Manifest.IsDone() && p.success == nil && p.confirmBtn == nil {
+																		if p.Profiles[index].Manifest.Error() != nil {
+																			slog.Error("Failed to start game", "error", p.Profiles[index].Manifest.Error())
+																			p.success = new(bool)
+																		} else if !p.booted {
+																			p.booted = true
+																			go func() {
+																				success := false
+																				defer func() {
+																					p.success = &success
+																				}()
+																				session, err := msa.NewSession(p.Cache)
+																				if err != nil {
+																					slog.Error("Failed to create session", "error", err)
+																					p.bootError = err
+																					return
+																				}
+																				account, err := msa.NewMinecraftAccount(session)
+																				if err != nil {
+																					slog.Error("Failed to create Minecraft account", "error", err)
+																					p.bootError = err
+																					return
+																				}
+																				if err := p.Profiles[index].Manifest.Boot(resource.DataDir, &p.Profiles[index].Profile, account); err != nil {
+																					slog.Error("Failed to start game", "error", err)
+																					p.bootError = err
+																				}
+																				success = true
+																				p.booted = false
+																			}()
+																		}
+																	}
+																	gtx.Execute(op.InvalidateCmd{})
+																	return layout.Inset{
+																		Top:    unit.Dp(80),
+																		Bottom: unit.Dp(80),
+																		Left:   unit.Dp(gtx.Metric.PxToDp(gtx.Constraints.Max.X/2) - 200),
+																		Right:  unit.Dp(gtx.Metric.PxToDp(gtx.Constraints.Max.X/2) - 200),
+																	}.Layout(gtx, func(gtx C) D {
+																		for p.success == nil {
+																			_, ok := p.playModalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)
+																			if !ok {
+																				break
+																			}
+																		}
+																		if p.success != nil || p.confirmBtn != nil {
+																			pr := clip.Rect(image.Rectangle{Max: gtx.Constraints.Max})
+																			defer pr.Push(gtx.Ops).Pop()
+																			event.Op(gtx.Ops, p.playModalDrag)
+																		}
+																		dims := layout.Background{}.Layout(gtx,
+																			func(gtx C) D {
+																				return component.Rect{
+																					Color: color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+																					Size:  gtx.Constraints.Max,
+																				}.Layout(gtx)
+																			},
+																			func(gtx C) D {
+																				return applayout.DefaultInset.Layout(gtx, func(gtx C) D {
+																					return layout.Flex{
+																						Alignment: layout.Middle,
+																						Axis:      layout.Vertical,
+																					}.Layout(gtx,
+																						layout.Rigid(func(gtx C) D {
+																							return applayout.DefaultInset.Layout(gtx, material.ProgressBar(&th, float32(p.Profiles[index].Manifest.TotalProgress())).Layout)
+																						}),
+																						layout.Rigid(func(gtx C) D {
+																							return applayout.DefaultInset.Layout(gtx, material.ProgressBar(&th, float32(p.Profiles[index].Manifest.CurrentProgress())).Layout)
+																						}),
+																						layout.Rigid(func(gtx C) D {
+																							if p.confirmBtn != nil {
+																								return layout.Flex{
+																									Axis: layout.Vertical,
+																								}.Layout(gtx,
+																									layout.Rigid(func(gtx C) D {
+																										mem, err := p.Profiles[index].ActualMemory()
+																										if err != nil {
+																											return material.Caption(&th, fmt.Sprintf("メモリの取得に失敗しました: %v", err)).Layout(gtx)
+																										}
+																										return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 16, fmt.Sprintf("推奨割り当てメモリ%dMBに対して、\nシステムの搭載メモリに十分な余裕がないため、%dMBを割り当てて起動します。\n これにより、動作が不安定になる場合があります。", p.Profiles[index].RecommendedMemoryMB, mem)).Layout)
+																									}),
+																									layout.Rigid(func(gtx C) D {
+																										return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Button(&th, p.confirmBtn, "確認しました").Layout)
+																									}),
+																								)
+																							}
+																							if p.bootError != nil {
+																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx C) D {
+																									return layout.Flex{
+																										Axis: layout.Vertical,
+																									}.Layout(gtx,
+																										layout.Rigid(func(gtx C) D {
+																											return material.Label(&th, 28, p.bootError.Error()).Layout(gtx)
+																										}),
+																										layout.Rigid(func(gtx C) D {
+																											return material.Button(&th, &p.saveLogButton, "ログを保存").Layout(gtx)
+																										}),
+																									)
+																								})
+																							}
+																							if p.booted && p.success == nil {
+																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, "ゲームを起動中").Layout)
+																							} else if p.success != nil && *p.success {
+																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx C) D {
+																									return layout.Flex{
+																										Axis: layout.Vertical,
+																									}.Layout(gtx,
+																										layout.Rigid(func(gtx C) D {
+																											return material.Label(&th, 28, "ゲームが終了しました").Layout(gtx)
+																										}),
+																										layout.Rigid(func(gtx C) D {
+																											return material.Button(&th, &p.saveLogButton, "ログを保存").Layout(gtx)
+																										}),
+																									)
+																								})
+																							}
+																							if p.Profiles[index].Manifest.Error() != nil {
+																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, p.Profiles[index].Manifest.Error().Error()).Layout)
+																							}
+																							return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, p.Profiles[index].Manifest.CurrentStatus()).Layout)
+																						}),
+																					)
+																				})
+																			},
+																		)
+																		if p.success != nil || p.confirmBtn != nil {
+																			defer pointer.PassOp{}.Push(gtx.Ops).Pop()
+																			defer clip.Rect(image.Rectangle{Max: gtx.Constraints.Max}).Push(gtx.Ops).Pop()
+																		} else {
+																			p.playModalDrag.Add(gtx.Ops)
+																		}
+																		return dims
+																	})
+																})
+															}
+															return applayout.DefaultInset.Layout(gtx, material.Button(th, &p.Profiles[index].playBtn, "プレイ").Layout)
+														}),
+													)
 												}),
 											)
-										}),
-									)
+										})
+									}),
+								)
+							}),
+							layout.Expanded(func(gtx C) D {
+								return p.Profiles[index].contextArea.Layout(gtx, func(gtx C) D {
+									gtx.Constraints.Min = image.Point{}
+									palette := th.Palette
+									palette.Bg = color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
+									bg := th.WithPalette(palette)
+									return component.Menu(&bg, &p.Profiles[index].menu).Layout(gtx)
 								})
 							}),
-						)
-					}),
-					layout.Expanded(func(gtx C) D {
-						return p.Profiles[index].contextArea.Layout(gtx, func(gtx C) D {
-							gtx.Constraints.Min = image.Point{}
-							return component.Menu(th, &p.Profiles[index].menu).Layout(gtx)
-						})
-					}),
-				)
+						))
+					})
 			})
 			return dims
 		}),
@@ -464,7 +481,7 @@ func (p *Page) Layout(gtx C, th *material.Theme) D {
 					dims := layout.Background{}.Layout(gtx,
 						func(gtx C) D {
 							return component.Rect{
-								Color: th.Bg,
+								Color: color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 								Size:  gtx.Constraints.Max,
 							}.Layout(gtx)
 						},
