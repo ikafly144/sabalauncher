@@ -103,18 +103,20 @@ func (p *Page) loadFromProfileSources() []Profile {
 			slog.Error("Failed to get source", "status", resp.StatusCode)
 			continue
 		}
-		var publicProfiles []resource.PublicProfile
+		var publicProfiles resource.PublicProfiles
 		if err := json.NewDecoder(resp.Body).Decode(&publicProfiles); err != nil {
 			slog.Error("Failed to decode source", "error", err)
 			continue
 		}
-		p := make([]Profile, len(publicProfiles))
-		for i := range publicProfiles {
+		profiles, err := publicProfiles.Convert()
+		if err != nil {
+			slog.Error("Failed to convert public profiles", "error", err)
+			continue
+		}
+		p := make([]Profile, len(profiles))
+		for i := range profiles {
 			p[i] = Profile{
-				Profile: resource.Profile{
-					PublicProfile: publicProfiles[i],
-					Path:          filepath.Join(dataDir, "profiles", publicProfiles[i].Name),
-				},
+				Profile: profiles[i],
 			}
 		}
 		for i := range p {

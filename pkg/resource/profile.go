@@ -39,6 +39,74 @@ type PublicProfile struct {
 	Version             int            `json:"version"`
 }
 
+func (p *PublicProfile) UnmarshalJSON(data []byte) error {
+	type Alias PublicProfile
+	aux := &struct {
+		*Alias
+		Manifest ManifestLoaderUnmarshal `json:"manifest"`
+	}{
+		Alias: (*Alias)(p),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if p.Version != CurrentProfileVersion {
+		return fmt.Errorf("unsupported profile version: %d", p.Version)
+	}
+	aux.Alias.Manifest = aux.Manifest.ManifestLoader
+	return nil
+}
+
+type PublicProfiles []PublicProfile
+
+func (p PublicProfiles) Convert() ([]Profile, error) {
+	var profiles []Profile
+	for _, pub := range p {
+		profile, err := convert(pub)
+		if err != nil {
+			return nil, err
+		}
+		profiles = append(profiles, *profile)
+	}
+	return profiles, nil
+}
+
+func convert(pub PublicProfile) (p *Profile, err error) {
+	p = &Profile{
+		PublicProfile: pub,
+	}
+	if p.Path == "" {
+		p.Path = filepath.Join(DataDir, "profiles", "local", p.Name)
+	}
+
+	if p.Source != "" {
+		u, err := url.Parse(p.Source)
+		if err != nil {
+			return nil, fmt.Errorf("invalid source URL: %w", err)
+		}
+		if u.Scheme == "" {
+			return nil, fmt.Errorf("invalid source URL: %w", err)
+		}
+		if u.Host == "" {
+			return nil, fmt.Errorf("invalid source URL: %w", err)
+		}
+		p.Path = filepath.Join(DataDir, "profiles", u.Host, p.Name)
+	}
+	p.IconImage = defaultIconImage
+	if p.Icon != "" {
+		// load icon as base64 img
+		img, _, err := image.Decode(base64.NewDecoder(base64.StdEncoding, strings.NewReader(p.Icon)))
+		if err != nil {
+			slog.Error("Failed to decode icon", "error", err)
+			// placeholder image
+			// black square
+			img = defaultIconImage
+		}
+		p.IconImage = img
+	}
+	return p, nil
+}
+
 type Profile struct {
 	PublicProfile
 	IconImage image.Image `json:"-"`
@@ -46,6 +114,24 @@ type Profile struct {
 	Path string `json:"-"`
 
 	Source string `json:"source,omitempty"`
+}
+
+func (p *Profile) UnmarshalJSON(data []byte) error {
+	type Alias Profile
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(p),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	profile, err := convert(aux.PublicProfile)
+	if err != nil {
+		return err
+	}
+	*p = *profile
+	return nil
 }
 
 func (p *Profile) Display() string {
@@ -72,53 +158,6 @@ func init() {
 	} else {
 		defaultIconImage = img
 	}
-}
-
-func (p *Profile) UnmarshalJSON(data []byte) error {
-	type Alias Profile
-	aux := &struct {
-		*Alias
-		Manifest ManifestLoaderUnmarshal `json:"manifest"`
-	}{
-		Alias: (*Alias)(p),
-	}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-	if p.Version != CurrentProfileVersion {
-		return fmt.Errorf("unsupported profile version: %d", p.Version)
-	}
-	aux.Alias.Manifest = aux.Manifest.ManifestLoader
-	if p.Path == "" {
-		p.Path = filepath.Join(DataDir, "profiles", "local", p.Name)
-	}
-
-	if p.Source != "" {
-		u, err := url.Parse(p.Source)
-		if err != nil {
-			return fmt.Errorf("invalid source URL: %w", err)
-		}
-		if u.Scheme == "" {
-			return fmt.Errorf("invalid source URL: %w", err)
-		}
-		if u.Host == "" {
-			return fmt.Errorf("invalid source URL: %w", err)
-		}
-		p.Path = filepath.Join(DataDir, "profiles", u.Host, p.Name)
-	}
-	p.IconImage = defaultIconImage
-	if p.Icon != "" {
-		// load icon as base64 img
-		img, _, err := image.Decode(base64.NewDecoder(base64.StdEncoding, strings.NewReader(p.Icon)))
-		if err != nil {
-			slog.Error("Failed to decode icon", "error", err)
-			// placeholder image
-			// black square
-			img = defaultIconImage
-		}
-		p.IconImage = img
-	}
-	return nil
 }
 
 func (p *Profile) Fetch() error {
