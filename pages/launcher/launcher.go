@@ -100,7 +100,7 @@ func (p *Page) Actions() []component.AppBarAction {
 				Name: "プロファイルを更新",
 				Tag:  "update",
 			},
-			Layout: func(gtx layout.Context, bg, fg color.NRGBA) layout.Dimensions {
+			Layout: func(gtx C, bg, fg color.NRGBA) D {
 				for p.updateBtn.Clicked(gtx) {
 					go p.loadProfiles()
 				}
@@ -121,7 +121,7 @@ func (p *Page) NavItem() component.NavItem {
 	}
 }
 
-func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
+func (p *Page) Layout(gtx C, th *material.Theme) D {
 	gtx.Execute(op.InvalidateCmd{})
 	if p.saveLogButton.Clicked(gtx) && !p.saveLog.Load() {
 		go func() {
@@ -165,11 +165,11 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 		Alignment: layout.Middle,
 		Axis:      layout.Vertical,
 	}.Layout(gtx,
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		layout.Rigid(func(gtx C) D {
 			gtx.Constraints.Max.Y -= gtx.Dp(60)
 			gtx.Constraints.Min.Y = gtx.Constraints.Max.Y
 			p.profileList.Axis = layout.Vertical
-			dims := material.List(th, &p.profileList).Layout(gtx, len(p.Profiles), func(gtx layout.Context, index int) layout.Dimensions {
+			dims := material.List(th, &p.profileList).Layout(gtx, len(p.Profiles), func(gtx C, index int) D {
 				if !p.Profiles[index].menuInit {
 					p.Profiles[index].menuInit = true
 					p.Profiles[index].menu = component.MenuState{
@@ -190,28 +190,28 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 					}()
 				}
 				return layout.Stack{}.Layout(gtx,
-					layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+					layout.Stacked(func(gtx C) D {
 						return layout.Flex{
 							Alignment: layout.Middle,
 							Axis:      layout.Vertical,
 						}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							layout.Rigid(func(gtx C) D {
 								gtx.Constraints.Min.X = gtx.Constraints.Max.X
-								return applayout.DefaultInset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								return applayout.DefaultInset.Layout(gtx, func(gtx C) D {
 									return layout.Flex{
 										Alignment: layout.Start,
 										Axis:      layout.Horizontal,
 									}.Layout(gtx,
-										layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+										layout.Rigid(func(gtx C) D {
 											gtx.Constraints = layout.Exact(image.Pt(gtx.Dp(128), gtx.Dp(128)))
 											return p.Profiles[index].GetIcon().Layout(gtx)
 										}),
-										layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+										layout.Rigid(func(gtx C) D {
 											return layout.Flex{
 												Alignment: layout.Start,
 												Axis:      layout.Vertical,
 											}.Layout(gtx,
-												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+												layout.Rigid(func(gtx C) D {
 													return layout.Inset{
 														Top:    unit.Dp(16),
 														Left:   unit.Dp(16),
@@ -219,21 +219,21 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 														Bottom: unit.Dp(8),
 													}.Layout(gtx, material.Label(th, 16, p.Profiles[index].Display()).Layout)
 												}),
-												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+												layout.Rigid(func(gtx C) D {
 													return layout.UniformInset(unit.Dp(8)).Layout(gtx, material.Body2(th, p.Profiles[index].Description).Layout)
 												}),
-												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+												layout.Rigid(func(gtx C) D {
 													return layout.UniformInset(unit.Dp(8)).Layout(gtx, material.Body2(th, "バージョン: "+p.Profiles[index].Manifest.VersionName()).Layout)
 												}),
 											)
 										}),
-										layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+										layout.Rigid(func(gtx C) D {
 											op.Offset(image.Pt(gtx.Constraints.Max.X-gtx.Dp(90), 0)).Add(gtx.Ops)
 											return layout.Flex{
 												Alignment: layout.Start,
 												Axis:      layout.Vertical,
 											}.Layout(gtx,
-												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+												layout.Rigid(func(gtx C) D {
 													if p.Profiles[index].playBtn.Clicked(gtx) {
 														p.success = nil
 														p.booted = false
@@ -254,7 +254,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 															slog.Error("Failed to fetch profile", "error", err)
 														}
 														p.Profiles[index].Manifest.StartSetup(resource.DataDir, p.Profiles[index].Path)
-														p.playModal.Widget = (func(gtx layout.Context, __th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
+														p.playModal.Widget = (func(gtx C, __th *material.Theme, anim *component.VisibilityAnimation) D {
 															for {
 																_, ok := p.playModalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)
 																if !ok {
@@ -311,7 +311,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																Bottom: unit.Dp(80),
 																Left:   unit.Dp(gtx.Metric.PxToDp(gtx.Constraints.Max.X/2) - 200),
 																Right:  unit.Dp(gtx.Metric.PxToDp(gtx.Constraints.Max.X/2) - 200),
-															}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+															}.Layout(gtx, func(gtx C) D {
 																for p.success == nil {
 																	_, ok := p.playModalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)
 																	if !ok {
@@ -324,50 +324,50 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																	event.Op(gtx.Ops, p.playModalDrag)
 																}
 																dims := layout.Background{}.Layout(gtx,
-																	func(gtx layout.Context) layout.Dimensions {
+																	func(gtx C) D {
 																		return component.Rect{
 																			Color: th.Bg,
 																			Size:  gtx.Constraints.Max,
 																		}.Layout(gtx)
 																	},
-																	func(gtx layout.Context) layout.Dimensions {
-																		return applayout.DefaultInset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+																	func(gtx C) D {
+																		return applayout.DefaultInset.Layout(gtx, func(gtx C) D {
 																			return layout.Flex{
 																				Alignment: layout.Middle,
 																				Axis:      layout.Vertical,
 																			}.Layout(gtx,
-																				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																				layout.Rigid(func(gtx C) D {
 																					return applayout.DefaultInset.Layout(gtx, material.ProgressBar(&th, float32(p.Profiles[index].Manifest.TotalProgress())).Layout)
 																				}),
-																				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																				layout.Rigid(func(gtx C) D {
 																					return applayout.DefaultInset.Layout(gtx, material.ProgressBar(&th, float32(p.Profiles[index].Manifest.CurrentProgress())).Layout)
 																				}),
-																				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																				layout.Rigid(func(gtx C) D {
 																					if p.confirmBtn != nil {
 																						return layout.Flex{
 																							Axis: layout.Vertical,
 																						}.Layout(gtx,
-																							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																							layout.Rigid(func(gtx C) D {
 																								mem, err := p.Profiles[index].ActualMemory()
 																								if err != nil {
 																									return material.Caption(&th, fmt.Sprintf("メモリの取得に失敗しました: %v", err)).Layout(gtx)
 																								}
 																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 16, fmt.Sprintf("推奨割り当てメモリ%dMBに対して、\nシステムの搭載メモリに十分な余裕がないため、%dMBを割り当てて起動します。\n これにより、動作が不安定になる場合があります。", p.Profiles[index].RecommendedMemoryMB, mem)).Layout)
 																							}),
-																							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																							layout.Rigid(func(gtx C) D {
 																								return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Button(&th, p.confirmBtn, "確認しました").Layout)
 																							}),
 																						)
 																					}
 																					if p.bootError != nil {
-																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx C) D {
 																							return layout.Flex{
 																								Axis: layout.Vertical,
 																							}.Layout(gtx,
-																								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																								layout.Rigid(func(gtx C) D {
 																									return material.Label(&th, 28, p.bootError.Error()).Layout(gtx)
 																								}),
-																								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																								layout.Rigid(func(gtx C) D {
 																									return material.Button(&th, &p.saveLogButton, "ログを保存").Layout(gtx)
 																								}),
 																							)
@@ -376,14 +376,14 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 																					if p.booted && p.success == nil {
 																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, material.Label(&th, 28, "ゲームを起動中").Layout)
 																					} else if p.success != nil && *p.success {
-																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+																						return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx C) D {
 																							return layout.Flex{
 																								Axis: layout.Vertical,
 																							}.Layout(gtx,
-																								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																								layout.Rigid(func(gtx C) D {
 																									return material.Label(&th, 28, "ゲームが終了しました").Layout(gtx)
 																								}),
-																								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+																								layout.Rigid(func(gtx C) D {
 																									return material.Button(&th, &p.saveLogButton, "ログを保存").Layout(gtx)
 																								}),
 																							)
@@ -417,8 +417,8 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 							}),
 						)
 					}),
-					layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-						return p.Profiles[index].contextArea.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					layout.Expanded(func(gtx C) D {
+						return p.Profiles[index].contextArea.Layout(gtx, func(gtx C) D {
 							gtx.Constraints.Min = image.Point{}
 							return component.Menu(th, &p.Profiles[index].menu).Layout(gtx)
 						})
@@ -427,8 +427,8 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 			})
 			return dims
 		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			p.modal.Widget = (func(gtx layout.Context, __th *material.Theme, anim *component.VisibilityAnimation) layout.Dimensions {
+		layout.Rigid(func(gtx C) D {
+			p.modal.Widget = (func(gtx C, __th *material.Theme, anim *component.VisibilityAnimation) D {
 				__p := __th.Palette
 				animating := anim.Animating() || anim.State == component.Invisible
 				if animating {
@@ -451,7 +451,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 					Bottom: unit.Dp(80),
 					Left:   unit.Dp(gtx.Metric.PxToDp(gtx.Constraints.Max.X/2) - 200),
 					Right:  unit.Dp(gtx.Metric.PxToDp(gtx.Constraints.Max.X/2) - 200),
-				}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				}.Layout(gtx, func(gtx C) D {
 					for {
 						_, ok := p.modalDrag.Update(gtx.Metric, gtx.Source, gesture.Horizontal)
 						if !ok {
@@ -462,33 +462,33 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 					defer pr.Push(gtx.Ops).Pop()
 					event.Op(gtx.Ops, p)
 					dims := layout.Background{}.Layout(gtx,
-						func(gtx layout.Context) layout.Dimensions {
+						func(gtx C) D {
 							return component.Rect{
 								Color: th.Bg,
 								Size:  gtx.Constraints.Max,
 							}.Layout(gtx)
 						},
-						func(gtx layout.Context) layout.Dimensions {
-							return applayout.DefaultInset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						func(gtx C) D {
+							return applayout.DefaultInset.Layout(gtx, func(gtx C) D {
 								p.addProfileList.Axis = layout.Vertical
 								return layout.Flex{
 									Alignment: layout.Middle,
 									Axis:      layout.Vertical,
 								}.Layout(gtx,
-									layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+									layout.Rigid(func(gtx C) D {
 										gtx.Constraints.Max.Y -= gtx.Dp(64)
-										return material.List(&th, &p.addProfileList).Layout(gtx, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+										return material.List(&th, &p.addProfileList).Layout(gtx, 1, func(gtx C, _ int) D {
 											return layout.Flex{
 												Alignment: layout.Middle,
 												Axis:      layout.Vertical,
 											}.Layout(gtx,
-												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+												layout.Rigid(func(gtx C) D {
 													return applayout.DefaultInset.Layout(gtx, material.Label(&th, 28, "プロファイルを追加").Layout)
 												}),
 												layout.Rigid(layout.Spacer{Height: unit.Dp(16)}.Layout),
-												layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+												layout.Rigid(func(gtx C) D {
 													if animating {
-														return layout.Dimensions{}
+														return D{}
 													}
 													gtx.Constraints.Max = gtx.Constraints.Max.Sub(image.Pt(gtx.Dp(32), 0))
 													p.addProfileInput.SingleLine = true
@@ -499,7 +499,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 											)
 										})
 									}),
-									layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+									layout.Rigid(func(gtx C) D {
 										for p.addProfileBtn.Clicked(gtx) {
 											url, err := url.Parse(p.addProfileInput.Text())
 											if err != nil || url.Scheme == "" {
@@ -533,7 +533,7 @@ func (p *Page) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions 
 	)
 	p.playModal.Layout(gtx, th)
 	p.modal.Layout(gtx, th)
-	return layout.Dimensions{
+	return D{
 		Size: gtx.Constraints.Max,
 	}
 }
