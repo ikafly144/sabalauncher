@@ -1,6 +1,6 @@
 module github.com/ikafly144/sabalauncher
 
-go 1.25.0
+go 1.25.1
 
 require (
 	gioui.org v0.8.0
