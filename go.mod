@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	gioui.org v0.9.0
 	gioui.org/x v0.9.0
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.4.2
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.5.0
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/bugph0bia/go-logging v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.98
@@ -26,7 +26,7 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-text/typesetting v0.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.0.6 // indirect
-	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
