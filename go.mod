@@ -5,7 +5,7 @@ go 1.25.3
 require (
 	gioui.org v0.9.0
 	gioui.org/x v0.9.0
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.5.0
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/bugph0bia/go-logging v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.98
