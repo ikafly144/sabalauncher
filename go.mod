@@ -1,19 +1,21 @@
 module github.com/ikafly144/sabalauncher
 
-go 1.25.0
+go 1.25.5
 
 require (
-	gioui.org v0.8.0
-	gioui.org/x v0.8.1
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.4.2
+	gioui.org v0.9.0
+	gioui.org/x v0.9.0
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/bugph0bia/go-logging v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.98
 	github.com/google/go-github/v74 v74.0.0
+	github.com/google/go-github/v79 v79.0.0
+	github.com/google/go-github/v79 v79.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
-	github.com/ulikunitz/xz v0.5.13
-	golang.org/x/exp v0.0.0-20240707233637-46b078467d37
+	github.com/ulikunitz/xz v0.5.15
+	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
 	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0
 )
 
@@ -24,9 +26,9 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
-	github.com/go-text/typesetting v0.2.1 // indirect
+	github.com/go-text/typesetting v0.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.0.6 // indirect
-	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -48,7 +50,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/urfave/cli v1.22.16 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/image v0.18.0 // indirect
+	golang.org/x/image v0.26.0 // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect

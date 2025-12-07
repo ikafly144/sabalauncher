@@ -12,7 +12,7 @@ jobs:
     runs-on: windows-2025
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Get Branch
@@ -23,9 +23,9 @@ jobs:
           echo "name=$branch" >> $env:GITHUB_OUTPUT
       - run: git checkout --progress --force ${{ steps.get_branch.outputs.name }}
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: "^1.25.0"
+          go-version: "^1.25.5"
       - name: Generate Local Keys
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
