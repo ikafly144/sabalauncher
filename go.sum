@@ -76,6 +76,7 @@ github.com/google/go-github/v79 v79.0.0 h1:MdodQojuFPBhmtwHiBcIGLw/e/wei2PvFX9nd
 github.com/google/go-github/v79 v79.0.0/go.mod h1:OAFbNhq7fQwohojb06iIIQAB9CBGYLq999myfUFnrS4=
 github.com/google/go-licenses/v2 v2.0.0-alpha.1 h1:2EMzW/1PWYvgOxBXsWl7b350vI0c/kf5Fh7z4AR1skM=
 github.com/google/go-licenses/v2 v2.0.0-alpha.1/go.mod h1:HlMUpsa+mbs8EqdlY0BDfCn0ZK7Y7NQoRCGYhNoox64=
+github.com/google/go-licenses/v2 v2.0.1/go.mod h1:efibo0EDNGkau6AIMOViGW+rTNPudhxX9rCxtfw5zKE=
 github.com/google/go-querystring v1.1.0 h1:AnCroh3fv4ZBgVIf1Iwtovgjaw/GiKJo8M8yD/fhyJ8=
 github.com/google/go-querystring v1.1.0/go.mod h1:Kcdr2DB4koayq7X8pmAG4sNG59So17icRSOU623lUBU=
 github.com/google/go-replayers/httpreplay v1.2.0 h1:VM1wEyyjaoU53BwrOnaf9VhAyQQEEioJvFYxYcLRKzk=
