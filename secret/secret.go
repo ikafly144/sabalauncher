@@ -10,8 +10,6 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-//go:generate go run github.com/ikafly144/sabalauncher/secret/gen
-
 //go:embed local/*.json
 var localRaw embed.FS
 
