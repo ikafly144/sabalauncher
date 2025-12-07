@@ -11,6 +11,7 @@ require (
 	github.com/cloudfoundry/gosigar v1.3.98
 	github.com/google/go-github/v74 v74.0.0
 	github.com/google/go-github/v79 v79.0.0
+	github.com/google/go-github/v80 v80.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
 	github.com/ulikunitz/xz v0.5.15
