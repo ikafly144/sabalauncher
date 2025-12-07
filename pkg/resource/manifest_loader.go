@@ -54,10 +54,55 @@ func (m *ManifestLoaderUnmarshal) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		m.ManifestLoader = &f
+	case "custom":
+		var c CustomManifestLoader
+		if err := json.Unmarshal(data, &c); err != nil {
+			return err
+		}
+		m.ManifestLoader = &c
 	default:
 		return fmt.Errorf("unknown loader type: %s", m.LoaderType)
 	}
 	return nil
+}
+
+var _ ManifestLoader = (*CustomManifestLoader)(nil)
+
+type CustomManifestLoader struct {
+	VanillaManifestLoader
+}
+
+func (v *CustomManifestLoader) StartSetup(dataPath string, profile string) {
+	v.state = NewState("Customのセットアップ", "custom_setup")
+	go func() {
+		_ = os.MkdirAll(dataPath, 0755)
+		_ = os.MkdirAll(profile, 0755)
+		m, err := GetLocalClientManifest(dataPath, v.VersionID)
+		if err != nil {
+			slog.Error("Failed to get client manifest", "error", err)
+			v.err = err
+			return
+		}
+		v.manifest = m
+		v.state.AddStep(&JavaSetupStep{
+			manifest: m,
+		})
+		v.state.AddStep(&ClientDownloadStep{
+			manifest: m,
+		})
+		v.state.AddStep(&AssetsDownloadStep{
+			manifest: m,
+		})
+		v.state.AddStep(&LibraryDownloadStep{
+			manifest: m,
+		})
+		if err := v.state.Do(&SetupContext{
+			dataPath:    dataPath,
+			profilePath: profile,
+		}); err != nil {
+			slog.Error("Failed to run setup state", "error", err)
+		}
+	}()
 }
 
 var _ ManifestLoader = (*VanillaManifestLoader)(nil)

@@ -104,6 +104,20 @@ func GetClientManifest(version *Version) (*ClientManifest, error) {
 	return &clientManifest, nil
 }
 
+func GetLocalClientManifest(dataDir, version string) (*ClientManifest, error) {
+	manifestPath := filepath.Join(dataDir, "versions", version, version+".json")
+	file, err := os.Open(manifestPath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	var clientManifest ClientManifest
+	if err := json.NewDecoder(file).Decode(&clientManifest); err != nil {
+		return nil, err
+	}
+	return &clientManifest, nil
+}
+
 const (
 	AssetResourceURL = "https://resources.download.minecraft.net/"
 )
