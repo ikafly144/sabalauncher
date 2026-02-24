@@ -37,7 +37,7 @@ jobs:
         run: |-
           winget install --id WiXToolset.WiXToolset -e --accept-source-agreements --accept-package-agreements || true
       - name: Build SabaLauncher
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser
