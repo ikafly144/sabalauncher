@@ -10,8 +10,6 @@ require (
 	github.com/bugph0bia/go-logging v1.0.0
 	github.com/cloudfoundry/gosigar v1.3.116
 	github.com/google/go-github/v79 v79.0.0
-	github.com/google/go-github/v83 v83.0.0
-	github.com/google/go-github/v83 v83.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
 	github.com/ulikunitz/xz v0.5.15
