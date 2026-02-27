@@ -29,7 +29,7 @@
     - [x] Implement reusable widgets or layouts for navigation and status headers.
 - [x] Task: Conductor - User Manual Verification 'Fyne UI Foundation & Component Scaffolding' (Protocol in workflow.md)
 
-## Phase 4: Page Re-implementation
+## Phase 4: Page Re-implementation [checkpoint: 2c42b64]
 - [x] Task: Implement Authentication View [8cdaa56]
     - [x] Build the Microsoft login popup/dialog using Fyne.
     - [x] Connect the view to the `Authenticator` service.
@@ -39,7 +39,7 @@
 - [x] Task: Implement Main Dashboard & Launch Controls [a65c30f]
     - [x] Build the main server list and the primary "Play" button.
     - [x] Connect the view to the `GameRunner` service.
-- [ ] Task: Conductor - User Manual Verification 'Page Re-implementation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Page Re-implementation' (Protocol in workflow.md) [2c42b64]
 
 ## Phase 5: Feedback Systems & Integration
 - [ ] Task: Implement Real-time Progress & Logs
