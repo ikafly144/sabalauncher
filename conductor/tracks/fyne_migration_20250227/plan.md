@@ -41,7 +41,7 @@
     - [x] Connect the view to the `GameRunner` service.
 - [x] Task: Conductor - User Manual Verification 'Page Re-implementation' (Protocol in workflow.md) [2c42b64]
 
-## Phase 5: Feedback Systems & Integration
+## Phase 5: Feedback Systems & Integration [checkpoint: 76ce162]
 - [x] Task: Implement Real-time Progress & Logs [39f9f0d]
     - [x] Create a dedicated view/overlay for download progress bars and live logs.
     - [x] Pipe events from the `GameRunner` service to the Fyne UI components.
@@ -49,7 +49,7 @@
     - [x] Re-hook the Discord service to the new UI state and lifecycle.
 - [x] Task: Support local JSON files for profile sources (Debug feature) [1cda269]
 - [x] Task: Implement secure session persistence (Auto-login) [6761844]
-- [ ] Task: Conductor - User Manual Verification 'Feedback Systems & Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Feedback Systems & Integration' (Protocol in workflow.md) [76ce162]
 
 ## Phase 6: Final Integration & Gio Removal
 - [ ] Task: End-to-End System Testing
