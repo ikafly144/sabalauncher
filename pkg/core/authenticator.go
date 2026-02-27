@@ -40,6 +40,45 @@ func NewAuthenticator(cachePath string) (Authenticator, error) {
 	}, nil
 }
 
+func (a *msaAuthenticator) TrySilentLogin(ctx context.Context) error {
+	a.mu.Lock()
+	a.status = AuthStatusLoggingIn
+	a.mu.Unlock()
+
+	// Try to get the Minecraft account from cache (silent flow)
+	account, err := msa.NewMinecraftAccount(a.session)
+	if err != nil {
+		a.mu.Lock()
+		a.status = AuthStatusLoggedOut
+		a.mu.Unlock()
+		return err
+	}
+
+	mcAuth, err := account.GetMinecraftAccount()
+	if err != nil {
+		a.mu.Lock()
+		a.status = AuthStatusError
+		a.mu.Unlock()
+		return err
+	}
+
+	profile, err := mcAuth.GetMinecraftProfile()
+	if err != nil {
+		a.mu.Lock()
+		a.status = AuthStatusError
+		a.mu.Unlock()
+		return err
+	}
+
+	a.mu.Lock()
+	a.user = profile.Username
+	a.mcProfile = profile
+	a.status = AuthStatusLoggedIn
+	a.mu.Unlock()
+
+	return nil
+}
+
 func (a *msaAuthenticator) Login(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()

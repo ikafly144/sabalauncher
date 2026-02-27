@@ -46,6 +46,11 @@ func (c *CacheAccessor) Export(ctx context.Context, cache cache.Marshaler, hints
 		return fmt.Errorf("failed to marshal cache: %w", err)
 	}
 
+	encrypted, err := encrypt(data)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt cache: %w", err)
+	}
+
 	_ = os.MkdirAll(filepath.Dir(c.path), 0755)
 	file, err := os.Create(c.path)
 	if err != nil {
@@ -53,7 +58,7 @@ func (c *CacheAccessor) Export(ctx context.Context, cache cache.Marshaler, hints
 	}
 	defer file.Close()
 
-	if _, err := file.Write(data); err != nil {
+	if _, err := file.Write(encrypted); err != nil {
 		return fmt.Errorf("failed to write cache data: %w", err)
 	}
 	slog.Info("Cache exported", "path", c.path, "partitionKey", hints.PartitionKey)
@@ -82,7 +87,15 @@ func (c *CacheAccessor) Replace(ctx context.Context, cache cache.Unmarshaler, hi
 	if err != nil {
 		return fmt.Errorf("failed to read cache file: %w", err)
 	}
-	if err := cache.Unmarshal(bytes); err != nil {
+
+	decrypted, err := decrypt(bytes)
+	if err != nil {
+		// If decryption fails, it might be an old unencrypted cache or corrupted
+		slog.Warn("Failed to decrypt cache, attempting to use as-is", "error", err)
+		decrypted = bytes
+	}
+
+	if err := cache.Unmarshal(decrypted); err != nil {
 		return fmt.Errorf("failed to unmarshal cache data: %w", err)
 	}
 	return nil

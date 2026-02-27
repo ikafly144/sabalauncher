@@ -16,6 +16,11 @@ type mockAuthenticator struct {
 	mock.Mock
 }
 
+func (m *mockAuthenticator) TrySilentLogin(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 func (m *mockAuthenticator) Login(ctx context.Context) error {
 	args := m.Called(ctx)
 	return args.Error(0)

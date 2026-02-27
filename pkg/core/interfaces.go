@@ -16,11 +16,12 @@ const (
 	AuthStatusError
 )
 
-// Authenticator defines the interface for handling Minecraft/Microsoft authentication.
+	// Authenticator defines the interface for handling Minecraft/Microsoft authentication.
 type Authenticator interface {
+	// TrySilentLogin attempts to login using cached credentials.
+	TrySilentLogin(ctx context.Context) error
 	// Login starts the interactive login process.
-	Login(ctx context.Context) error
-	// Logout clears the current session.
+	Login(ctx context.Context) error	// Logout clears the current session.
 	Logout() error
 	// GetStatus returns the current authentication status.
 	GetStatus() AuthStatus

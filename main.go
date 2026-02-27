@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -67,6 +68,9 @@ func main() {
 
 	runner := core.NewGameRunner(auth, profiles, resource.DataDir)
 	discord := core.NewDiscordManager(auth, profiles)
+
+	// Try to resume session
+	_ = auth.TrySilentLogin(context.Background())
 
 	// Initialize Fyne App
 	a := app.NewWithID("net.sabafly.sabalauncher")
