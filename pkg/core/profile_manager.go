@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -68,12 +69,20 @@ func (pm *profileManager) GetProfiles() ([]Profile, error) {
 }
 
 func (pm *profileManager) AddProfile(sourceURL string) error {
-	u, err := url.Parse(sourceURL)
-	if err != nil {
-		return err
-	}
-	if u.Scheme == "" || u.Host == "" {
-		return fmt.Errorf("invalid URL: %s", sourceURL)
+	// Relax validation to allow local file paths
+	if strings.HasPrefix(sourceURL, "http://") || strings.HasPrefix(sourceURL, "https://") {
+		u, err := url.Parse(sourceURL)
+		if err != nil {
+			return err
+		}
+		if u.Host == "" {
+			return fmt.Errorf("invalid URL: %s", sourceURL)
+		}
+	} else {
+		// Assume local file path
+		if _, err := os.Stat(sourceURL); err != nil {
+			return fmt.Errorf("local file not found: %w", err)
+		}
 	}
 
 	pm.mu.Lock()
@@ -120,16 +129,27 @@ func (pm *profileManager) RefreshProfiles() error {
 
 	var allProfiles []Profile
 	for _, source := range pm.sources {
-		resp, err := http.Get(source)
-		if err != nil {
-			continue // Skip failing sources
+		var reader io.ReadCloser
+		if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
+			resp, err := http.Get(source)
+			if err != nil {
+				continue // Skip failing sources
+			}
+			reader = resp.Body
+		} else {
+			file, err := os.Open(source)
+			if err != nil {
+				continue // Skip failing files
+			}
+			reader = file
 		}
-		defer resp.Body.Close()
 		
 		var publicProfiles resource.PublicProfiles
-		if err := json.NewDecoder(resp.Body).Decode(&publicProfiles); err != nil {
+		if err := json.NewDecoder(reader).Decode(&publicProfiles); err != nil {
+			reader.Close()
 			continue
 		}
+		reader.Close()
 		
 		resProfiles, err := publicProfiles.Convert()
 		if err != nil {
