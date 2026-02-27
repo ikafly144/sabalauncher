@@ -4,10 +4,11 @@
 - **Go (1.26.0):** The primary programming language for the launcher, chosen for its performance, ease of deployment, and strong standard library.
 
 ## User Interface
-- **Gio (gioui.org):** A portable Go library for building immediate-mode graphical user interfaces. It enables high-performance, hardware-accelerated UIs.
+- **Fyne (fyne.io):** A modern UI toolkit for Go that enables building cross-platform, natively-styled applications with ease. Chosen for its rich widget set and ease of development compared to immediate-mode frameworks.
 
 ## Authentication & Security
 - **Microsoft Authentication Library (MSAL) for Go:** Used to handle secure OAuth2 authentication with Microsoft accounts, required for Minecraft licensing.
+- **DPAPI (Data Protection API):** Used on Windows to securely encrypt and store user credentials and session tokens locally.
 
 ## Platform Integration & Features
 - **Discord Rich Presence (rich-go):** Integrates the launcher with Discord to display the user's current game status.
@@ -18,4 +19,5 @@
 - **WiX Toolset (MSI):** The standard format for Windows installers, ensuring a professional and reliable installation experience for users.
 
 ## Architectural Patterns
-- **Modular Monolith:** The project is organized into clear packages (e.g., `pages` for UI, `pkg` for core logic) to maintain separation of concerns while keeping the deployment simple.
+- **UI/Core Decoupling:** Strict separation between the presentation layer (Fyne) and core launcher logic via Go interfaces.
+- **Interface-Driven Design:** Core services (Authenticator, ProfileManager, GameRunner) are abstracted behind interfaces to facilitate testing and maintainability.
