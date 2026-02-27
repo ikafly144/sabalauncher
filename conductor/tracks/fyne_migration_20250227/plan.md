@@ -9,17 +9,17 @@
     - [x] Ensure existing logic in `pkg` is prepared for decoupling.
 - [x] Task: Conductor - User Manual Verification 'Architecture Definition & Package Scaffolding' (Protocol in workflow.md) [ac1f04f]
 
-## Phase 2: Core Logic Refactoring (Decoupling)
+## Phase 2: Core Logic Refactoring (Decoupling) [checkpoint: a55e1cf]
 - [x] Task: Refactor Authentication Logic
     - [x] Write unit tests for the `Authenticator` implementation.
     - [x] Extract Microsoft Auth logic from UI-coupled code into a standalone service.
 - [x] Task: Refactor Profile Management Logic
     - [x] Write unit tests for the `ProfileManager` implementation.
     - [x] Decouple profile loading, adding, and deleting from Gio-specific structures.
-- [~] Task: Refactor Game Launch & Update Logic
-    - [ ] Write unit tests for the `GameRunner` implementation (using mocks for process execution).
-    - [ ] Decouple download progress and log streaming into channel-based events.
-- [ ] Task: Conductor - User Manual Verification 'Core Logic Refactoring (Decoupling)' (Protocol in workflow.md)
+- [x] Task: Refactor Game Launch & Update Logic
+    - [x] Write unit tests for the `GameRunner` implementation (using mocks for process execution).
+    - [x] Decouple download progress and log streaming into channel-based events.
+- [x] Task: Conductor - User Manual Verification 'Core Logic Refactoring (Decoupling)' (Protocol in workflow.md) [a55e1cf]
 
 ## Phase 3: Fyne UI Foundation & Component Scaffolding
 - [ ] Task: Initialize Fyne Application
