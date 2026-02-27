@@ -6,16 +6,14 @@ import (
 )
 
 func TestNewFyneUI(t *testing.T) {
-	// Use test.NewApp() for headless testing
 	a := test.NewApp()
-	w := a.NewWindow("Test")
-	
-	ui := &FyneUI{
-		app:    a,
-		window: w,
-	}
+	m := new(mockAuthenticator)
+	ui := NewFyneUI(a, m, nil, nil)
 	
 	if ui == nil {
 		t.Fatal("Failed to create FyneUI")
+	}
+	if ui.auth != m {
+		t.Error("Authenticator not set")
 	}
 }

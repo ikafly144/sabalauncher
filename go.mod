@@ -13,6 +13,7 @@ require (
 	github.com/google/go-github/v79 v79.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
+	github.com/stretchr/testify v1.11.1
 	github.com/ulikunitz/xz v0.5.15
 	golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39
 	golang.org/x/exp/shiny v0.0.0-20251125195548-87e1e737ad39
@@ -67,7 +68,7 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
-	github.com/stretchr/testify v1.11.1 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/urfave/cli v1.22.17 // indirect
 	github.com/yuin/goldmark v1.7.8 // indirect
 	go.opencensus.io v0.24.0 // indirect

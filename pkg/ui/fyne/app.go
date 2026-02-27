@@ -2,9 +2,6 @@ package fyne
 
 import (
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/core"
 )
 
@@ -17,8 +14,7 @@ type FyneUI struct {
 	runner  core.GameRunner
 }
 
-func NewFyneUI(auth core.Authenticator, profiles core.ProfileManager, runner core.GameRunner) *FyneUI {
-	a := app.New()
+func NewFyneUI(a fyne.App, auth core.Authenticator, profiles core.ProfileManager, runner core.GameRunner) *FyneUI {
 	w := a.NewWindow("SabaLauncher")
 	
 	return &FyneUI{
@@ -31,12 +27,6 @@ func NewFyneUI(auth core.Authenticator, profiles core.ProfileManager, runner cor
 }
 
 func (ui *FyneUI) Run() {
-	ui.window.SetContent(container.NewVBox(
-		widget.NewLabel("SabaLauncher - Fyne Migration"),
-		widget.NewButton("Quit", func() {
-			ui.app.Quit()
-		}),
-	))
-	
+	ui.showAuthView()
 	ui.window.ShowAndRun()
 }
