@@ -22,17 +22,17 @@
 - [x] Task: Conductor - User Manual Verification 'Core Logic Refactoring (Decoupling)' (Protocol in workflow.md) [a55e1cf]
 
 ## Phase 3: Fyne UI Foundation & Component Scaffolding
-- [ ] Task: Initialize Fyne Application
-    - [ ] Set up the main Fyne app loop and basic window management.
-    - [ ] Configure the default Fyne theme (Clean & Modern).
-- [ ] Task: Create UI Component Primitives
-    - [ ] Implement reusable widgets or layouts for navigation and status headers.
-- [ ] Task: Conductor - User Manual Verification 'Fyne UI Foundation & Component Scaffolding' (Protocol in workflow.md)
+- [x] Task: Initialize Fyne Application
+    - [x] Set up the main Fyne app loop and basic window management.
+    - [x] Configure the default Fyne theme (Clean & Modern).
+- [x] Task: Create UI Component Primitives
+    - [x] Implement reusable widgets or layouts for navigation and status headers.
+- [x] Task: Conductor - User Manual Verification 'Fyne UI Foundation & Component Scaffolding' (Protocol in workflow.md)
 
 ## Phase 4: Page Re-implementation
-- [ ] Task: Implement Authentication View
-    - [ ] Build the Microsoft login popup/dialog using Fyne.
-    - [ ] Connect the view to the `Authenticator` service.
+- [x] Task: Implement Authentication View [8cdaa56]
+    - [x] Build the Microsoft login popup/dialog using Fyne.
+    - [x] Connect the view to the `Authenticator` service.
 - [ ] Task: Implement Profile Management Views
     - [ ] Rebuild the profile list and "Add Profile" dialogs.
     - [ ] Connect the view to the `ProfileManager` service.
