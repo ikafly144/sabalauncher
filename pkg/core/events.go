@@ -9,6 +9,8 @@ type ProgressEvent struct {
 	TaskName   string  // e.g., "Downloading Forge"
 	Percentage float64 // 0.0 to 100.0
 	Status     string  // e.g., "45 MB / 100 MB"
+	Total      int
+	Current    int
 	IsFinished bool
 }
 

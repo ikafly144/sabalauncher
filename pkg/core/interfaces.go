@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"image"
 )
 
 // AuthStatus represents the current state of authentication.
@@ -24,6 +25,11 @@ type Authenticator interface {
 	GetStatus() AuthStatus
 	// GetUserDisplay returns the name of the logged-in user.
 	GetUserDisplay() string
+	// DeviceCode returns the device code information for the user to login.
+	// This should only be called when status is AuthStatusLoggingIn.
+	DeviceCode() (url, code string)
+	// WaitLogin blocks until the authentication process is complete or the context is cancelled.
+	WaitLogin(ctx context.Context) error
 }
 
 // Profile represents a game configuration.
@@ -31,8 +37,9 @@ type Profile struct {
 	Name        string
 	DisplayName string
 	Description string
-	Icon        []byte // Base64 or raw bytes
+	IconImage   image.Image
 	IsActive    bool
+	Source      string
 }
 
 // ProfileManager defines the interface for managing game profiles.
@@ -55,4 +62,8 @@ type GameRunner interface {
 	Stop() error
 	// IsRunning returns true if the game is currently active.
 	IsRunning() bool
+	// SubscribeProgress returns a channel that receives progress updates.
+	SubscribeProgress() <-chan ProgressEvent
+	// SubscribeLogs returns a channel that receives log entries.
+	SubscribeLogs() <-chan LogEntry
 }

@@ -15,8 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gioui.org/op/paint"
-	"gioui.org/widget"
 	sigar "github.com/cloudfoundry/gosigar"
 )
 
@@ -198,10 +196,6 @@ func (p *Profile) Fetch() error {
 	}
 	slog.Error("Profile not found in fetched data", "name", p.Name, "source", p.Source)
 	return fmt.Errorf("profile %s not found in fetched data from %s", p.Name, p.Source)
-}
-
-func (p *Profile) GetIcon() *widget.Image {
-	return &widget.Image{Src: paint.NewImageOp(p.IconImage)}
 }
 
 func getMem() (sigar.Mem, error) {
