@@ -33,9 +33,9 @@
 - [x] Task: Implement Authentication View [8cdaa56]
     - [x] Build the Microsoft login popup/dialog using Fyne.
     - [x] Connect the view to the `Authenticator` service.
-- [ ] Task: Implement Profile Management Views
-    - [ ] Rebuild the profile list and "Add Profile" dialogs.
-    - [ ] Connect the view to the `ProfileManager` service.
+- [x] Task: Implement Profile Management Views [3d2465d]
+    - [x] Rebuild the profile list and "Add Profile" dialogs.
+    - [x] Connect the view to the `ProfileManager` service.
 - [ ] Task: Implement Main Dashboard & Launch Controls
     - [ ] Build the main server list and the primary "Play" button.
     - [ ] Connect the view to the `GameRunner` service.
