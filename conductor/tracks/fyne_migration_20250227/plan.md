@@ -1,13 +1,13 @@
 # Plan: UI Migration to Fyne & Logic Decoupling
 
 ## Phase 1: Architecture Definition & Package Scaffolding
-- [ ] Task: Define Core Interfaces
-    - [ ] Create `pkg/core` package and define `Authenticator`, `ProfileManager`, and `GameRunner` interfaces.
-    - [ ] Define event/channel structures for background process updates (progress, logs).
-- [ ] Task: Scaffold New Project Structure
-    - [ ] Create `pkg/ui/fyne` for the new UI implementation.
-    - [ ] Ensure existing logic in `pkg` is prepared for decoupling.
-- [ ] Task: Conductor - User Manual Verification 'Architecture Definition & Package Scaffolding' (Protocol in workflow.md)
+- [x] Task: Define Core Interfaces
+    - [x] Create `pkg/core` package and define `Authenticator`, `ProfileManager`, and `GameRunner` interfaces.
+    - [x] Define event/channel structures for background process updates (progress, logs).
+- [x] Task: Scaffold New Project Structure
+    - [x] Create `pkg/ui/fyne` for the new UI implementation.
+    - [x] Ensure existing logic in `pkg` is prepared for decoupling.
+- [~] Task: Conductor - User Manual Verification 'Architecture Definition & Package Scaffolding' (Protocol in workflow.md)
 
 ## Phase 2: Core Logic Refactoring (Decoupling)
 - [ ] Task: Refactor Authentication Logic
