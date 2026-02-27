@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/test"
+	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/stretchr/testify/mock"
 )
@@ -43,7 +45,7 @@ func (m *mockAuthenticator) WaitLogin(ctx context.Context) error {
 	return args.Error(0)
 }
 
-func TestShowAuthView_LoggedOut(t *testing.T) {
+func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
 	
@@ -58,12 +60,63 @@ func TestShowAuthView_LoggedOut(t *testing.T) {
 		auth:   m,
 	}
 	
-	ui.showAuthView()
+	view := ui.createLoggedOutView()
+	container := view.(*fyne.Container)
+	for _, obj := range container.Objects {
+		if btn, ok := obj.(*widget.Button); ok {
+			btn.OnTapped()
+		}
+	}
+}
+
+func TestShowAuthView_LoggedIn_Buttons(t *testing.T) {
+	a := test.NewApp()
+	w := a.NewWindow("Test")
 	
-	// Find and tap the login button
-	// We can't easily find it by text in standard Fyne API,
-	// but we can manually invoke it if we have the widget.
-	// For now, just check if content is set.
+	m := new(mockAuthenticator)
+	m.On("GetStatus").Return(core.AuthStatusLoggedIn)
+	m.On("GetUserDisplay").Return("TestUser")
+	m.On("Logout").Return(nil)
+	
+	ui := &FyneUI{
+		app:      a,
+		window:   w,
+		auth:     m,
+		profiles: new(mockProfileManager),
+	}
+	ui.profiles.(*mockProfileManager).On("GetProfiles").Return([]core.Profile{}, nil)
+	
+	view := ui.createLoggedInView()
+	container := view.(*fyne.Container)
+	for _, obj := range container.Objects {
+		if btn, ok := obj.(*widget.Button); ok {
+			btn.OnTapped()
+		}
+	}
+}
+
+func TestShowAuthView_Error_Retry(t *testing.T) {
+	a := test.NewApp()
+	w := a.NewWindow("Test")
+	
+	m := new(mockAuthenticator)
+	m.On("GetStatus").Return(core.AuthStatusError)
+	m.On("Login", mock.Anything).Return(nil)
+	m.On("WaitLogin", mock.Anything).Return(nil)
+	
+	ui := &FyneUI{
+		app:    a,
+		window: w,
+		auth:   m,
+	}
+	
+	view := ui.createErrorView()
+	container := view.(*fyne.Container)
+	for _, obj := range container.Objects {
+		if btn, ok := obj.(*widget.Button); ok {
+			btn.OnTapped()
+		}
+	}
 }
 
 func TestShowAuthView_LoggedIn_Logout(t *testing.T) {
