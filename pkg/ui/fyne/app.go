@@ -12,6 +12,8 @@ type FyneUI struct {
 	auth    core.Authenticator
 	profiles core.ProfileManager
 	runner  core.GameRunner
+
+	selectedProfileName string
 }
 
 func NewFyneUI(a fyne.App, auth core.Authenticator, profiles core.ProfileManager, runner core.GameRunner) *FyneUI {
@@ -27,6 +29,10 @@ func NewFyneUI(a fyne.App, auth core.Authenticator, profiles core.ProfileManager
 }
 
 func (ui *FyneUI) Run() {
-	ui.showAuthView()
+	if ui.auth.GetStatus() == core.AuthStatusLoggedIn {
+		ui.showDashboardView()
+	} else {
+		ui.showAuthView()
+	}
 	ui.window.ShowAndRun()
 }

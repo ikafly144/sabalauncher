@@ -52,8 +52,8 @@ func (ui *FyneUI) createLoggingInView() fyne.CanvasObject {
 }
 
 func (ui *FyneUI) createLoggedInView() fyne.CanvasObject {
-	profilesBtn := widget.NewButton("Go to Profiles", func() {
-		ui.showProfileView()
+	dashboardBtn := widget.NewButton("Go to Dashboard", func() {
+		ui.showDashboardView()
 	})
 	
 	logoutBtn := widget.NewButton("Logout", func() {
@@ -63,7 +63,7 @@ func (ui *FyneUI) createLoggedInView() fyne.CanvasObject {
 	
 	return container.NewVBox(
 		widget.NewLabel("Logged in as: "+ui.auth.GetUserDisplay()),
-		profilesBtn,
+		dashboardBtn,
 		logoutBtn,
 	)
 }
@@ -93,5 +93,5 @@ func (ui *FyneUI) startLogin() {
 		return
 	}
 	
-	ui.showAuthView() // Update to LoggedIn state
+	ui.showDashboardView() // Update to Dashboard on success
 }

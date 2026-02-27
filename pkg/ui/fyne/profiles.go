@@ -37,8 +37,8 @@ func (ui *FyneUI) showProfileView() {
 		ui.showAddProfileDialog()
 	})
 	
-	backBtn := widget.NewButton("Back to Auth", func() {
-		ui.showAuthView()
+	backBtn := widget.NewButton("Back to Dashboard", func() {
+		ui.showDashboardView()
 	})
 	
 	ui.window.SetContent(container.NewVBox(

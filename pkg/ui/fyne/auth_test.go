@@ -54,10 +54,14 @@ func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 	m.On("Login", mock.Anything).Return(nil)
 	m.On("WaitLogin", mock.Anything).Return(nil)
 	
+	mp := new(mockProfileManager)
+	mp.On("GetProfiles").Return([]core.Profile{}, nil)
+
 	ui := &FyneUI{
-		app:    a,
-		window: w,
-		auth:   m,
+		app:      a,
+		window:   w,
+		auth:     m,
+		profiles: mp,
 	}
 	
 	view := ui.createLoggedOutView()
@@ -104,10 +108,14 @@ func TestShowAuthView_Error_Retry(t *testing.T) {
 	m.On("Login", mock.Anything).Return(nil)
 	m.On("WaitLogin", mock.Anything).Return(nil)
 	
+	mp := new(mockProfileManager)
+	mp.On("GetProfiles").Return([]core.Profile{}, nil)
+
 	ui := &FyneUI{
-		app:    a,
-		window: w,
-		auth:   m,
+		app:      a,
+		window:   w,
+		auth:     m,
+		profiles: mp,
 	}
 	
 	view := ui.createErrorView()
@@ -171,15 +179,17 @@ func TestStartLogin(t *testing.T) {
 	m := new(mockAuthenticator)
 	m.On("Login", mock.Anything).Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusLoggingIn).Once()
-	m.On("GetStatus").Return(core.AuthStatusLoggedIn).Once()
 	m.On("DeviceCode").Return("http://example.com", "CODE")
 	m.On("WaitLogin", mock.Anything).Return(nil)
-	m.On("GetUserDisplay").Return("TestUser")
 	
+	mp := new(mockProfileManager)
+	mp.On("GetProfiles").Return([]core.Profile{}, nil)
+
 	ui := &FyneUI{
-		app:    a,
-		window: w,
-		auth:   m,
+		app:      a,
+		window:   w,
+		auth:     m,
+		profiles: mp,
 	}
 	
 	ui.startLogin()
