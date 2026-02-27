@@ -40,9 +40,15 @@ func (ui *FyneUI) showDashboardView() {
 			dialog.ShowInformation("No Profile", "Please select a profile first.", ui.window)
 			return
 		}
-		if err := ui.runner.Launch(ui.selectedProfileName); err != nil {
-			dialog.ShowError(err, ui.window)
-		}
+		ui.showLaunchOverlay()
+		go func() {
+			_ = ui.discord.SetActivity(ui.selectedProfileName)
+			if err := ui.runner.Launch(ui.selectedProfileName); err != nil {
+				dialog.ShowError(err, ui.window)
+				ui.showDashboardView()
+			}
+			_ = ui.discord.ClearActivity()
+		}()
 	})
 	playBtn.Importance = widget.HighImportance
 
@@ -61,5 +67,53 @@ func (ui *FyneUI) showDashboardView() {
 		container.NewHBox(widget.NewLabel("Selected Profile:"), profileSelect),
 		playBtn,
 		container.NewHBox(manageProfilesBtn, logoutBtn),
+	))
+}
+
+func (ui *FyneUI) showLaunchOverlay() {
+	taskLabel := widget.NewLabel("Preparing...")
+	statusLabel := widget.NewLabel("")
+	progressBar := widget.NewProgressBar()
+	
+	logEntry := widget.NewMultiLineEntry()
+	logEntry.Disable()
+	logEntry.SetText("Waiting for logs...\n")
+
+	stopBtn := widget.NewButton("STOP", func() {
+		_ = ui.runner.Stop()
+		ui.showDashboardView()
+	})
+	stopBtn.Importance = widget.DangerImportance
+
+	progressChan := ui.runner.SubscribeProgress()
+	logsChan := ui.runner.SubscribeLogs()
+
+	go func() {
+		for event := range progressChan {
+			taskLabel.SetText(event.TaskName)
+			statusLabel.SetText(event.Status)
+			progressBar.SetValue(event.Percentage / 100.0)
+			if event.IsFinished {
+				// We don't necessarily want to go back to dashboard yet, 
+				// as the game might be starting.
+			}
+		}
+	}()
+
+	go func() {
+		for entry := range logsChan {
+			logLine := "[" + string(entry.Level) + "] " + entry.Message + "\n"
+			logEntry.SetText(logEntry.Text + logLine)
+			logEntry.CursorColumn = 0
+			logEntry.CursorRow = len(logEntry.Text) // Simple scroll to end
+		}
+	}()
+
+	ui.window.SetContent(container.NewBorder(
+		container.NewVBox(createHeader(), taskLabel, progressBar, statusLabel),
+		stopBtn,
+		nil,
+		nil,
+		container.NewScroll(logEntry),
 	))
 }

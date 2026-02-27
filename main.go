@@ -66,10 +66,11 @@ func main() {
 	}
 
 	runner := core.NewGameRunner(auth, profiles, resource.DataDir)
+	discord := core.NewDiscordManager(auth, profiles)
 
 	// Initialize Fyne App
 	a := app.NewWithID("net.sabafly.sabalauncher")
-	ui := fyne.NewFyneUI(a, auth, profiles, runner)
+	ui := fyne.NewFyneUI(a, auth, profiles, runner, discord)
 
 	// Run UI
 	ui.Run()

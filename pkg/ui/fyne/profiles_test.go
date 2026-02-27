@@ -47,6 +47,7 @@ func TestShowProfileView(t *testing.T) {
 		app:      a,
 		window:   w,
 		profiles: m,
+		discord:  new(mockDiscordManager),
 	}
 	
 	ui.showProfileView()
@@ -67,6 +68,7 @@ func TestShowProfileView_Error(t *testing.T) {
 		app:      a,
 		window:   w,
 		profiles: m,
+		discord:  new(mockDiscordManager),
 	}
 	
 	ui.showProfileView()
@@ -79,6 +81,7 @@ func TestShowAddProfileDialog(t *testing.T) {
 	ui := &FyneUI{
 		app:    a,
 		window: w,
+		discord: new(mockDiscordManager),
 	}
 	
 	ui.showAddProfileDialog()
@@ -96,6 +99,7 @@ func TestShowProfileView_Buttons(t *testing.T) {
 		window:   w,
 		profiles: m,
 		auth:     new(mockAuthenticator),
+		discord:  new(mockDiscordManager),
 	}
 	ui.auth.(*mockAuthenticator).On("GetStatus").Return(core.AuthStatusLoggedOut)
 	

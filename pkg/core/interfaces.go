@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"image"
+	"github.com/ikafly144/sabalauncher/pkg/msa"
 )
 
 // AuthStatus represents the current state of authentication.
@@ -25,6 +26,8 @@ type Authenticator interface {
 	GetStatus() AuthStatus
 	// GetUserDisplay returns the name of the logged-in user.
 	GetUserDisplay() string
+	// GetMinecraftProfile returns the Minecraft profile of the logged-in user.
+	GetMinecraftProfile() (*msa.MinecraftProfile, error)
 	// DeviceCode returns the device code information for the user to login.
 	// This should only be called when status is AuthStatusLoggingIn.
 	DeviceCode() (url, code string)
@@ -67,3 +70,10 @@ type GameRunner interface {
 	// SubscribeLogs returns a channel that receives log entries.
 	SubscribeLogs() <-chan LogEntry
 }
+
+// DiscordManager defines the interface for managing Discord Rich Presence.
+type DiscordManager interface {
+	SetActivity(profileName string) error
+	ClearActivity() error
+}
+

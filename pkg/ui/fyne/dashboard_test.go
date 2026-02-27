@@ -53,6 +53,7 @@ func TestShowDashboardView(t *testing.T) {
 		window:   w,
 		profiles: mp,
 		runner:   mr,
+		discord:  new(mockDiscordManager),
 	}
 	
 	// This should fail to compile or run as showDashboardView doesn't exist
@@ -62,4 +63,28 @@ func TestShowDashboardView(t *testing.T) {
 		t.Fatal("Window content is nil")
 	}
 	_ = fyne.NewPos(0, 0) // Use fyne
+}
+
+func TestShowLaunchOverlay(t *testing.T) {
+	a := test.NewApp()
+	w := a.NewWindow("Test")
+	
+	mr := new(mockGameRunner)
+	mr.On("SubscribeProgress").Return(make(<-chan core.ProgressEvent))
+	mr.On("SubscribeLogs").Return(make(<-chan core.LogEntry))
+	mr.On("IsRunning").Return(true)
+	mr.On("Stop").Return(nil)
+
+	ui := &FyneUI{
+		app:    a,
+		window: w,
+		runner: mr,
+		discord: new(mockDiscordManager),
+	}
+	
+	ui.showLaunchOverlay()
+	
+	if ui.window.Content() == nil {
+		t.Fatal("Window content is nil")
+	}
 }

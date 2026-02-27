@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/core"
+	"github.com/ikafly144/sabalauncher/pkg/msa"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -45,6 +46,25 @@ func (m *mockAuthenticator) WaitLogin(ctx context.Context) error {
 	return args.Error(0)
 }
 
+func (m *mockAuthenticator) GetMinecraftProfile() (*msa.MinecraftProfile, error) {
+	args := m.Called()
+	return args.Get(0).(*msa.MinecraftProfile), args.Error(1)
+}
+
+type mockDiscordManager struct {
+	mock.Mock
+}
+
+func (m *mockDiscordManager) SetActivity(profileName string) error {
+	args := m.Called(profileName)
+	return args.Error(0)
+}
+
+func (m *mockDiscordManager) ClearActivity() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
@@ -62,6 +82,7 @@ func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 		window:   w,
 		auth:     m,
 		profiles: mp,
+		discord:  new(mockDiscordManager),
 	}
 	
 	view := ui.createLoggedOutView()
@@ -87,6 +108,7 @@ func TestShowAuthView_LoggedIn_Buttons(t *testing.T) {
 		window:   w,
 		auth:     m,
 		profiles: new(mockProfileManager),
+		discord:  new(mockDiscordManager),
 	}
 	ui.profiles.(*mockProfileManager).On("GetProfiles").Return([]core.Profile{}, nil)
 	
@@ -116,6 +138,7 @@ func TestShowAuthView_Error_Retry(t *testing.T) {
 		window:   w,
 		auth:     m,
 		profiles: mp,
+		discord:  new(mockDiscordManager),
 	}
 	
 	view := ui.createErrorView()
@@ -141,6 +164,7 @@ func TestShowAuthView_LoggedIn_Logout(t *testing.T) {
 		app:    a,
 		window: w,
 		auth:   m,
+		discord: new(mockDiscordManager),
 	}
 	
 	ui.showAuthView()
@@ -163,6 +187,7 @@ func TestShowAuthView_Error(t *testing.T) {
 		app:    a,
 		window: w,
 		auth:   m,
+		discord: new(mockDiscordManager),
 	}
 	
 	ui.showAuthView()
@@ -190,6 +215,7 @@ func TestStartLogin(t *testing.T) {
 		window:   w,
 		auth:     m,
 		profiles: mp,
+		discord:  new(mockDiscordManager),
 	}
 	
 	ui.startLogin()
@@ -209,6 +235,7 @@ func TestStartLogin_Fail(t *testing.T) {
 		app:    a,
 		window: w,
 		auth:   m,
+		discord: new(mockDiscordManager),
 	}
 	
 	ui.startLogin()
@@ -231,6 +258,7 @@ func TestStartLogin_WaitFail(t *testing.T) {
 		app:    a,
 		window: w,
 		auth:   m,
+		discord: new(mockDiscordManager),
 	}
 	
 	ui.startLogin()

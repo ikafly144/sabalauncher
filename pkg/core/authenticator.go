@@ -10,11 +10,12 @@ import (
 )
 
 type msaAuthenticator struct {
-	client  public.Client
-	session msa.Session
-	status  AuthStatus
-	user    string
-	mu      sync.RWMutex
+	client    public.Client
+	session   msa.Session
+	status    AuthStatus
+	user      string
+	mcProfile *msa.MinecraftProfile
+	mu        sync.RWMutex
 }
 
 func NewAuthenticator(cachePath string) (Authenticator, error) {
@@ -88,10 +89,20 @@ func (a *msaAuthenticator) WaitLogin(ctx context.Context) error {
 
 	a.mu.Lock()
 	a.user = profile.Username
+	a.mcProfile = profile
 	a.status = AuthStatusLoggedIn
 	a.mu.Unlock()
 
 	return nil
+}
+
+func (a *msaAuthenticator) GetMinecraftProfile() (*msa.MinecraftProfile, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	if a.mcProfile == nil {
+		return nil, fmt.Errorf("no minecraft profile available")
+	}
+	return a.mcProfile, nil
 }
 
 func (a *msaAuthenticator) Logout() error {
@@ -100,6 +111,7 @@ func (a *msaAuthenticator) Logout() error {
 	// MSA library handles token removal via client.RemoveAccount, 
 	// but we'd need to expose that from the msa package.
 	a.user = ""
+	a.mcProfile = nil
 	a.status = AuthStatusLoggedOut
 	return nil
 }
