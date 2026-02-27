@@ -52,8 +52,8 @@
 - [x] Task: Conductor - User Manual Verification 'Feedback Systems & Integration' (Protocol in workflow.md) [76ce162]
 
 ## Phase 6: Final Integration & Gio Removal
-- [ ] Task: End-to-End System Testing
-    - [ ] Verify the full flow: Login -> Add Profile -> Download -> Play.
+- [x] Task: End-to-End System Testing [7be1997]
+    - [x] Verify the full flow: Login -> Add Profile -> Download -> Play.
 - [ ] Task: Remove Legacy Gio Dependencies
     - [ ] Delete `gioui.org` related code and cleanup `go.mod`.
     - [ ] Remove old UI packages (`pages`, `applayout`).
