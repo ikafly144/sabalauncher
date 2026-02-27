@@ -4,6 +4,7 @@ import (
 	"context"
 	"image"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
 // AuthStatus represents the current state of authentication.
@@ -29,6 +30,8 @@ type Authenticator interface {
 	GetUserDisplay() string
 	// GetMinecraftProfile returns the Minecraft profile of the logged-in user.
 	GetMinecraftProfile() (*msa.MinecraftProfile, error)
+	// GetMinecraftAccount returns the raw Minecraft account object.
+	GetMinecraftAccount() (*msa.MinecraftAccount, error)
 	// DeviceCode returns the device code information for the user to login.
 	// This should only be called when status is AuthStatusLoggingIn.
 	DeviceCode() (url, code string)
@@ -57,6 +60,9 @@ type ProfileManager interface {
 	DeleteProfile(name string) error
 	// RefreshProfiles updates all profiles from their sources.
 	RefreshProfiles() error
+	// GetFullProfile returns the underlying resource.Profile.
+	// This is used for launch logic.
+	GetFullProfile(name string) (*resource.Profile, error)
 }
 
 // GameRunner defines the interface for launching and managing the game process.

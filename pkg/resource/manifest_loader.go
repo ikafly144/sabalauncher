@@ -24,7 +24,7 @@ type ManifestLoader interface {
 	CurrentProgress() float64
 	TotalProgress() float64
 	Error() error
-	Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount) error
+	Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount, stdout, stderr io.Writer) error
 }
 
 type ManifestLoaderUnmarshal struct {
@@ -165,7 +165,7 @@ func (v *VanillaManifestLoader) StartSetup(dataPath string, profile string) {
 	}()
 }
 
-func (v *VanillaManifestLoader) Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount) error {
+func (v *VanillaManifestLoader) Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount, stdout, stderr io.Writer) error {
 	if v.manifest == nil {
 		return fmt.Errorf("manifest is not set")
 	}
@@ -182,7 +182,7 @@ func (v *VanillaManifestLoader) Boot(dataPath string, profile *Profile, account 
 		return fmt.Errorf("account is not set")
 	}
 
-	if err := BootGame(v.manifest, profile, auth, dataPath); err != nil {
+	if err := BootGame(v.manifest, profile, auth, dataPath, stdout, stderr); err != nil {
 		return err
 	}
 
@@ -395,7 +395,7 @@ func (f *ForgeManifestLoader) StartSetup(dataPath string, profilePath string) {
 	}()
 }
 
-func (f *ForgeManifestLoader) Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount) error {
+func (f *ForgeManifestLoader) Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount, stdout, stderr io.Writer) error {
 	if f.bootManifest == nil {
 		return fmt.Errorf("boot manifest is not set")
 	}
@@ -411,7 +411,7 @@ func (f *ForgeManifestLoader) Boot(dataPath string, profile *Profile, account *m
 		return fmt.Errorf("account is not set")
 	}
 
-	if err := BootGame(f.bootManifest, profile, auth, dataPath); err != nil {
+	if err := BootGame(f.bootManifest, profile, auth, dataPath, stdout, stderr); err != nil {
 		return err
 	}
 	f.bootManifest = nil

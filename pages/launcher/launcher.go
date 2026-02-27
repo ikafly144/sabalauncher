@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"io"
 	"log/slog"
 	"net/url"
 	"os"
@@ -309,7 +310,7 @@ func (p *Page) Layout(gtx C, th *material.Theme) D {
 																					p.bootError = err
 																					return
 																				}
-																				if err := p.Profiles[index].Manifest.Boot(resource.DataDir, &p.Profiles[index].Profile, account); err != nil {
+																				if err := p.Profiles[index].Manifest.Boot(resource.DataDir, &p.Profiles[index].Profile, account, io.Discard, io.Discard); err != nil {
 																					slog.Error("Failed to start game", "error", err)
 																					p.bootError = err
 																				}

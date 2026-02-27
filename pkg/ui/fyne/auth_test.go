@@ -56,6 +56,11 @@ func (m *mockAuthenticator) GetMinecraftProfile() (*msa.MinecraftProfile, error)
 	return args.Get(0).(*msa.MinecraftProfile), args.Error(1)
 }
 
+func (m *mockAuthenticator) GetMinecraftAccount() (*msa.MinecraftAccount, error) {
+	args := m.Called()
+	return args.Get(0).(*msa.MinecraftAccount), args.Error(1)
+}
+
 type mockDiscordManager struct {
 	mock.Mock
 }

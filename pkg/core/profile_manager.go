@@ -16,10 +16,11 @@ import (
 )
 
 type profileManager struct {
-	dataDir string
-	sources []string
-	profiles []Profile
-	mu sync.RWMutex
+	dataDir      string
+	sources      []string
+	profiles     []Profile
+	fullProfiles []resource.Profile
+	mu           sync.RWMutex
 }
 
 func NewProfileManager(dataDir string) (ProfileManager, error) {
@@ -66,6 +67,17 @@ func (pm *profileManager) GetProfiles() ([]Profile, error) {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
 	return pm.profiles, nil
+}
+
+func (pm *profileManager) GetFullProfile(name string) (*resource.Profile, error) {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	for _, p := range pm.fullProfiles {
+		if p.Name == name {
+			return &p, nil
+		}
+	}
+	return nil, fmt.Errorf("profile not found: %s", name)
 }
 
 func (pm *profileManager) AddProfile(sourceURL string) error {
@@ -128,6 +140,7 @@ func (pm *profileManager) RefreshProfiles() error {
 	defer pm.mu.Unlock()
 
 	var allProfiles []Profile
+	var allFullProfiles []resource.Profile
 	for _, source := range pm.sources {
 		var reader io.ReadCloser
 		if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
@@ -157,6 +170,7 @@ func (pm *profileManager) RefreshProfiles() error {
 		}
 		
 		for _, rp := range resProfiles {
+			allFullProfiles = append(allFullProfiles, rp)
 			allProfiles = append(allProfiles, Profile{
 				Name:        rp.Name,
 				DisplayName: rp.DisplayName,
@@ -174,5 +188,6 @@ func (pm *profileManager) RefreshProfiles() error {
 	})
 
 	pm.profiles = allProfiles
+	pm.fullProfiles = allFullProfiles
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"time"
 )
 
 type gameRunner struct {
@@ -43,28 +44,55 @@ func (r *gameRunner) Launch(profileName string) error {
 		r.mu.Unlock()
 	}()
 
-	profiles, err := r.profiles.GetProfiles()
+	fullProfile, err := r.profiles.GetFullProfile(profileName)
 	if err != nil {
 		return err
 	}
 
-	var targetProfile *Profile
-	for _, p := range profiles {
-		if p.Name == profileName {
-			targetProfile = &p
-			break
+	account, err := r.auth.GetMinecraftAccount()
+	if err != nil {
+		return err
+	}
+
+	// 1. Start Setup
+	fullProfile.Manifest.StartSetup(r.dataPath, fullProfile.Path)
+
+	// 2. Monitor Progress
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for !fullProfile.Manifest.IsDone() {
+		select {
+		case <-ticker.C:
+			r.progressChan <- ProgressEvent{
+				TaskName:   fullProfile.Manifest.CurrentStatus(),
+				Percentage: fullProfile.Manifest.TotalProgress() * 100.0,
+				Status:     fmt.Sprintf("%.1f%%", fullProfile.Manifest.CurrentProgress()*100.0),
+				IsFinished: false,
+			}
 		}
 	}
 
-	if targetProfile == nil {
-		return fmt.Errorf("profile not found: %s", profileName)
+	if err := fullProfile.Manifest.Error(); err != nil {
+		return fmt.Errorf("setup failed: %w", err)
 	}
 
-	// We need to convert core.Profile back to resource.Profile or similar
-	// This shows that our core.Profile needs to hold enough info for launching
-	// or we need a way to get the original resource.Profile.
-	
-	return fmt.Errorf("launch implementation in progress")
+	r.progressChan <- ProgressEvent{
+		TaskName:   "Starting Game...",
+		Percentage: 100.0,
+		Status:     "Done",
+		IsFinished: true,
+	}
+
+	stdout := &logWriter{source: "Game", ch: r.logsChan}
+	stderr := &logWriter{source: "Game", ch: r.logsChan}
+
+	// 3. Boot Game
+	if err := fullProfile.Manifest.Boot(r.dataPath, fullProfile, account, stdout, stderr); err != nil {
+		return fmt.Errorf("boot failed: %w", err)
+	}
+
+	return nil
 }
 
 func (r *gameRunner) Stop() error {

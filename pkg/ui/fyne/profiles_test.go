@@ -7,6 +7,7 @@ import (
 	"fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/core"
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -32,6 +33,11 @@ func (m *mockProfileManager) DeleteProfile(name string) error {
 func (m *mockProfileManager) RefreshProfiles() error {
 	args := m.Called()
 	return args.Error(0)
+}
+
+func (m *mockProfileManager) GetFullProfile(name string) (*resource.Profile, error) {
+	args := m.Called(name)
+	return args.Get(0).(*resource.Profile), args.Error(1)
 }
 
 func TestShowProfileView(t *testing.T) {

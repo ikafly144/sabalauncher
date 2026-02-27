@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
@@ -18,21 +17,9 @@ func NewDiscordManager(auth Authenticator, profiles ProfileManager) DiscordManag
 }
 
 func (d *discordManager) SetActivity(profileName string) error {
-	profiles, err := d.profiles.GetProfiles()
+	fullProfile, err := d.profiles.GetFullProfile(profileName)
 	if err != nil {
 		return err
-	}
-
-	var targetProfile *Profile
-	for _, p := range profiles {
-		if p.Name == profileName {
-			targetProfile = &p
-			break
-		}
-	}
-
-	if targetProfile == nil {
-		return fmt.Errorf("profile not found: %s", profileName)
 	}
 
 	mcProfile, err := d.auth.GetMinecraftProfile()
@@ -40,17 +27,7 @@ func (d *discordManager) SetActivity(profileName string) error {
 		return err
 	}
 
-	// We need a resource.Profile here. 
-	// Our core.Profile is a simplified version.
-	// For now, let's create a minimal resource.Profile for the RPC.
-	resProfile := &resource.Profile{
-		PublicProfile: resource.PublicProfile{
-			Name:        targetProfile.Name,
-			DisplayName: targetProfile.DisplayName + " (" + targetProfile.VersionName + ")",
-		},
-	}
-	
-	_, err = resource.SetActivity(resProfile, mcProfile)
+	_, err = resource.SetActivity(fullProfile, mcProfile)
 	return err
 }
 

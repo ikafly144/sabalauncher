@@ -15,6 +15,7 @@ type msaAuthenticator struct {
 	status    AuthStatus
 	user      string
 	mcProfile *msa.MinecraftProfile
+	account   *msa.MinecraftAccount
 	mu        sync.RWMutex
 }
 
@@ -73,6 +74,7 @@ func (a *msaAuthenticator) TrySilentLogin(ctx context.Context) error {
 	a.mu.Lock()
 	a.user = profile.Username
 	a.mcProfile = profile
+	a.account = account
 	a.status = AuthStatusLoggedIn
 	a.mu.Unlock()
 
@@ -129,6 +131,7 @@ func (a *msaAuthenticator) WaitLogin(ctx context.Context) error {
 	a.mu.Lock()
 	a.user = profile.Username
 	a.mcProfile = profile
+	a.account = account
 	a.status = AuthStatusLoggedIn
 	a.mu.Unlock()
 
@@ -142,6 +145,15 @@ func (a *msaAuthenticator) GetMinecraftProfile() (*msa.MinecraftProfile, error) 
 		return nil, fmt.Errorf("no minecraft profile available")
 	}
 	return a.mcProfile, nil
+}
+
+func (a *msaAuthenticator) GetMinecraftAccount() (*msa.MinecraftAccount, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	if a.account == nil {
+		return nil, fmt.Errorf("no minecraft account available")
+	}
+	return a.account, nil
 }
 
 func (a *msaAuthenticator) Logout() error {
