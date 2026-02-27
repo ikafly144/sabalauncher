@@ -48,6 +48,7 @@
 - [x] Task: Implement Discord Rich Presence Integration [39f9f0d]
     - [x] Re-hook the Discord service to the new UI state and lifecycle.
 - [x] Task: Support local JSON files for profile sources (Debug feature) [1cda269]
+- [x] Task: Implement secure session persistence (Auto-login) [6761844]
 - [ ] Task: Conductor - User Manual Verification 'Feedback Systems & Integration' (Protocol in workflow.md)
 
 ## Phase 6: Final Integration & Gio Removal
