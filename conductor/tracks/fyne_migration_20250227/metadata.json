@@ -1,0 +1,8 @@
+{
+  "track_id": "fyne_migration_20250227",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2025-02-27T19:25:00Z",
+  "updated_at": "2025-02-27T19:25:00Z",
+  "description": "UIをgioui.orgからfyne.ioに変更します。既存の機能はすべて維持します。"
+}
