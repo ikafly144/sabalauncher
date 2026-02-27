@@ -173,7 +173,7 @@ func (pm *profileManager) RefreshProfiles() error {
 			allFullProfiles = append(allFullProfiles, rp)
 			allProfiles = append(allProfiles, Profile{
 				Name:        rp.Name,
-				DisplayName: rp.DisplayName,
+				DisplayName: rp.Display(),
 				Description: rp.Description,
 				VersionName: rp.Manifest.VersionName(),
 				IconImage:   rp.IconImage,
