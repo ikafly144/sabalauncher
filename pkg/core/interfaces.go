@@ -40,6 +40,7 @@ type Profile struct {
 	Name        string
 	DisplayName string
 	Description string
+	VersionName string
 	IconImage   image.Image
 	IsActive    bool
 	Source      string

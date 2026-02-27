@@ -46,12 +46,9 @@ func (d *discordManager) SetActivity(profileName string) error {
 	resProfile := &resource.Profile{
 		PublicProfile: resource.PublicProfile{
 			Name:        targetProfile.Name,
-			DisplayName: targetProfile.DisplayName,
-			// Manifest is also needed for version name
+			DisplayName: targetProfile.DisplayName + " (" + targetProfile.VersionName + ")",
 		},
 	}
-	// This shows that core.Profile might need to store the version name directly 
-	// or we need to pass it.
 	
 	_, err = resource.SetActivity(resProfile, mcProfile)
 	return err

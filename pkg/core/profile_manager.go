@@ -161,6 +161,7 @@ func (pm *profileManager) RefreshProfiles() error {
 				Name:        rp.Name,
 				DisplayName: rp.DisplayName,
 				Description: rp.Description,
+				VersionName: rp.Manifest.VersionName(),
 				IconImage:   rp.IconImage,
 				IsActive:    false,
 				Source:      source,

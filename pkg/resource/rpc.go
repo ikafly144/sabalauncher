@@ -48,9 +48,13 @@ func SetActivity(profile *Profile, mcProfile *msa.MinecraftProfile) (*client.Act
 
 func mapActivity(profile Profile, mcProfile *msa.MinecraftProfile) client.Activity {
 	t := time.Now()
+	version := "Unknown Version"
+	if profile.Manifest != nil {
+		version = profile.Manifest.VersionName()
+	}
 	return client.Activity{
 		State:      fmt.Sprintf("%sをプレイ中", profile.Display()),
-		Details:    fmt.Sprintf("%s %s", mcProfile.Username, profile.Manifest.VersionName()),
+		Details:    fmt.Sprintf("%s %s", mcProfile.Username, version),
 		LargeImage: "launcher_icon",
 		LargeText:  "SabaLauncherでプレイ中",
 		Timestamps: &client.Timestamps{
