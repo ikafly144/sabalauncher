@@ -42,11 +42,11 @@
 - [x] Task: Conductor - User Manual Verification 'Page Re-implementation' (Protocol in workflow.md) [2c42b64]
 
 ## Phase 5: Feedback Systems & Integration
-- [ ] Task: Implement Real-time Progress & Logs
-    - [ ] Create a dedicated view/overlay for download progress bars and live logs.
-    - [ ] Pipe events from the `GameRunner` service to the Fyne UI components.
-- [ ] Task: Implement Discord Rich Presence Integration
-    - [ ] Re-hook the Discord service to the new UI state and lifecycle.
+- [x] Task: Implement Real-time Progress & Logs [39f9f0d]
+    - [x] Create a dedicated view/overlay for download progress bars and live logs.
+    - [x] Pipe events from the `GameRunner` service to the Fyne UI components.
+- [x] Task: Implement Discord Rich Presence Integration [39f9f0d]
+    - [x] Re-hook the Discord service to the new UI state and lifecycle.
 - [ ] Task: Conductor - User Manual Verification 'Feedback Systems & Integration' (Protocol in workflow.md)
 
 ## Phase 6: Final Integration & Gio Removal
