@@ -8,9 +8,44 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/stretchr/testify/mock"
 	"testing"
 )
+
+type mockInstanceManager struct {
+	mock.Mock
+}
+
+func (m *mockInstanceManager) GetInstances() ([]*resource.Instance, error) {
+	args := m.Called()
+	return args.Get(0).([]*resource.Instance), args.Error(1)
+}
+
+func (m *mockInstanceManager) GetInstance(name string) (*resource.Instance, error) {
+	args := m.Called(name)
+	return args.Get(0).(*resource.Instance), args.Error(1)
+}
+
+func (m *mockInstanceManager) DeleteInstance(name string) error {
+	args := m.Called(name)
+	return args.Error(0)
+}
+
+func (m *mockInstanceManager) RefreshInstances() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *mockInstanceManager) ImportInstance(packPath string) error {
+	args := m.Called(packPath)
+	return args.Error(0)
+}
+
+func (m *mockInstanceManager) UpdateInstance(instanceName string, patchPath string) error {
+	args := m.Called(instanceName, patchPath)
+	return args.Error(0)
+}
 
 type mockAuthenticator struct {
 	mock.Mock
@@ -96,15 +131,15 @@ func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 	m.On("WaitLogin", mock.Anything).Return(nil)
 	m.On("GetUserDisplay").Return("TestUser")
 
-	mp := new(mockProfileManager)
-	mp.On("GetProfiles").Return([]core.Profile{}, nil)
+	mp := new(mockInstanceManager)
+	mp.On("GetInstances").Return([]*resource.Instance{}, nil)
 
 	ui := &FyneUI{
-		app:      a,
-		window:   w,
-		auth:     m,
-		profiles: mp,
-		discord:  new(mockDiscordManager),
+		app:       a,
+		window:    w,
+		auth:      m,
+		instances: mp,
+		discord:   new(mockDiscordManager),
 	}
 
 	view := ui.createLoggedOutView()
@@ -126,13 +161,13 @@ func TestShowAuthView_LoggedIn_Buttons(t *testing.T) {
 	m.On("Logout").Return(nil)
 
 	ui := &FyneUI{
-		app:      a,
-		window:   w,
-		auth:     m,
-		profiles: new(mockProfileManager),
-		discord:  new(mockDiscordManager),
+		app:       a,
+		window:    w,
+		auth:      m,
+		instances: new(mockInstanceManager),
+		discord:   new(mockDiscordManager),
 	}
-	ui.profiles.(*mockProfileManager).On("GetProfiles").Return([]core.Profile{}, nil)
+	ui.instances.(*mockInstanceManager).On("GetInstances").Return([]*resource.Instance{}, nil)
 
 	view := ui.createLoggedInView()
 	container := view.(*fyne.Container)
@@ -155,15 +190,15 @@ func TestShowAuthView_Error_Retry(t *testing.T) {
 	m.On("WaitLogin", mock.Anything).Return(nil)
 	m.On("GetUserDisplay").Return("TestUser")
 
-	mp := new(mockProfileManager)
-	mp.On("GetProfiles").Return([]core.Profile{}, nil)
+	mp := new(mockInstanceManager)
+	mp.On("GetInstances").Return([]*resource.Instance{}, nil)
 
 	ui := &FyneUI{
-		app:      a,
-		window:   w,
-		auth:     m,
-		profiles: mp,
-		discord:  new(mockDiscordManager),
+		app:       a,
+		window:    w,
+		auth:      m,
+		instances: mp,
+		discord:   new(mockDiscordManager),
 	}
 
 	view := ui.createErrorView()
@@ -235,15 +270,15 @@ func TestStartLogin(t *testing.T) {
 	m.On("WaitLogin", mock.Anything).Return(nil)
 	m.On("GetUserDisplay").Return("TestUser")
 
-	mp := new(mockProfileManager)
-	mp.On("GetProfiles").Return([]core.Profile{}, nil)
+	mp := new(mockInstanceManager)
+	mp.On("GetInstances").Return([]*resource.Instance{}, nil)
 
 	ui := &FyneUI{
-		app:      a,
-		window:   w,
-		auth:     m,
-		profiles: mp,
-		discord:  new(mockDiscordManager),
+		app:       a,
+		window:    w,
+		auth:      m,
+		instances: mp,
+		discord:   new(mockDiscordManager),
 	}
 
 	ui.startLogin(msa.LoginMethodBrowser)

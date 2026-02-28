@@ -3,6 +3,7 @@ package fyne
 import (
 	"fyne.io/fyne/v2/test"
 	"github.com/ikafly144/sabalauncher/pkg/core"
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/stretchr/testify/mock"
 	"testing"
 )
@@ -40,9 +41,9 @@ func TestShowDashboardView(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
 
-	mp := new(mockProfileManager)
-	mp.On("GetProfiles").Return([]core.Profile{
-		{Name: "test", DisplayName: "Test Profile", Description: "Desc", VersionName: "1.20.1"},
+	mp := new(mockInstanceManager)
+	mp.On("GetInstances").Return([]*resource.Instance{
+		{Name: "test"},
 	}, nil)
 
 	mr := new(mockGameRunner)
@@ -51,12 +52,12 @@ func TestShowDashboardView(t *testing.T) {
 	ma.On("GetUserDisplay").Return("TestUser")
 
 	ui := &FyneUI{
-		app:      a,
-		window:   w,
-		profiles: mp,
-		runner:   mr,
-		auth:     ma,
-		discord:  new(mockDiscordManager),
+		app:       a,
+		window:    w,
+		instances: mp,
+		runner:    mr,
+		auth:      ma,
+		discord:   new(mockDiscordManager),
 	}
 
 	ui.showDashboardView()

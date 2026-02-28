@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
-	"image"
 )
 
 // AuthStatus represents the current state of authentication.
@@ -43,36 +42,26 @@ type Authenticator interface {
 	GetLastError() error
 }
 
-// Profile represents a game configuration.
-type Profile struct {
-	Name        string
-	DisplayName string
-	Description string
-	VersionName string
-	IconImage   image.Image
-	IsActive    bool
-	Source      string
-}
-
-// ProfileManager defines the interface for managing game profiles.
-type ProfileManager interface {
-	// GetProfiles returns the list of all available profiles.
-	GetProfiles() ([]Profile, error)
-	// AddProfile fetches and adds a new profile from the given URL.
-	AddProfile(url string) error
-	// DeleteProfile removes a profile by its name.
-	DeleteProfile(name string) error
-	// RefreshProfiles updates all profiles from their sources.
-	RefreshProfiles() error
-	// GetFullProfile returns the underlying resource.Profile.
-	// This is used for launch logic.
-	GetFullProfile(name string) (*resource.Profile, error)
+// InstanceManager defines the interface for managing game instances.
+type InstanceManager interface {
+	// GetInstances returns the list of all available instances.
+	GetInstances() ([]*resource.Instance, error)
+	// DeleteInstance removes an instance by its name or UID.
+	DeleteInstance(name string) error
+	// RefreshInstances updates all instances from local storage.
+	RefreshInstances() error
+	// GetInstance returns a specific instance.
+	GetInstance(name string) (*resource.Instance, error)
+	// ImportInstance imports a modpack from an .sbpack file.
+	ImportInstance(packPath string) error
+	// UpdateInstance updates an instance using an .sbpatch file.
+	UpdateInstance(instanceName string, patchPath string) error
 }
 
 // GameRunner defines the interface for launching and managing the game process.
 type GameRunner interface {
-	// Launch starts the game with the specified profile.
-	Launch(profileName string) error
+	// Launch starts the game with the specified instance.
+	Launch(instanceName string) error
 	// Stop terminates the running game process.
 	Stop() error
 	// IsRunning returns true if the game is currently active.
@@ -85,6 +74,6 @@ type GameRunner interface {
 
 // DiscordManager defines the interface for managing Discord Rich Presence.
 type DiscordManager interface {
-	SetActivity(profileName string) error
+	SetActivity(instanceName string) error
 	ClearActivity() error
 }

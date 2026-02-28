@@ -7,7 +7,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"github.com/ikafly144/sabalauncher/pkg/core"
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
 func (ui *FyneUI) showMainView() {
@@ -27,18 +27,18 @@ func (ui *FyneUI) showDashboardView() {
 }
 
 func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
-	profiles, err := ui.profiles.GetProfiles()
+	instances, err := ui.instances.GetInstances()
 	if err != nil {
 		return widget.NewLabel("Error: " + err.Error())
 	}
 
-	if ui.selectedProfileName == "" && len(profiles) > 0 {
-		ui.selectedProfileName = profiles[0].Name
+	if ui.selectedInstanceName == "" && len(instances) > 0 {
+		ui.selectedInstanceName = instances[0].Name
 	}
 
-	// Profile selection (left side) with Icons
-	profileList := widget.NewList(
-		func() int { return len(profiles) },
+	// Instance selection (left side) with Icons
+	instanceList := widget.NewList(
+		func() int { return len(instances) },
 		func() fyne.CanvasObject {
 			icon := canvas.NewImageFromImage(nil)
 			icon.SetMinSize(fyne.NewSize(32, 32))
@@ -46,46 +46,47 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			return container.NewHBox(icon, widget.NewLabel("Template Label"))
 		},
 		func(id widget.ListItemID, obj fyne.CanvasObject) {
-			if id >= len(profiles) {
+			if id >= len(instances) {
 				return
 			}
-			p := profiles[id]
+			p := instances[id]
 			box := obj.(*fyne.Container)
-			icon := box.Objects[0].(*canvas.Image)
+			// Wait: Instance no longer has IconImage by default. Let's leave a blank or default icon logic here
+			// icon := box.Objects[0].(*canvas.Image)
 			label := box.Objects[1].(*widget.Label)
 
-			if p.IconImage != nil {
-				icon.Image = p.IconImage
-			} else {
-				icon.Image = nil
-			}
-			icon.Refresh()
+			// if p.IconImage != nil {
+			// 	icon.Image = p.IconImage
+			// } else {
+			// 	icon.Image = nil
+			// }
+			// icon.Refresh()
 
-			label.SetText(p.DisplayName)
-			if p.Name == ui.selectedProfileName {
+			label.SetText(p.Name)
+			if p.Name == ui.selectedInstanceName {
 				label.TextStyle = fyne.TextStyle{Bold: true}
 			} else {
 				label.TextStyle = fyne.TextStyle{}
 			}
 		},
 	)
-	profileList.OnSelected = func(id widget.ListItemID) {
-		ui.selectedProfileName = profiles[id].Name
+	instanceList.OnSelected = func(id widget.ListItemID) {
+		ui.selectedInstanceName = instances[id].Name
 		ui.showMainView()
 	}
 
-	// Sidebar with Add Profile button
-	addBtn := widget.NewButton("Add Profile", func() {
-		ui.showAddProfileDialog()
+	// Sidebar with Import Profile button
+	importBtn := widget.NewButton("Import Modpack", func() {
+		ui.showImportModpackDialog()
 	})
-	sidebar := container.NewBorder(nil, container.NewPadded(addBtn), nil, nil, profileList)
+	sidebar := container.NewBorder(nil, container.NewPadded(importBtn), nil, nil, instanceList)
 
 	// Right side: Detail View
-	var currentProfile core.Profile
+	var currentInstance *resource.Instance
 	found := false
-	for _, p := range profiles {
-		if p.Name == ui.selectedProfileName {
-			currentProfile = p
+	for _, p := range instances {
+		if p.Name == ui.selectedInstanceName {
+			currentInstance = p
 			found = true
 			break
 		}
@@ -93,21 +94,24 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 
 	var detailArea fyne.CanvasObject
 	if found {
-		detailTitle := widget.NewLabelWithStyle(currentProfile.DisplayName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-		detailDesc := widget.NewLabel(currentProfile.Description)
-		detailDesc.Wrapping = fyne.TextWrapWord
-		detailVersion := widget.NewLabel("Version: " + currentProfile.VersionName)
+		detailTitle := widget.NewLabelWithStyle(currentInstance.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+		
+		versionStr := "Unknown Version"
+		for _, v := range currentInstance.Versions {
+			if v.ID == "minecraft" {
+				versionStr = v.Version
+				break
+			}
+		}
+		
+		detailVersion := widget.NewLabel("Version: " + versionStr)
 
-		icon := canvas.NewImageFromImage(currentProfile.IconImage)
-		icon.SetMinSize(fyne.NewSize(64, 64))
-		icon.FillMode = canvas.ImageFillContain
-
-		// Action Buttons for current profile
+		// Action Buttons for current instance
 		playBtn := widget.NewButton("PLAY", func() {
 			ui.showLaunchOverlay()
 			go func() {
-				_ = ui.discord.SetActivity(ui.selectedProfileName)
-				if err := ui.runner.Launch(ui.selectedProfileName); err != nil {
+				_ = ui.discord.SetActivity(ui.selectedInstanceName)
+				if err := ui.runner.Launch(ui.selectedInstanceName); err != nil {
 					fyne.Do(func() {
 						dialog.ShowError(err, ui.window)
 					})
@@ -120,13 +124,17 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		})
 		playBtn.Importance = widget.HighImportance
 
-		deleteBtn := widget.NewButton("Delete Profile", func() {
-			dialog.ShowConfirm("Delete Profile", "Are you sure you want to delete "+currentProfile.DisplayName+"?", func(ok bool) {
+		updateBtn := widget.NewButton("Update", func() {
+			ui.showUpdateInstanceDialog(currentInstance.Name)
+		})
+
+		deleteBtn := widget.NewButton("Delete Instance", func() {
+			dialog.ShowConfirm("Delete Instance", "Are you sure you want to delete "+currentInstance.Name+"?", func(ok bool) {
 				if ok {
-					if err := ui.profiles.DeleteProfile(currentProfile.Source); err != nil {
+					if err := ui.instances.DeleteInstance(currentInstance.Name); err != nil {
 						dialog.ShowError(err, ui.window)
 					} else {
-						ui.selectedProfileName = "" // Reset selection
+						ui.selectedInstanceName = "" // Reset selection
 						ui.showMainView()
 					}
 				}
@@ -134,19 +142,18 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		})
 		deleteBtn.Importance = widget.DangerImportance
 
-		actions := container.NewHBox(playBtn, deleteBtn)
+		actions := container.NewHBox(playBtn, updateBtn, deleteBtn)
 
 		detailContainer := container.NewVBox(
-			container.NewHBox(icon, detailTitle),
+			detailTitle,
 			detailVersion,
 			widget.NewSeparator(),
-			detailDesc,
 			layout.NewSpacer(),
 			container.NewPadded(actions),
 		)
 		detailArea = container.NewPadded(detailContainer)
 	} else {
-		detailArea = container.NewCenter(widget.NewLabel("Select a profile to see details"))
+		detailArea = container.NewCenter(widget.NewLabel("Select an instance to see details"))
 	}
 
 	// Main Layout (Responsive Split)
