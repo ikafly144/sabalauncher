@@ -103,8 +103,8 @@ func ImportSBPack(packPath string, destDir string) (*Instance, error) {
 
 	// Unzip overrides
 	for _, f := range reader.File {
-		if strings.HasPrefix(f.Name, "overrides/") {
-			relPath := strings.TrimPrefix(f.Name, "overrides/")
+		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
+			relPath := after
 			if relPath == "" {
 				continue
 			}
@@ -123,7 +123,7 @@ func ImportSBPack(packPath string, destDir string) (*Instance, error) {
 			if err != nil {
 				return nil, err
 			}
-			
+
 			destFile, err := os.Create(destPath)
 			if err != nil {
 				rc.Close()
@@ -168,8 +168,14 @@ func ImportSBPack(packPath string, destDir string) (*Instance, error) {
 				Version:  "unknown", // Could extract from jar if needed
 				UpdateAt: time.Now(),
 				Source: &URLSource{
-					ModURL:  "",
-					FileURI: func() string { if len(fileInfo.Downloads) > 0 { return fileInfo.Downloads[0] } else { return "" } }(),
+					ModURL: "",
+					FileURI: func() string {
+						if len(fileInfo.Downloads) > 0 {
+							return fileInfo.Downloads[0]
+						} else {
+							return ""
+						}
+					}(),
 				},
 			})
 		}
@@ -211,8 +217,14 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 	}
 
 	if inst.Upstream == nil || inst.Upstream.Version != patch.FromVersion {
-		return fmt.Errorf("version mismatch: instance is at %s, patch requires %s", 
-			func() string { if inst.Upstream != nil { return inst.Upstream.Version } else { return "unknown" } }(), 
+		return fmt.Errorf("version mismatch: instance is at %s, patch requires %s",
+			func() string {
+				if inst.Upstream != nil {
+					return inst.Upstream.Version
+				} else {
+					return "unknown"
+				}
+			}(),
 			patch.FromVersion)
 	}
 
@@ -224,8 +236,8 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 
 	// 2. Unzip overrides from patch
 	for _, f := range reader.File {
-		if strings.HasPrefix(f.Name, "overrides/") {
-			relPath := strings.TrimPrefix(f.Name, "overrides/")
+		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
+			relPath := after
 			if relPath == "" {
 				continue
 			}
@@ -244,7 +256,7 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 			if err != nil {
 				return err
 			}
-			
+
 			destFile, err := os.Create(destPath)
 			if err != nil {
 				rc.Close()
@@ -268,7 +280,7 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 		}
 
 		destPath := filepath.Join(inst.Path, fileInfo.Path)
-		
+
 		// Check if file already exists and hashes match
 		if verifyHashes(destPath, fileInfo.Hashes) == nil {
 			// Already up to date
@@ -290,8 +302,14 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 				Version:  "unknown",
 				UpdateAt: time.Now(),
 				Source: &URLSource{
-					ModURL:  "",
-					FileURI: func() string { if len(fileInfo.Downloads) > 0 { return fileInfo.Downloads[0] } else { return "" } }(),
+					ModURL: "",
+					FileURI: func() string {
+						if len(fileInfo.Downloads) > 0 {
+							return fileInfo.Downloads[0]
+						} else {
+							return ""
+						}
+					}(),
 				},
 			})
 		}
@@ -345,7 +363,7 @@ func verifyHashes(path string, hashes map[string]string) error {
 	for algo, expectedHash := range hashes {
 		f.Seek(0, 0)
 		var actualHash string
-		
+
 		switch strings.ToLower(algo) {
 		case "sha1":
 			h := sha1.New()

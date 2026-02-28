@@ -133,7 +133,7 @@ type JFileEntry struct {
 	Executable bool `json:"executable"`
 	Downloads  struct {
 		Lzma *JDownloadInfo `json:"lzma"`
-		Raw  JDownloadInfo  `json:"raw,omitempty"`
+		Raw  JDownloadInfo  `json:"raw"`
 	} `json:"downloads"`
 }
 

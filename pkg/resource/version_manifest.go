@@ -328,7 +328,7 @@ type Downloads struct {
 	ClientMappings Download `json:"client_mappings"`
 	Server         Download `json:"server"`
 	ServerMappings Download `json:"server_mappings"`
-	WindowsServer  Download `json:"windows_server,omitempty"`
+	WindowsServer  Download `json:"windows_server"`
 }
 
 type Download struct {
@@ -347,7 +347,7 @@ type Library struct {
 	Name      string            `json:"name"`
 	URL       string            `json:"url"`
 	Natives   map[string]string `json:"natives,omitempty"`
-	Extract   LibraryExtract    `json:"extract,omitempty"`
+	Extract   LibraryExtract    `json:"extract"`
 	Rules     []LibraryRule     `json:"rules,omitempty"`
 }
 

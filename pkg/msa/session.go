@@ -139,9 +139,7 @@ func (s *session) StartLogin(method LoginMethod) error {
 	scopes := []string{"XboxLive.signin", "XboxLive.offline_access"}
 
 	if method == LoginMethodBrowser {
-		s.done.Add(1)
-		go func() {
-			defer s.done.Done()
+		s.done.Go(func() {
 			// MSAL Go defaults to http://localhost if not specified,
 			// but we must ensure the Azure Portal has "http://localhost" registered
 			// under "Mobile and desktop applications".
@@ -155,7 +153,7 @@ func (s *session) StartLogin(method LoginMethod) error {
 				return
 			}
 			s.handleResult(result)
-		}()
+		})
 		return nil
 	}
 
@@ -165,9 +163,7 @@ func (s *session) StartLogin(method LoginMethod) error {
 	}
 	s.deviceCode = &deviceCode
 
-	s.done.Add(1)
-	go func() {
-		defer s.done.Done()
+	s.done.Go(func() {
 		result, err := deviceCode.AuthenticationResult(context.Background())
 		if err != nil {
 			s.result = nil
@@ -175,7 +171,7 @@ func (s *session) StartLogin(method LoginMethod) error {
 			return
 		}
 		s.handleResult(result)
-	}()
+	})
 	return nil
 }
 
