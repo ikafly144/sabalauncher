@@ -3,13 +3,13 @@ package fyne
 import (
 	"context"
 	"fmt"
-	"testing"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
 	"github.com/stretchr/testify/mock"
+	"testing"
 )
 
 type mockAuthenticator struct {
@@ -88,14 +88,14 @@ func (m *mockDiscordManager) ClearActivity() error {
 func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	m := new(mockAuthenticator)
 	m.On("GetStatus").Return(core.AuthStatusLoggedOut)
 	m.On("Login", mock.Anything, mock.Anything).Return(nil)
 	m.On("LoginURL").Return("http://example.com")
 	m.On("WaitLogin", mock.Anything).Return(nil)
 	m.On("GetUserDisplay").Return("TestUser")
-	
+
 	mp := new(mockProfileManager)
 	mp.On("GetProfiles").Return([]core.Profile{}, nil)
 
@@ -106,7 +106,7 @@ func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 		profiles: mp,
 		discord:  new(mockDiscordManager),
 	}
-	
+
 	view := ui.createLoggedOutView()
 	container := view.(*fyne.Container)
 	for _, obj := range container.Objects {
@@ -119,12 +119,12 @@ func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 func TestShowAuthView_LoggedIn_Buttons(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	m := new(mockAuthenticator)
 	m.On("GetStatus").Return(core.AuthStatusLoggedIn)
 	m.On("GetUserDisplay").Return("TestUser")
 	m.On("Logout").Return(nil)
-	
+
 	ui := &FyneUI{
 		app:      a,
 		window:   w,
@@ -133,7 +133,7 @@ func TestShowAuthView_LoggedIn_Buttons(t *testing.T) {
 		discord:  new(mockDiscordManager),
 	}
 	ui.profiles.(*mockProfileManager).On("GetProfiles").Return([]core.Profile{}, nil)
-	
+
 	view := ui.createLoggedInView()
 	container := view.(*fyne.Container)
 	for _, obj := range container.Objects {
@@ -146,7 +146,7 @@ func TestShowAuthView_LoggedIn_Buttons(t *testing.T) {
 func TestShowAuthView_Error_Retry(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	m := new(mockAuthenticator)
 	m.On("GetLastError").Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusError)
@@ -154,7 +154,7 @@ func TestShowAuthView_Error_Retry(t *testing.T) {
 	m.On("LoginURL").Return("http://example.com")
 	m.On("WaitLogin", mock.Anything).Return(nil)
 	m.On("GetUserDisplay").Return("TestUser")
-	
+
 	mp := new(mockProfileManager)
 	mp.On("GetProfiles").Return([]core.Profile{}, nil)
 
@@ -165,7 +165,7 @@ func TestShowAuthView_Error_Retry(t *testing.T) {
 		profiles: mp,
 		discord:  new(mockDiscordManager),
 	}
-	
+
 	view := ui.createErrorView()
 	container := view.(*fyne.Container)
 	for _, obj := range container.Objects {
@@ -178,46 +178,46 @@ func TestShowAuthView_Error_Retry(t *testing.T) {
 func TestShowAuthView_LoggedIn_Logout(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	m := new(mockAuthenticator)
 	m.On("GetStatus").Return(core.AuthStatusLoggedIn).Once()
 	m.On("GetUserDisplay").Return("TestUser")
 	m.On("Logout").Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusLoggedOut).Once()
-	
+
 	ui := &FyneUI{
-		app:    a,
-		window: w,
-		auth:   m,
+		app:     a,
+		window:  w,
+		auth:    m,
 		discord: new(mockDiscordManager),
 	}
-	
+
 	ui.showAuthView()
-	
+
 	// Manual logout call to verify logic
 	_ = ui.auth.Logout()
 	ui.showAuthView()
-	
+
 	m.AssertExpectations(t)
 }
 
 func TestShowAuthView_Error(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	m := new(mockAuthenticator)
 	m.On("GetLastError").Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusError)
-	
+
 	ui := &FyneUI{
-		app:    a,
-		window: w,
-		auth:   m,
+		app:     a,
+		window:  w,
+		auth:    m,
 		discord: new(mockDiscordManager),
 	}
-	
+
 	ui.showAuthView()
-	
+
 	if ui.window.Content() == nil {
 		t.Fatal("Window content is nil")
 	}
@@ -226,7 +226,7 @@ func TestShowAuthView_Error(t *testing.T) {
 func TestStartLogin(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	m := new(mockAuthenticator)
 	m.On("Login", mock.Anything, mock.Anything).Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusLoggingIn).Once()
@@ -234,7 +234,7 @@ func TestStartLogin(t *testing.T) {
 	m.On("LoginURL").Return("http://example.com").Maybe()
 	m.On("WaitLogin", mock.Anything).Return(nil)
 	m.On("GetUserDisplay").Return("TestUser")
-	
+
 	mp := new(mockProfileManager)
 	mp.On("GetProfiles").Return([]core.Profile{}, nil)
 
@@ -245,37 +245,37 @@ func TestStartLogin(t *testing.T) {
 		profiles: mp,
 		discord:  new(mockDiscordManager),
 	}
-	
+
 	ui.startLogin(msa.LoginMethodBrowser)
-	
+
 	m.AssertExpectations(t)
 }
 
 func TestStartLogin_Fail(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	m := new(mockAuthenticator)
 	m.On("Login", mock.Anything, mock.Anything).Return(fmt.Errorf("fail"))
 	m.On("GetLastError").Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusError)
-	
+
 	ui := &FyneUI{
-		app:    a,
-		window: w,
-		auth:   m,
+		app:     a,
+		window:  w,
+		auth:    m,
 		discord: new(mockDiscordManager),
 	}
-	
+
 	ui.startLogin(msa.LoginMethodBrowser)
-	
+
 	m.AssertExpectations(t)
 }
 
 func TestStartLogin_WaitFail(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	m := new(mockAuthenticator)
 	m.On("Login", mock.Anything, mock.Anything).Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusLoggingIn).Once()
@@ -283,15 +283,15 @@ func TestStartLogin_WaitFail(t *testing.T) {
 	m.On("WaitLogin", mock.Anything).Return(fmt.Errorf("fail"))
 	m.On("GetLastError").Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusError).Once()
-	
+
 	ui := &FyneUI{
-		app:    a,
-		window: w,
-		auth:   m,
+		app:     a,
+		window:  w,
+		auth:    m,
 		discord: new(mockDiscordManager),
 	}
-	
+
 	ui.startLogin(msa.LoginMethodBrowser)
-	
+
 	m.AssertExpectations(t)
 }

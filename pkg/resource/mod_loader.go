@@ -32,7 +32,7 @@ type ModLoader interface {
 func GetModLoader(profile *Profile) (ModLoader, error) {
 	switch strings.ToLower(profile.ModLoader) {
 	case "forge":
-		// For Forge, we need the version information. 
+		// For Forge, we need the version information.
 		// Currently, this is stored in the ManifestLoader if it's a ForgeManifestLoader.
 		// We might need to extract this more cleanly later.
 		if fl, ok := profile.Manifest.(*ForgeManifestLoader); ok {
@@ -78,7 +78,7 @@ func (v *VanillaLoader) Install(ctx context.Context, profile *Profile) error {
 
 func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
 	dataPath := DataDir
-	
+
 	ver, err := GetVersion(v.Version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get version: %w", err)
@@ -148,13 +148,13 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 		Classpath:    []string{classpath},
 	}
 
-	// Game arguments will be handled in a similar way if needed, 
+	// Game arguments will be handled in a similar way if needed,
 	// but currently BootGameFromConfig needs them.
 	// Actually, most game arguments are dynamic (tokens, UUIDs).
 	// We might want to keep the dynamic ones in BootGameFromConfig or pass them here.
-	
+
 	// For now, let's keep the dynamic ones in GameRunner/BootGame.
-	
+
 	return config, nil
 }
 

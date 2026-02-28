@@ -10,13 +10,13 @@ import (
 )
 
 type gameRunner struct {
-	auth        Authenticator
-	profiles    ProfileManager
-	dataPath    string
-	
+	auth     Authenticator
+	profiles ProfileManager
+	dataPath string
+
 	progressChan chan ProgressEvent
 	logsChan     chan LogEntry
-	
+
 	running bool
 	mu      sync.RWMutex
 }

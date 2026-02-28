@@ -142,8 +142,8 @@ func (s *session) StartLogin(method LoginMethod) error {
 		s.done.Add(1)
 		go func() {
 			defer s.done.Done()
-			// MSAL Go defaults to http://localhost if not specified, 
-			// but we must ensure the Azure Portal has "http://localhost" registered 
+			// MSAL Go defaults to http://localhost if not specified,
+			// but we must ensure the Azure Portal has "http://localhost" registered
 			// under "Mobile and desktop applications".
 			result, err := s.client.AcquireTokenInteractive(context.Background(), scopes, public.WithOpenURL(func(url string) error {
 				s.interactiveURL = url

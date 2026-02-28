@@ -10,9 +10,9 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/ikafly144/sabalauncher/pkg/browser"
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
-	"github.com/ikafly144/sabalauncher/pkg/browser"
 )
 
 func (ui *FyneUI) showAuthView() {
@@ -63,7 +63,7 @@ func (ui *FyneUI) createLoggedOutView() fyne.CanvasObject {
 
 func (ui *FyneUI) createLoggingInView() fyne.CanvasObject {
 	url, code := ui.auth.DeviceCode()
-	
+
 	var content *fyne.Container
 	if url != "" && code != "" {
 		content = container.NewVBox(

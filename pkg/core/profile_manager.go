@@ -156,19 +156,19 @@ func (pm *profileManager) RefreshProfiles() error {
 			}
 			reader = file
 		}
-		
+
 		var publicProfiles resource.PublicProfiles
 		if err := json.NewDecoder(reader).Decode(&publicProfiles); err != nil {
 			reader.Close()
 			continue
 		}
 		reader.Close()
-		
+
 		resProfiles, err := publicProfiles.Convert()
 		if err != nil {
 			continue
 		}
-		
+
 		for _, rp := range resProfiles {
 			allFullProfiles = append(allFullProfiles, rp)
 			allProfiles = append(allProfiles, Profile{

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	dllcrypt32 = syscall.NewLazyDLL("crypt32.dll")
+	dllcrypt32      = syscall.NewLazyDLL("crypt32.dll")
 	procEncryptData = dllcrypt32.NewProc("CryptProtectData")
 	procDecryptData = dllcrypt32.NewProc("CryptUnprotectData")
 )

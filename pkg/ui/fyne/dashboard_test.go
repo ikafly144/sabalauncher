@@ -1,10 +1,10 @@
 package fyne
 
 import (
-	"testing"
 	"fyne.io/fyne/v2/test"
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/stretchr/testify/mock"
+	"testing"
 )
 
 type mockGameRunner struct {
@@ -39,17 +39,17 @@ func (m *mockGameRunner) SubscribeLogs() <-chan core.LogEntry {
 func TestShowDashboardView(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	mp := new(mockProfileManager)
 	mp.On("GetProfiles").Return([]core.Profile{
 		{Name: "test", DisplayName: "Test Profile", Description: "Desc", VersionName: "1.20.1"},
 	}, nil)
-	
+
 	mr := new(mockGameRunner)
 	ma := new(mockAuthenticator)
 	ma.On("GetStatus").Return(core.AuthStatusLoggedIn)
 	ma.On("GetUserDisplay").Return("TestUser")
-	
+
 	ui := &FyneUI{
 		app:      a,
 		window:   w,
@@ -58,9 +58,9 @@ func TestShowDashboardView(t *testing.T) {
 		auth:     ma,
 		discord:  new(mockDiscordManager),
 	}
-	
+
 	ui.showDashboardView()
-	
+
 	if ui.window.Content() == nil {
 		t.Fatal("Window content is nil")
 	}
@@ -69,7 +69,7 @@ func TestShowDashboardView(t *testing.T) {
 func TestShowLaunchOverlay(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	mr := new(mockGameRunner)
 	mr.On("SubscribeProgress").Return(make(<-chan core.ProgressEvent))
 	mr.On("SubscribeLogs").Return(make(<-chan core.LogEntry))
@@ -77,14 +77,14 @@ func TestShowLaunchOverlay(t *testing.T) {
 	mr.On("Stop").Return(nil)
 
 	ui := &FyneUI{
-		app:    a,
-		window: w,
-		runner: mr,
+		app:     a,
+		window:  w,
+		runner:  mr,
 		discord: new(mockDiscordManager),
 	}
-	
+
 	ui.showLaunchOverlay()
-	
+
 	if ui.window.Content() == nil {
 		t.Fatal("Window content is nil")
 	}

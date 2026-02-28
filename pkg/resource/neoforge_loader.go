@@ -18,14 +18,14 @@ import (
 
 // NeoForgeLoader implements the ModLoader interface for the NeoForge mod loader.
 type NeoForgeLoader struct {
-	VanillaVersion string
+	VanillaVersion  string
 	NeoForgeVersion string
 }
 
 // NewNeoForgeLoader creates a new NeoForgeLoader instance.
 func NewNeoForgeLoader(vanillaVersion, neoforgeVersion string) *NeoForgeLoader {
 	return &NeoForgeLoader{
-		VanillaVersion: vanillaVersion,
+		VanillaVersion:  vanillaVersion,
 		NeoForgeVersion: neoforgeVersion,
 	}
 }
@@ -34,7 +34,7 @@ func NewNeoForgeLoader(vanillaVersion, neoforgeVersion string) *NeoForgeLoader {
 func (n *NeoForgeLoader) Install(ctx context.Context, profile *Profile) error {
 	dataPath := DataDir
 	neoforgeDir := n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
-	
+
 	// Check if already installed
 	manifestPath := filepath.Join(dataPath, "versions", neoforgeDir, neoforgeDir+".json")
 	if _, err := os.Stat(manifestPath); err == nil {
@@ -58,7 +58,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, profile *Profile) error {
 		return fmt.Errorf("failed to download neoforge installer: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("neoforge installer download returned: %s", resp.Status)
 	}
@@ -82,7 +82,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, profile *Profile) error {
 	cmd.Stdout = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
 	cmd.Stderr = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()
-	
+
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("neoforge installer failed: %w", err)
 	}
@@ -94,7 +94,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, profile *Profile) error {
 func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
 	dataPath := DataDir
 	neoforgeDir := n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
-	
+
 	// 1. Load NeoForge Manifest
 	manifestPath := filepath.Join(dataPath, "versions", neoforgeDir, neoforgeDir+".json")
 	file, err := os.Open(manifestPath)
@@ -102,7 +102,7 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, 
 		return nil, fmt.Errorf("failed to open neoforge manifest: %w", err)
 	}
 	defer file.Close()
-	
+
 	var manifest ClientManifest
 	if err := json.NewDecoder(file).Decode(&manifest); err != nil {
 		return nil, fmt.Errorf("failed to decode neoforge manifest: %w", err)
@@ -187,6 +187,6 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, 
 		GameArguments: gameArgs,
 		Classpath:     []string{classpath},
 	}
-	
+
 	return config, nil
 }

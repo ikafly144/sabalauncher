@@ -1,11 +1,11 @@
 package fyne
 
 import (
-	"testing"
 	"fyne.io/fyne/v2/test"
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/stretchr/testify/mock"
+	"testing"
 )
 
 type mockProfileManager struct {
@@ -40,12 +40,12 @@ func (m *mockProfileManager) GetFullProfile(name string) (*resource.Profile, err
 func TestShowAddProfileDialog(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
-	
+
 	ui := &FyneUI{
-		app:    a,
-		window: w,
+		app:     a,
+		window:  w,
 		discord: new(mockDiscordManager),
 	}
-	
+
 	ui.showAddProfileDialog()
 }

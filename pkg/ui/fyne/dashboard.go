@@ -97,7 +97,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		detailDesc := widget.NewLabel(currentProfile.Description)
 		detailDesc.Wrapping = fyne.TextWrapWord
 		detailVersion := widget.NewLabel("Version: " + currentProfile.VersionName)
-		
+
 		icon := canvas.NewImageFromImage(currentProfile.IconImage)
 		icon.SetMinSize(fyne.NewSize(64, 64))
 		icon.FillMode = canvas.ImageFillContain
@@ -175,12 +175,12 @@ func (ui *FyneUI) makeAccountView() fyne.CanvasObject {
 func (ui *FyneUI) showLaunchOverlay() {
 	taskLabel := widget.NewLabel("Preparing...")
 	taskLabel.Alignment = fyne.TextAlignCenter
-	
+
 	statusLabel := widget.NewLabel("")
 	statusLabel.Alignment = fyne.TextAlignCenter
-	
+
 	progressBar := widget.NewProgressBar()
-	
+
 	logEntry := widget.NewMultiLineEntry()
 	logEntry.Disable()
 	logEntry.SetText("Waiting for logs...\n")
@@ -215,7 +215,7 @@ func (ui *FyneUI) showLaunchOverlay() {
 
 	// Responsive launch overlay layout
 	topInfo := container.NewVBox(taskLabel, progressBar, statusLabel)
-	
+
 	// NewBorder makes the logEntry (center) fill the window between top info and stop button
 	content := container.NewBorder(
 		container.NewVBox(createHeader(), container.NewPadded(topInfo)),
@@ -224,6 +224,6 @@ func (ui *FyneUI) showLaunchOverlay() {
 		nil,
 		container.NewPadded(container.NewScroll(logEntry)),
 	)
-	
+
 	ui.window.SetContent(content)
 }

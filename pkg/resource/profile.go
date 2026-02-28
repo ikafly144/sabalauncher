@@ -23,7 +23,7 @@ var (
 )
 
 const (
-	CurrentProfileVersion = 1
+	CurrentProfileVersion = 2
 )
 
 type PublicProfile struct {

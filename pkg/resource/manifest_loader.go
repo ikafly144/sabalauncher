@@ -523,13 +523,13 @@ func (f *FabricManifestLoader) StartSetup(dataPath string, profilePath string) {
 		f.state.AddStep(&LibraryDownloadStep{
 			manifest: m,
 		})
-		
+
 		// Fabric specific installation (Loader and Libraries)
 		fabricLoader := NewFabricLoader(f.VanillaVersion, f.LoaderVersion)
 		f.state.AddStep(&FabricSetupStep{
 			loader: fabricLoader,
 		})
-		
+
 		if err := f.state.Do(&SetupContext{
 			dataPath:    dataPath,
 			profilePath: profilePath,
@@ -658,13 +658,13 @@ func (n *NeoForgeManifestLoader) StartSetup(dataPath string, profilePath string)
 		n.state.AddStep(&LibraryDownloadStep{
 			manifest: m,
 		})
-		
+
 		// NeoForge specific installation
 		neoforgeLoader := NewNeoForgeLoader(n.VanillaVersion, n.NeoForgeVersion)
 		n.state.AddStep(&NeoForgeSetupStep{
 			loader: neoforgeLoader,
 		})
-		
+
 		if err := n.state.Do(&SetupContext{
 			dataPath:    dataPath,
 			profilePath: profilePath,
@@ -792,13 +792,13 @@ func (q *QuiltManifestLoader) StartSetup(dataPath string, profilePath string) {
 		q.state.AddStep(&LibraryDownloadStep{
 			manifest: m,
 		})
-		
+
 		// Quilt specific installation
 		quiltLoader := NewQuiltLoader(q.VanillaVersion, q.LoaderVersion)
 		q.state.AddStep(&QuiltSetupStep{
 			loader: quiltLoader,
 		})
-		
+
 		if err := q.state.Do(&SetupContext{
 			dataPath:    dataPath,
 			profilePath: profilePath,

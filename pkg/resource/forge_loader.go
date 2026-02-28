@@ -28,14 +28,14 @@ func NewForgeLoader(vanillaVersion, forgeVersion string) *ForgeLoader {
 // Install handles the downloading and installation of Forge.
 func (f *ForgeLoader) Install(ctx context.Context, profile *Profile) error {
 	slog.Info("Installing Forge", "vanillaVersion", f.VanillaVersion, "forgeVersion", f.ForgeVersion)
-	
+
 	// This logic is currently spread across ForgeManifestLoader and SetupState.
 	// For the refactor, we'll implement it here or call existing helpers.
 	// We need dataPath here. We might need to add it to the Install signature or use a global.
 	// DataDir is available in profile.go.
-	
+
 	dataPath := DataDir
-	
+
 	// 1. Get Vanilla Manifest
 	ver, err := GetVersion(f.VanillaVersion)
 	if err != nil {
@@ -50,7 +50,7 @@ func (f *ForgeLoader) Install(ctx context.Context, profile *Profile) error {
 	// 2. Download Forge Installer if not present
 	forgeDir := f.VanillaVersion + "-forge-" + f.ForgeVersion
 	installerPath := filepath.Join(os.TempDir(), forgeDir+"-installer.jar")
-	
+
 	if _, err := os.Stat(filepath.Join(dataPath, "versions", forgeDir, forgeDir+".json")); os.IsNotExist(err) {
 		worker, path, err := DownloadForge(f.VanillaVersion+"-"+f.ForgeVersion, forgeDir, dataPath)
 		if err != nil {
@@ -60,7 +60,7 @@ func (f *ForgeLoader) Install(ctx context.Context, profile *Profile) error {
 			return fmt.Errorf("failed to run forge download worker: %w", err)
 		}
 		installerPath = path
-		
+
 		// 3. Install Forge
 		if err := InstallForge(installerPath, dataPath); err != nil {
 			return fmt.Errorf("failed to install forge: %w", err)
@@ -75,7 +75,7 @@ func (f *ForgeLoader) Install(ctx context.Context, profile *Profile) error {
 func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
 	dataPath := DataDir
 	forgeDir := f.VanillaVersion + "-forge-" + f.ForgeVersion
-	
+
 	// 1. Load Forge Manifest
 	manifestPath := filepath.Join(dataPath, "versions", forgeDir, forgeDir+".json")
 	file, err := os.Open(manifestPath)
@@ -83,7 +83,7 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 		return nil, fmt.Errorf("failed to open forge manifest: %w", err)
 	}
 	defer file.Close()
-	
+
 	var manifest ClientManifest
 	if err := json.NewDecoder(file).Decode(&manifest); err != nil {
 		return nil, fmt.Errorf("failed to decode forge manifest: %w", err)
@@ -148,7 +148,7 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 	// Forge specific game arguments are usually in manifest.Arguments.Game
 	var gameArgs []string
 	// Note: tokens and player info will be handled by GameRunner/BootGameFromConfig
-	
+
 	for _, arg := range manifest.Arguments.Game {
 		if arg == nil {
 			continue
@@ -177,6 +177,6 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 		GameArguments: gameArgs,
 		Classpath:     []string{classpath},
 	}
-	
+
 	return config, nil
 }

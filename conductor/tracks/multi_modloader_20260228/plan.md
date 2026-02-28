@@ -46,6 +46,6 @@ Ensure errors are handled gracefully.
 - [x] Task: Implement Manifest Validation
     - [x] Add checks for mandatory `mod_loader` field
     - [x] Create user-friendly error messages for missing/invalid loaders
-- [ ] Task: Final Integration Test
-    - [ ] Verify all 4 loaders work in a production-like environment
-- [ ] Task: Conductor - User Manual Verification 'Validation and UX' (Protocol in workflow.md)
+- [x] Task: Final Integration Test
+    - [x] Verify all 4 loaders work in a production-like environment
+- [x] Task: Conductor - User Manual Verification 'Validation and UX' (Protocol in workflow.md)

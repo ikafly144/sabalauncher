@@ -25,12 +25,12 @@ func NewAuthenticator(cachePath string) (Authenticator, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cache accessor: %w", err)
 	}
-	
+
 	// We need the client ID from the msa package's internal state or redefined here.
 	// For now, we'll use a placeholder or try to extract it if possible.
-	// The current msa package doesn't export NewSession with a custom client, 
+	// The current msa package doesn't export NewSession with a custom client,
 	// so we might need to refactor msa package as well.
-	
+
 	sess, err := msa.NewSession(cache)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create msa session: %w", err)
@@ -175,11 +175,11 @@ func (a *msaAuthenticator) GetMinecraftAccount() (*msa.MinecraftAccount, error) 
 func (a *msaAuthenticator) Logout() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	
+
 	if err := a.session.Logout(); err != nil {
 		return err
 	}
-	
+
 	a.user = ""
 	a.mcProfile = nil
 	a.status = AuthStatusLoggedOut

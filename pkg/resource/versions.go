@@ -696,7 +696,7 @@ func BootGameFromConfig(javaPath string, config *LaunchConfig, profile *Profile,
 	var cmds []string
 	cmds = append(cmds, javaPath)
 	cmds = append(cmds, config.JVMArguments...)
-	
+
 	// Ensure classpath is handled. LaunchConfig.Classpath is a list of JARs.
 	// Minecraft expects -cp <joined_classpath>
 	if len(config.Classpath) > 0 {
