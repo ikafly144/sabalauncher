@@ -2,6 +2,7 @@ package resource
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -11,8 +12,8 @@ func TestPublicProfile_UnmarshalJSON(t *testing.T) {
 		"mod_loader": "fabric",
 		"version": 2,
 		"manifest": {
-			"loaderType": "vanilla",
-			"version": "1.21"
+			"version": "1.21",
+			"loaderVersion": "0.15.11"
 		}
 	}`
 
@@ -24,11 +25,17 @@ func TestPublicProfile_UnmarshalJSON(t *testing.T) {
 	if p.Name != "test-profile" {
 		t.Errorf("Expected name 'test-profile', got '%s'", p.Name)
 	}
+	if p.ModLoader != "fabric" {
+		t.Errorf("Expected mod_loader 'fabric', got '%s'", p.ModLoader)
+	}
 	if p.Manifest == nil {
 		t.Fatal("Expected manifest to be non-nil")
 	}
-	if p.Manifest.VersionName() != "1.21" {
-		t.Errorf("Expected manifest version '1.21', got '%s'", p.Manifest.VersionName())
+	if p.Manifest.Type() != "fabric" {
+		t.Errorf("Expected manifest type 'fabric', got '%s'", p.Manifest.Type())
+	}
+	if p.Manifest.VersionName() != "1.21-fabric-0.15.11" {
+		t.Errorf("Expected manifest version '1.21-fabric-0.15.11', got '%s'", p.Manifest.VersionName())
 	}
 }
 
@@ -37,7 +44,6 @@ func TestPublicProfile_UnmarshalJSON_MissingModLoader(t *testing.T) {
 		"name": "test-profile",
 		"version": 2,
 		"manifest": {
-			"loaderType": "vanilla",
 			"version": "1.21"
 		}
 	}`
@@ -59,7 +65,6 @@ func TestPublicProfile_UnmarshalJSON_InvalidModLoader(t *testing.T) {
 		"mod_loader": "invalid-loader",
 		"version": 2,
 		"manifest": {
-			"loaderType": "vanilla",
 			"version": "1.21"
 		}
 	}`
@@ -69,11 +74,7 @@ func TestPublicProfile_UnmarshalJSON_InvalidModLoader(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error due to invalid mod_loader, but got nil")
 	}
-	if !contains(err.Error(), "invalid mod_loader 'invalid-loader'") {
+	if !strings.Contains(err.Error(), "invalid mod_loader 'invalid-loader'") {
 		t.Errorf("Unexpected error message: %v", err)
 	}
-}
-
-func contains(s, substr string) bool {
-	return (s != "" && substr != "" && (len(s) >= len(substr)) && (s == substr || (len(s) > len(substr) && (s[:len(substr)] == substr || contains(s[1:], substr)))))
 }

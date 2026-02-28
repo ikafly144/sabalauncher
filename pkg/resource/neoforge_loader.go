@@ -109,16 +109,17 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, 
 	}
 
 	// 2. Generate Classpath
-	classpath := filepath.Join(dataPath, "versions", manifest.ID, manifest.ID+".jar")
+	var classpath []string
+	classpath = append(classpath, filepath.Join(dataPath, "versions", manifest.ID, manifest.ID+".jar"))
 	classpathSeparator := string(os.PathListSeparator)
 	for _, library := range manifest.Libraries {
 		if library.Downloads.Classifiers != nil {
 			for _, classifier := range library.Downloads.Classifiers {
-				classpath += classpathSeparator + filepath.Join(dataPath, "libraries", classifier.Path)
+				classpath = append(classpath, filepath.Join(dataPath, "libraries", classifier.Path))
 			}
 		}
 		if library.Downloads.Artifact.Path != "" {
-			classpath += classpathSeparator + filepath.Join(dataPath, "libraries", library.Downloads.Artifact.Path)
+			classpath = append(classpath, filepath.Join(dataPath, "libraries", library.Downloads.Artifact.Path))
 		}
 	}
 
@@ -127,7 +128,7 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, 
 		"natives_directory":   filepath.Join(dataPath, "bin", manifest.ID),
 		"launcher_name":       "SabaLauncher",
 		"launcher_version":    "1.0",
-		"classpath":           classpath,
+		"classpath":           strings.Join(classpath, classpathSeparator),
 		"library_directory":   filepath.Join(dataPath, "libraries"),
 		"classpath_separator": classpathSeparator,
 	}
@@ -140,13 +141,25 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, 
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
+	skipNext := false
 	for _, arg := range manifest.Arguments.Jvm {
+		if skipNext {
+			skipNext = false
+			continue
+		}
 		if arg == nil {
 			continue
 		}
 		switch arg := arg.(type) {
 		case JvmArgumentString:
 			val := arg.String()
+			if val == "-cp" {
+				skipNext = true
+				continue
+			}
+			if strings.Contains(val, "${classpath}") {
+				continue
+			}
 			for before, after := range cmdMap {
 				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
 			}
@@ -158,6 +171,12 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, 
 				continue
 			}
 			for _, a := range arg.Value {
+				if a == "-cp" {
+					continue
+				}
+				if strings.Contains(a, "${classpath}") {
+					continue
+				}
 				for before, after := range cmdMap {
 					a = strings.ReplaceAll(a, fmt.Sprintf("${%s}", before), after)
 				}
@@ -185,7 +204,7 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, 
 		MainClass:     manifest.MainClass,
 		JVMArguments:  jvmArgs,
 		GameArguments: gameArgs,
-		Classpath:     []string{classpath},
+		Classpath:     classpath,
 	}
 
 	return config, nil

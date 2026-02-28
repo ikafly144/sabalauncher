@@ -30,63 +30,6 @@ type ManifestLoader interface {
 	GetClientManifest() *ClientManifest
 }
 
-type ManifestLoaderUnmarshal struct {
-	LoaderType string `json:"loaderType"`
-	ManifestLoader
-}
-
-func (m *ManifestLoaderUnmarshal) UnmarshalJSON(data []byte) error {
-	type raw struct {
-		LoaderType string `json:"loaderType"`
-	}
-	var r raw
-	if err := json.Unmarshal(data, &r); err != nil {
-		return err
-	}
-	m.LoaderType = r.LoaderType
-	switch m.LoaderType {
-	case "vanilla":
-		var v VanillaManifestLoader
-		if err := json.Unmarshal(data, &v); err != nil {
-			return err
-		}
-		m.ManifestLoader = &v
-	case "forge":
-		var f ForgeManifestLoader
-		if err := json.Unmarshal(data, &f); err != nil {
-			return err
-		}
-		m.ManifestLoader = &f
-	case "fabric":
-		var f FabricManifestLoader
-		if err := json.Unmarshal(data, &f); err != nil {
-			return err
-		}
-		m.ManifestLoader = &f
-	case "neoforge":
-		var n NeoForgeManifestLoader
-		if err := json.Unmarshal(data, &n); err != nil {
-			return err
-		}
-		m.ManifestLoader = &n
-	case "quilt":
-		var q QuiltManifestLoader
-		if err := json.Unmarshal(data, &q); err != nil {
-			return err
-		}
-		m.ManifestLoader = &q
-	case "custom":
-		var c CustomManifestLoader
-		if err := json.Unmarshal(data, &c); err != nil {
-			return err
-		}
-		m.ManifestLoader = &c
-	default:
-		return fmt.Errorf("unknown loader type: %s", m.LoaderType)
-	}
-	return nil
-}
-
 var _ ManifestLoader = (*CustomManifestLoader)(nil)
 
 type CustomManifestLoader struct {

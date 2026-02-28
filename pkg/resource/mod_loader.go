@@ -88,22 +88,25 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 		return nil, fmt.Errorf("failed to get client manifest: %w", err)
 	}
 
-	classpath := filepath.Join(dataPath, "versions", clientManifest.ID, clientManifest.ID+".jar")
+	var classpath []string
+	classpath = append(classpath, filepath.Join(dataPath, "versions", clientManifest.ID, clientManifest.ID+".jar"))
 	classpathSeparator := string(os.PathListSeparator)
 	for _, library := range clientManifest.Libraries {
 		if library.Downloads.Classifiers != nil {
 			for _, classifier := range library.Downloads.Classifiers {
-				classpath += classpathSeparator + filepath.Join(dataPath, "libraries", classifier.Path)
+				classpath = append(classpath, filepath.Join(dataPath, "libraries", classifier.Path))
 			}
 		}
-		classpath += classpathSeparator + filepath.Join(dataPath, "libraries", library.Downloads.Artifact.Path)
+		if library.Downloads.Artifact.Path != "" {
+			classpath = append(classpath, filepath.Join(dataPath, "libraries", library.Downloads.Artifact.Path))
+		}
 	}
 
 	cmdMap := map[string]string{
 		"natives_directory":   filepath.Join(dataPath, "bin", clientManifest.ID),
 		"launcher_name":       "SabaLauncher",
 		"launcher_version":    "1.0",
-		"classpath":           classpath,
+		"classpath":           strings.Join(classpath, classpathSeparator),
 		"library_directory":   filepath.Join(dataPath, "libraries"),
 		"classpath_separator": classpathSeparator,
 	}
@@ -116,13 +119,25 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
+	skipNext := false
 	for _, arg := range clientManifest.Arguments.Jvm {
+		if skipNext {
+			skipNext = false
+			continue
+		}
 		if arg == nil {
 			continue
 		}
 		switch arg := arg.(type) {
 		case JvmArgumentString:
 			val := arg.String()
+			if val == "-cp" {
+				skipNext = true
+				continue
+			}
+			if strings.Contains(val, "${classpath}") {
+				continue
+			}
 			for before, after := range cmdMap {
 				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
 			}
@@ -134,6 +149,15 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 				continue
 			}
 			for _, a := range arg.Value {
+				if a == "-cp" {
+					// This is unlikely inside a rule, but let's be safe.
+					// However, skipNext logic doesn't work well here.
+					// We'll just skip the value if it's -cp or contains ${classpath}
+					continue
+				}
+				if strings.Contains(a, "${classpath}") {
+					continue
+				}
 				for before, after := range cmdMap {
 					a = strings.ReplaceAll(a, fmt.Sprintf("${%s}", before), after)
 				}
@@ -145,7 +169,7 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 	config := &LaunchConfig{
 		MainClass:    clientManifest.MainClass,
 		JVMArguments: jvmArgs,
-		Classpath:    []string{classpath},
+		Classpath:    classpath,
 	}
 
 	var gameArgs []string

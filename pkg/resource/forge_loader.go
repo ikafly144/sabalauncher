@@ -90,15 +90,18 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 	}
 
 	// 2. Generate Classpath
-	classpath := filepath.Join(dataPath, "versions", manifest.ID, manifest.ID+".jar")
+	var classpath []string
+	classpath = append(classpath, filepath.Join(dataPath, "versions", manifest.ID, manifest.ID+".jar"))
 	classpathSeparator := string(os.PathListSeparator)
 	for _, library := range manifest.Libraries {
 		if library.Downloads.Classifiers != nil {
 			for _, classifier := range library.Downloads.Classifiers {
-				classpath += classpathSeparator + filepath.Join(dataPath, "libraries", classifier.Path)
+				classpath = append(classpath, filepath.Join(dataPath, "libraries", classifier.Path))
 			}
 		}
-		classpath += classpathSeparator + filepath.Join(dataPath, "libraries", library.Downloads.Artifact.Path)
+		if library.Downloads.Artifact.Path != "" {
+			classpath = append(classpath, filepath.Join(dataPath, "libraries", library.Downloads.Artifact.Path))
+		}
 	}
 
 	// 3. Resolve Arguments
@@ -106,7 +109,7 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 		"natives_directory":   filepath.Join(dataPath, "bin", manifest.ID),
 		"launcher_name":       "SabaLauncher",
 		"launcher_version":    "1.0",
-		"classpath":           classpath,
+		"classpath":           strings.Join(classpath, classpathSeparator),
 		"library_directory":   filepath.Join(dataPath, "libraries"),
 		"classpath_separator": classpathSeparator,
 	}
@@ -119,13 +122,25 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
+	skipNext := false
 	for _, arg := range manifest.Arguments.Jvm {
+		if skipNext {
+			skipNext = false
+			continue
+		}
 		if arg == nil {
 			continue
 		}
 		switch arg := arg.(type) {
 		case JvmArgumentString:
 			val := arg.String()
+			if val == "-cp" {
+				skipNext = true
+				continue
+			}
+			if strings.Contains(val, "${classpath}") {
+				continue
+			}
 			for before, after := range cmdMap {
 				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
 			}
@@ -137,6 +152,12 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 				continue
 			}
 			for _, a := range arg.Value {
+				if a == "-cp" {
+					continue
+				}
+				if strings.Contains(a, "${classpath}") {
+					continue
+				}
 				for before, after := range cmdMap {
 					a = strings.ReplaceAll(a, fmt.Sprintf("${%s}", before), after)
 				}
@@ -157,12 +178,7 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 		case GameArgumentString:
 			// We skip placeholders that are handled dynamically during boot
 			val := arg.String()
-			if !strings.Contains(val, "${") {
-				gameArgs = append(gameArgs, val)
-			} else {
-				// For now, let's include them and let BootGameFromConfig handle them
-				gameArgs = append(gameArgs, val)
-			}
+			gameArgs = append(gameArgs, val)
 		case GameArgumentRule:
 			// TODO: Handle rules if necessary
 			for _, a := range arg.Value {
@@ -175,8 +191,7 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 		MainClass:     manifest.MainClass,
 		JVMArguments:  jvmArgs,
 		GameArguments: gameArgs,
-		Classpath:     []string{classpath},
+		Classpath:     classpath,
 	}
-
 	return config, nil
 }

@@ -27,9 +27,11 @@ func (m *mockProfileManager) GetFullProfile(name string) (*resource.Profile, err
 
 type mockManifestLoader struct {
 	resource.ManifestLoader
-	done bool
+	loaderType string
+	done       bool
 }
 
+func (m *mockManifestLoader) Type() string { return m.loaderType }
 func (m *mockManifestLoader) StartSetup(dataPath, profilePath string) {
 	m.done = true
 }
@@ -53,12 +55,13 @@ func TestGameRunner_LaunchFlow(t *testing.T) {
 
 	for _, loaderType := range loaders {
 		t.Run(loaderType, func(t *testing.T) {
-			manifest := &mockManifestLoader{}
+			manifest := &mockManifestLoader{loaderType: loaderType}
 			profile := &resource.Profile{
 				PublicProfile: resource.PublicProfile{
-					Name:     "test",
-					Manifest: manifest,
-					Version:  1,
+					Name:      "test",
+					ModLoader: loaderType,
+					Manifest:  manifest,
+					Version:   2,
 				},
 				Path: "test-path",
 			}

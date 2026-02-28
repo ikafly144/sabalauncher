@@ -42,7 +42,7 @@ func (p *PublicProfile) UnmarshalJSON(data []byte) error {
 	type Alias PublicProfile
 	aux := &struct {
 		*Alias
-		Manifest ManifestLoaderUnmarshal `json:"manifest"`
+		Manifest json.RawMessage `json:"manifest"`
 	}{
 		Alias: (*Alias)(p),
 	}
@@ -57,19 +57,49 @@ func (p *PublicProfile) UnmarshalJSON(data []byte) error {
 	if p.ModLoader == "" {
 		return fmt.Errorf("missing mandatory field: 'mod_loader'")
 	}
-	validLoaders := []string{"vanilla", "forge", "fabric", "neoforge", "quilt"}
-	isValid := false
-	for _, loader := range validLoaders {
-		if strings.ToLower(p.ModLoader) == loader {
-			isValid = true
-			break
+
+	switch strings.ToLower(p.ModLoader) {
+	case "vanilla":
+		var v VanillaManifestLoader
+		if err := json.Unmarshal(aux.Manifest, &v); err != nil {
+			return err
 		}
-	}
-	if !isValid {
+		p.Manifest = &v
+	case "forge":
+		var f ForgeManifestLoader
+		if err := json.Unmarshal(aux.Manifest, &f); err != nil {
+			return err
+		}
+		p.Manifest = &f
+	case "fabric":
+		var f FabricManifestLoader
+		if err := json.Unmarshal(aux.Manifest, &f); err != nil {
+			return err
+		}
+		p.Manifest = &f
+	case "neoforge":
+		var n NeoForgeManifestLoader
+		if err := json.Unmarshal(aux.Manifest, &n); err != nil {
+			return err
+		}
+		p.Manifest = &n
+	case "quilt":
+		var q QuiltManifestLoader
+		if err := json.Unmarshal(aux.Manifest, &q); err != nil {
+			return err
+		}
+		p.Manifest = &q
+	case "custom":
+		var c CustomManifestLoader
+		if err := json.Unmarshal(aux.Manifest, &c); err != nil {
+			return err
+		}
+		p.Manifest = &c
+	default:
+		validLoaders := []string{"vanilla", "forge", "fabric", "neoforge", "quilt"}
 		return fmt.Errorf("invalid mod_loader '%s'. Supported loaders are: %s", p.ModLoader, strings.Join(validLoaders, ", "))
 	}
 
-	aux.Alias.Manifest = aux.Manifest.ManifestLoader
 	return nil
 }
 

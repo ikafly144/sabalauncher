@@ -87,6 +87,10 @@ func (f *FabricLoader) Install(ctx context.Context, profile *Profile) error {
 
 	// Add libraries to download worker
 	libs := append(meta.LauncherMeta.Libraries.Common, meta.LauncherMeta.Libraries.Client...)
+	// Add loader and intermediary
+	libs = append(libs, FabricLibraryInfo{Name: meta.Loader.Maven, URL: "https://maven.fabricmc.net/"})
+	libs = append(libs, FabricLibraryInfo{Name: meta.Intermediary.Maven, URL: "https://maven.fabricmc.net/"})
+
 	for _, lib := range libs {
 		libPath := mavenToPath(lib.Name, "/")
 		fullPath := filepath.Join(dataPath, "libraries", filepath.FromSlash(libPath))
@@ -123,10 +127,10 @@ func (f *FabricLoader) Install(ctx context.Context, profile *Profile) error {
 	defer metaFile.Close()
 
 	return json.NewEncoder(metaFile).Encode(meta)
-}
+	}
 
-// GenerateLaunchConfig produces the configuration required to launch the game with Fabric.
-func (f *FabricLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
+	// GenerateLaunchConfig produces the configuration required to launch the game with Fabric.
+	func (f *FabricLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
 	dataPath := DataDir
 	metaPath := filepath.Join(dataPath, "versions", f.GameVersion+"-fabric-"+f.LoaderVersion, "fabric-meta.json")
 
@@ -150,11 +154,13 @@ func (f *FabricLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, er
 
 	// 2. Add Fabric libraries to Classpath
 	libs := append(meta.LauncherMeta.Libraries.Common, meta.LauncherMeta.Libraries.Client...)
+	libs = append(libs, FabricLibraryInfo{Name: meta.Loader.Maven})
+	libs = append(libs, FabricLibraryInfo{Name: meta.Intermediary.Maven})
+
 	for _, lib := range libs {
 		libPath := filepath.Join(dataPath, "libraries", filepath.FromSlash(mavenToPath(lib.Name, "/")))
 		config.Classpath = append(config.Classpath, libPath)
 	}
-
 	// 3. Update Main Class
 	config.MainClass = meta.LauncherMeta.MainClass.Client
 
