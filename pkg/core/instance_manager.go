@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
@@ -49,8 +50,9 @@ func (im *instanceManager) GetInstance(name string) (*resource.Instance, error) 
 }
 
 func (im *instanceManager) ImportInstance(packPath string) error {
-	destDir := filepath.Join(im.dataDir, "instances", strings.TrimSuffix(filepath.Base(packPath), ".sbpack"))
-	inst, err := resource.ImportSBPack(packPath, destDir)
+	uid := uuid.New()
+	destDir := filepath.Join(im.dataDir, "instances", uid.String())
+	inst, err := resource.ImportSBPack(packPath, destDir, uid)
 	if err != nil {
 		return err
 	}
@@ -68,7 +70,7 @@ func (im *instanceManager) UpdateInstance(instanceName string, patchPath string)
 
 	var targetInst *resource.Instance
 	for _, inst := range im.instances {
-		if inst.Name == instanceName {
+		if inst.Name == instanceName || inst.UID.String() == instanceName {
 			targetInst = inst
 			break
 		}
@@ -91,7 +93,12 @@ func (im *instanceManager) DeleteInstance(name string) error {
 
 	found := false
 	for i, inst := range im.instances {
-		if inst.Name == name {
+		if inst.Name == name || inst.UID.String() == name {
+			// Delete files from disk
+			if err := os.RemoveAll(inst.Path); err != nil {
+				return fmt.Errorf("failed to delete instance files: %w", err)
+			}
+
 			im.instances = append(im.instances[:i], im.instances[i+1:]...)
 			found = true
 			break
@@ -126,7 +133,7 @@ func (im *instanceManager) RefreshInstances() error {
 	}
 
 	for _, inst := range instances {
-		inst.Path = filepath.Join(im.dataDir, "instances", inst.Name)
+		inst.Path = filepath.Join(im.dataDir, "instances", inst.UID.String())
 	}
 
 	sort.SliceStable(instances, func(i, j int) bool {

@@ -48,7 +48,7 @@ type SBPatch struct {
 }
 
 // ImportSBPack imports a new instance from an .sbpack ZIP file.
-func ImportSBPack(packPath string, destDir string) (*Instance, error) {
+func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, error) {
 	reader, err := zip.OpenReader(packPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sbpack: %w", err)
@@ -81,7 +81,7 @@ func ImportSBPack(packPath string, destDir string) (*Instance, error) {
 
 	inst := &Instance{
 		Name:     index.Name,
-		UID:      uuid.New(),
+		UID:      uid,
 		Versions: make([]InstanceVersion, 0, len(index.Dependencies)),
 		Mods:     []Mod{},
 		Path:     destDir,

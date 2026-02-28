@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func createMockZip(t *testing.T, path string, files map[string][]byte) {
@@ -88,9 +90,14 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	})
 
 	// 3. Test Import
-	inst, err := ImportSBPack(packPath, destDir)
+	testUID := uuid.New()
+	inst, err := ImportSBPack(packPath, destDir, testUID)
 	if err != nil {
 		t.Fatalf("ImportSBPack failed: %v", err)
+	}
+
+	if inst.UID != testUID {
+		t.Errorf("expected UID %v, got %v", testUID, inst.UID)
 	}
 
 	if inst.Name != "Test Pack" {
