@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Multi-ModLoader Support and Launch Refactoring
+## [x] Track: Multi-ModLoader Support and Launch Refactoring
 *Link: [./conductor/tracks/multi_modloader_20260228/](./conductor/tracks/multi_modloader_20260228/)*
