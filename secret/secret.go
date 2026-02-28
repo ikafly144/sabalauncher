@@ -40,7 +40,6 @@ var initOnce = sync.OnceFunc(func() {
 				// JSONのデコードに失敗した場合はスキップ
 				return false
 			}
-			slog.Info("loaded local secret file", "file", e.Name(), "keys", len(m))
 			return true
 		}() {
 			continue // ファイルが開けなかった、またはJSONのデコードに失敗した場合はスキップ
@@ -53,7 +52,6 @@ var initOnce = sync.OnceFunc(func() {
 				continue // 重複を無視
 			}
 			localEntry[k] = v
-			slog.Info("loaded local secret", "key", k)
 		}
 	}
 })
@@ -65,7 +63,6 @@ func init() {
 }
 
 func GetSecret(key string) (value string) {
-	initOnce()
 	if localEntry == nil {
 		return
 	}
