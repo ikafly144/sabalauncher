@@ -68,6 +68,12 @@ func (m *ManifestLoaderUnmarshal) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		m.ManifestLoader = &n
+	case "quilt":
+		var q QuiltManifestLoader
+		if err := json.Unmarshal(data, &q); err != nil {
+			return err
+		}
+		m.ManifestLoader = &q
 	case "custom":
 		var c CustomManifestLoader
 		if err := json.Unmarshal(data, &c); err != nil {
@@ -734,6 +740,140 @@ func (s *NeoForgeSetupStep) Progress() float32 {
 }
 
 func (s *NeoForgeSetupStep) Do(ctx *SetupContext) error {
+	profile := &Profile{
+		Path: ctx.profilePath,
+	}
+	return s.loader.Install(context.Background(), profile)
+}
+
+type QuiltManifestLoader struct {
+	VanillaVersion string     `json:"version"`
+	LoaderVersion  string     `json:"loaderVersion"`
+	PackURL        string     `json:"packUrl"`
+	Pack           *modLoader `json:"pack"`
+
+	state    *SetupState
+	manifest *ClientManifest
+	err      error
+}
+
+func (q *QuiltManifestLoader) VersionName() string {
+	return q.VanillaVersion + "-quilt-" + q.LoaderVersion
+}
+
+func (q *QuiltManifestLoader) StartSetup(dataPath string, profilePath string) {
+	q.state = NewState("Quiltのセットアップ", "quilt_setup")
+	go func() {
+		_ = os.MkdirAll(dataPath, 0755)
+		_ = os.MkdirAll(profilePath, 0755)
+		ver, err := GetVersion(q.VanillaVersion)
+		if err != nil {
+			slog.Error("Failed to get version", "error", err)
+			q.err = err
+			return
+		}
+		m, err := GetClientManifest(ver)
+		if err != nil {
+			slog.Error("Failed to get client manifest", "error", err)
+			q.err = err
+			return
+		}
+		q.manifest = m
+
+		q.state.AddStep(&JavaSetupStep{
+			manifest: m,
+		})
+		q.state.AddStep(&ClientDownloadStep{
+			manifest: m,
+		})
+		q.state.AddStep(&AssetsDownloadStep{
+			manifest: m,
+		})
+		q.state.AddStep(&LibraryDownloadStep{
+			manifest: m,
+		})
+		
+		// Quilt specific installation
+		quiltLoader := NewQuiltLoader(q.VanillaVersion, q.LoaderVersion)
+		q.state.AddStep(&QuiltSetupStep{
+			loader: quiltLoader,
+		})
+		
+		if err := q.state.Do(&SetupContext{
+			dataPath:    dataPath,
+			profilePath: profilePath,
+		}); err != nil {
+			slog.Error("Failed to run setup state", "error", err)
+		}
+	}()
+}
+
+func (q *QuiltManifestLoader) IsDone() bool {
+	if q.err != nil {
+		return true
+	}
+	if q.state != nil {
+		return q.state.IsDone()
+	}
+	return false
+}
+
+func (q *QuiltManifestLoader) CurrentStatus() string {
+	if q.state != nil {
+		return q.state.FriendlyName()
+	}
+	return "初期化中"
+}
+
+func (q *QuiltManifestLoader) CurrentProgress() float64 {
+	if q.state != nil {
+		return float64(q.state.CurrentProgress())
+	}
+	return 1.0
+}
+
+func (q *QuiltManifestLoader) TotalProgress() float64 {
+	if q.state != nil {
+		return float64(q.state.Progress())
+	}
+	return 0.0
+}
+
+func (q *QuiltManifestLoader) Error() error {
+	if q.err != nil {
+		return q.err
+	}
+	if q.state != nil {
+		return q.state.Error()
+	}
+	return nil
+}
+
+func (q *QuiltManifestLoader) Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount, stdout, stderr io.Writer) error {
+	return nil
+}
+
+func (q *QuiltManifestLoader) GetClientManifest() *ClientManifest {
+	return q.manifest
+}
+
+type QuiltSetupStep struct {
+	loader *QuiltLoader
+}
+
+func (s *QuiltSetupStep) FriendlyName() string {
+	return "Quiltのインストール"
+}
+
+func (s *QuiltSetupStep) Name() string {
+	return "quilt_setup"
+}
+
+func (s *QuiltSetupStep) Progress() float32 {
+	return 0.0
+}
+
+func (s *QuiltSetupStep) Do(ctx *SetupContext) error {
 	profile := &Profile{
 		Path: ctx.profilePath,
 	}

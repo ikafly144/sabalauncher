@@ -35,9 +35,9 @@ Implement the new mod loaders following the same pattern.
 - [x] Task: Implement `NeoForgeLoader`
     - [x] Write tests for NeoForge (Red)
     - [x] Implement NeoForge installation logic (Green)
-- [ ] Task: Implement `QuiltLoader`
-    - [ ] Write tests for Quilt (Red)
-    - [ ] Implement Quilt installation logic (Green)
+- [x] Task: Implement `QuiltLoader`
+    - [x] Write tests for Quilt (Red)
+    - [x] Implement Quilt installation logic (Green)
 - [ ] Task: Conductor - User Manual Verification 'New Loaders' (Protocol in workflow.md)
 
 ## Phase 4: Validation and UX Improvements
