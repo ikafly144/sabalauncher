@@ -2,6 +2,7 @@ package resource
 
 import (
 	"archive/zip"
+	"context"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
@@ -19,6 +20,25 @@ import (
 )
 
 var curseForgeAPIKey = secret.GetSecret("CURSEFORGE_API_KEY")
+
+// ModLoader defines the interface for different mod loaders like Forge, Fabric, etc.
+type ModLoader interface {
+	Install(ctx context.Context, profile *Profile) error
+	GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error)
+}
+
+// DependencyResolver defines the interface for resolving mod dependencies.
+type DependencyResolver interface {
+	ResolveDependencies(profile *Profile) ([]string, error)
+}
+
+// LaunchConfig contains the configuration required to launch the game with a specific mod loader.
+type LaunchConfig struct {
+	MainClass     string
+	JVMArguments  []string
+	GameArguments []string
+	Classpath     []string
+}
 
 type modLoader struct {
 	Loader
