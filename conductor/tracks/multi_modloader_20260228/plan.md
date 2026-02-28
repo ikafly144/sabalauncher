@@ -32,9 +32,9 @@ Implement the new mod loaders following the same pattern.
 - [x] Task: Implement `FabricLoader`
     - [x] Write tests for Fabric installation and config (Red)
     - [x] Implement Fabric installation logic (Green)
-- [ ] Task: Implement `NeoForgeLoader`
-    - [ ] Write tests for NeoForge (Red)
-    - [ ] Implement NeoForge installation logic (Green)
+- [x] Task: Implement `NeoForgeLoader`
+    - [x] Write tests for NeoForge (Red)
+    - [x] Implement NeoForge installation logic (Green)
 - [ ] Task: Implement `QuiltLoader`
     - [ ] Write tests for Quilt (Red)
     - [ ] Implement Quilt installation logic (Green)

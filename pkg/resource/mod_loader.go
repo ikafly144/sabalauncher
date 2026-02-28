@@ -44,6 +44,11 @@ func GetModLoader(profile *Profile) (ModLoader, error) {
 			return NewFabricLoader(fl.VanillaVersion, fl.LoaderVersion), nil
 		}
 		return nil, fmt.Errorf("fabric mod loader requires fabric manifest information")
+	case "neoforge":
+		if fl, ok := profile.Manifest.(*NeoForgeManifestLoader); ok {
+			return NewNeoForgeLoader(fl.VanillaVersion, fl.NeoForgeVersion), nil
+		}
+		return nil, fmt.Errorf("neoforge mod loader requires neoforge manifest information")
 	case "vanilla", "":
 		return NewVanillaLoader(profile.Manifest.VersionName()), nil
 	default:

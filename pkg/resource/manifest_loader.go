@@ -62,6 +62,12 @@ func (m *ManifestLoaderUnmarshal) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		m.ManifestLoader = &f
+	case "neoforge":
+		var n NeoForgeManifestLoader
+		if err := json.Unmarshal(data, &n); err != nil {
+			return err
+		}
+		m.ManifestLoader = &n
 	case "custom":
 		var c CustomManifestLoader
 		if err := json.Unmarshal(data, &c); err != nil {
@@ -594,6 +600,140 @@ func (s *FabricSetupStep) Progress() float32 {
 }
 
 func (s *FabricSetupStep) Do(ctx *SetupContext) error {
+	profile := &Profile{
+		Path: ctx.profilePath,
+	}
+	return s.loader.Install(context.Background(), profile)
+}
+
+type NeoForgeManifestLoader struct {
+	VanillaVersion  string     `json:"version"`
+	NeoForgeVersion string     `json:"neoforgeVersion"`
+	PackURL         string     `json:"packUrl"`
+	Pack            *modLoader `json:"pack"`
+
+	state    *SetupState
+	manifest *ClientManifest
+	err      error
+}
+
+func (n *NeoForgeManifestLoader) VersionName() string {
+	return n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
+}
+
+func (n *NeoForgeManifestLoader) StartSetup(dataPath string, profilePath string) {
+	n.state = NewState("NeoForgeのセットアップ", "neoforge_setup")
+	go func() {
+		_ = os.MkdirAll(dataPath, 0755)
+		_ = os.MkdirAll(profilePath, 0755)
+		ver, err := GetVersion(n.VanillaVersion)
+		if err != nil {
+			slog.Error("Failed to get version", "error", err)
+			n.err = err
+			return
+		}
+		m, err := GetClientManifest(ver)
+		if err != nil {
+			slog.Error("Failed to get client manifest", "error", err)
+			n.err = err
+			return
+		}
+		n.manifest = m
+
+		n.state.AddStep(&JavaSetupStep{
+			manifest: m,
+		})
+		n.state.AddStep(&ClientDownloadStep{
+			manifest: m,
+		})
+		n.state.AddStep(&AssetsDownloadStep{
+			manifest: m,
+		})
+		n.state.AddStep(&LibraryDownloadStep{
+			manifest: m,
+		})
+		
+		// NeoForge specific installation
+		neoforgeLoader := NewNeoForgeLoader(n.VanillaVersion, n.NeoForgeVersion)
+		n.state.AddStep(&NeoForgeSetupStep{
+			loader: neoforgeLoader,
+		})
+		
+		if err := n.state.Do(&SetupContext{
+			dataPath:    dataPath,
+			profilePath: profilePath,
+		}); err != nil {
+			slog.Error("Failed to run setup state", "error", err)
+		}
+	}()
+}
+
+func (n *NeoForgeManifestLoader) IsDone() bool {
+	if n.err != nil {
+		return true
+	}
+	if n.state != nil {
+		return n.state.IsDone()
+	}
+	return false
+}
+
+func (n *NeoForgeManifestLoader) CurrentStatus() string {
+	if n.state != nil {
+		return n.state.FriendlyName()
+	}
+	return "初期化中"
+}
+
+func (n *NeoForgeManifestLoader) CurrentProgress() float64 {
+	if n.state != nil {
+		return float64(n.state.CurrentProgress())
+	}
+	return 1.0
+}
+
+func (n *NeoForgeManifestLoader) TotalProgress() float64 {
+	if n.state != nil {
+		return float64(n.state.Progress())
+	}
+	return 0.0
+}
+
+func (n *NeoForgeManifestLoader) Error() error {
+	if n.err != nil {
+		return n.err
+	}
+	if n.state != nil {
+		return n.state.Error()
+	}
+	return nil
+}
+
+func (n *NeoForgeManifestLoader) Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount, stdout, stderr io.Writer) error {
+	return nil
+}
+
+func (n *NeoForgeManifestLoader) GetClientManifest() *ClientManifest {
+	return n.manifest
+}
+
+type NeoForgeSetupStep struct {
+	loader *NeoForgeLoader
+}
+
+func (s *NeoForgeSetupStep) FriendlyName() string {
+	return "NeoForgeのインストール"
+}
+
+func (s *NeoForgeSetupStep) Name() string {
+	return "neoforge_setup"
+}
+
+func (s *NeoForgeSetupStep) Progress() float32 {
+	return 0.0
+}
+
+func (s *NeoForgeSetupStep) Do(ctx *SetupContext) error {
 	profile := &Profile{
 		Path: ctx.profilePath,
 	}
