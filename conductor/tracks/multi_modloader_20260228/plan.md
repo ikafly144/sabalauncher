@@ -17,10 +17,10 @@ This phase focuses on defining the new architecture.
 ## Phase 2: Refactor Forge Implementation
 Move existing Forge logic into the new modular structure.
 
-- [ ] Task: Implement `ForgeLoader`
-    - [ ] Write failing tests for `ForgeLoader` (Red)
-    - [ ] Port existing Forge installation logic to `ForgeLoader.Install` (Green)
-    - [ ] Port existing Forge argument generation to `ForgeLoader.GenerateLaunchConfig`
+- [x] Task: Implement `ForgeLoader` [7e85267]
+    - [x] Write failing tests for `ForgeLoader` (Red)
+    - [x] Port existing Forge installation logic to `ForgeLoader.Install` (Green)
+    - [x] Port existing Forge argument generation to `ForgeLoader.GenerateLaunchConfig`
 - [ ] Task: Refactor `GameRunner` Integration
     - [ ] Update `GameRunner` to use `ModLoader` and `LaunchConfig`
     - [ ] Verify Forge still launches correctly after refactoring
