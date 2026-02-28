@@ -32,6 +32,7 @@ type PublicProfile struct {
 	Description         string         `json:"description,omitempty"`
 	Icon                string         `json:"icon,omitempty"`
 	ServerAddress       string         `json:"server_address,omitempty"`
+	ModLoader           string         `json:"mod_loader"`
 	Manifest            ManifestLoader `json:"manifest"`
 	RecommendedMemoryMB uint64         `json:"recommended_memory_mb,omitempty"`
 	Version             int            `json:"version"`
@@ -227,7 +228,7 @@ func (p *Profile) ActualMemory() (uint64, error) {
 	return mem.Total / (2 * 1024 * 1024), nil
 }
 
-type Manifest struct {
+type ProfileManifest struct {
 	MinecraftVersion string `json:"minecraftVersion"`
 	JavaVersion      int    `json:"javaVersion"`
 	MaxMemory        int    `json:"maxMemory"`
