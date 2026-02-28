@@ -34,7 +34,7 @@ func (ui *FyneUI) showImportModpackDialog() {
 }
 
 func (ui *FyneUI) showUpdateInstanceDialog(instanceName string) {
-	path, err := browser.SelectFile(0, "SBPatch files (*.sbpatch)|*.sbpatch")
+	path, err := browser.SelectFile(0, "Update files (*.sbpatch, *.sbpack)|*.sbpatch;*.sbpack")
 	if err != nil {
 		dialog.ShowError(err, ui.window)
 		return

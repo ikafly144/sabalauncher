@@ -181,7 +181,133 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, er
 		}
 	}
 
+	// Save index to instance dir for future updates
+	indexBytes, _ := json.MarshalIndent(index, "", "  ")
+	os.WriteFile(filepath.Join(destDir, "sb.index.json"), indexBytes, 0644)
+
 	return inst, nil
+}
+
+// ApplySBPack updates an existing instance using a full .sbpack file.
+func ApplySBPack(inst *Instance, packPath string) error {
+	reader, err := zip.OpenReader(packPath)
+	if err != nil {
+		return fmt.Errorf("failed to open sbpack: %w", err)
+	}
+	defer reader.Close()
+
+	var newIndex SBIndex
+	var indexFound bool
+	for _, f := range reader.File {
+		if f.Name == "sb.index.json" {
+			rc, err := f.Open()
+			if err != nil {
+				return err
+			}
+			err = json.NewDecoder(rc).Decode(&newIndex)
+			rc.Close()
+			if err != nil {
+				return fmt.Errorf("failed to parse sb.index.json: %w", err)
+			}
+			indexFound = true
+			break
+		}
+	}
+
+	if !indexFound {
+		return fmt.Errorf("sb.index.json not found in pack")
+	}
+
+	// Load old index to find removed files
+	var oldIndex SBIndex
+	oldIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
+	if err == nil {
+		json.Unmarshal(oldIndexBytes, &oldIndex)
+	}
+
+	removedFiles := []string{}
+	for _, oldF := range oldIndex.Files {
+		found := false
+		for _, newF := range newIndex.Files {
+			if oldF.Path == newF.Path {
+				found = true
+				break
+			}
+		}
+		if !found {
+			removedFiles = append(removedFiles, oldF.Path)
+		}
+	}
+
+	// Perform update (similar to patch)
+	for _, removed := range removedFiles {
+		os.Remove(filepath.Join(inst.Path, removed))
+	}
+
+	// Unzip overrides from new pack
+	for _, f := range reader.File {
+		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
+			relPath := after
+			if relPath == "" {
+				continue
+			}
+			destPath := filepath.Join(inst.Path, relPath)
+			if f.FileInfo().IsDir() {
+				os.MkdirAll(destPath, 0755)
+				continue
+			}
+			os.MkdirAll(filepath.Dir(destPath), 0755)
+			rc, _ := f.Open()
+			df, _ := os.Create(destPath)
+			io.Copy(df, rc)
+			df.Close()
+			rc.Close()
+		}
+	}
+
+	// Download/Verify files
+	newMods := []Mod{}
+	for _, fileInfo := range newIndex.Files {
+		if fileInfo.Env != nil && fileInfo.Env.Client == "unsupported" {
+			continue
+		}
+		destPath := filepath.Join(inst.Path, fileInfo.Path)
+		if verifyHashes(destPath, fileInfo.Hashes) != nil && len(fileInfo.Downloads) > 0 {
+			os.MkdirAll(filepath.Dir(destPath), 0755)
+			downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes)
+		}
+		if strings.HasPrefix(fileInfo.Path, "mods/") && strings.HasSuffix(fileInfo.Path, ".jar") {
+			modName := filepath.Base(fileInfo.Path)
+			newMods = append(newMods, Mod{
+				Name:     modName,
+				File:     fileInfo.Path,
+				Version:  "unknown",
+				UpdateAt: time.Now(),
+				Source: &URLSource{
+					FileURI: func() string {
+						if len(fileInfo.Downloads) > 0 {
+							return fileInfo.Downloads[0]
+						} else {
+							return ""
+						}
+					}(),
+				},
+			})
+		}
+	}
+
+	inst.Upstream.Version = newIndex.Version
+	inst.Versions = make([]InstanceVersion, 0, len(newIndex.Dependencies))
+	for id, ver := range newIndex.Dependencies {
+		inst.Versions = append(inst.Versions, InstanceVersion{ID: id, Version: ver})
+	}
+	inst.Mods = newMods
+
+	// Save new index
+	newIndexBytes, _ := json.MarshalIndent(newIndex, "", "  ")
+	os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644)
+
+	return nil
 }
 
 // ApplySBPatch applies an .sbpatch file to an existing instance.
@@ -325,6 +451,10 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 		})
 	}
 	inst.Mods = newMods
+
+	// Save new index
+	newIndexBytes, _ := json.MarshalIndent(patch.NewIndex, "", "  ")
+	os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644)
 
 	return nil
 }

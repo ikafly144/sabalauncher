@@ -64,7 +64,7 @@ func (im *instanceManager) ImportInstance(packPath string) error {
 	return im.saveInstances()
 }
 
-func (im *instanceManager) UpdateInstance(instanceName string, patchPath string) error {
+func (im *instanceManager) UpdateInstance(instanceName string, path string) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()
 
@@ -80,7 +80,16 @@ func (im *instanceManager) UpdateInstance(instanceName string, patchPath string)
 		return fmt.Errorf("instance not found: %s", instanceName)
 	}
 
-	if err := resource.ApplySBPatch(targetInst, patchPath); err != nil {
+	var err error
+	if strings.HasSuffix(strings.ToLower(path), ".sbpatch") {
+		err = resource.ApplySBPatch(targetInst, path)
+	} else if strings.HasSuffix(strings.ToLower(path), ".sbpack") {
+		err = resource.ApplySBPack(targetInst, path)
+	} else {
+		return fmt.Errorf("unsupported file format: %s (expected .sbpack or .sbpatch)", filepath.Base(path))
+	}
+
+	if err != nil {
 		return err
 	}
 
