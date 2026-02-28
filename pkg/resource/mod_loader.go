@@ -39,6 +39,11 @@ func GetModLoader(profile *Profile) (ModLoader, error) {
 			return NewForgeLoader(fl.VanillaVersion, fl.ForgeVersion), nil
 		}
 		return nil, fmt.Errorf("forge mod loader requires forge manifest information")
+	case "fabric":
+		if fl, ok := profile.Manifest.(*FabricManifestLoader); ok {
+			return NewFabricLoader(fl.VanillaVersion, fl.LoaderVersion), nil
+		}
+		return nil, fmt.Errorf("fabric mod loader requires fabric manifest information")
 	case "vanilla", "":
 		return NewVanillaLoader(profile.Manifest.VersionName()), nil
 	default:

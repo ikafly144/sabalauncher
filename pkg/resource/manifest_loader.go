@@ -2,6 +2,7 @@ package resource
 
 import (
 	"archive/zip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -51,6 +52,12 @@ func (m *ManifestLoaderUnmarshal) UnmarshalJSON(data []byte) error {
 		m.ManifestLoader = &v
 	case "forge":
 		var f ForgeManifestLoader
+		if err := json.Unmarshal(data, &f); err != nil {
+			return err
+		}
+		m.ManifestLoader = &f
+	case "fabric":
+		var f FabricManifestLoader
 		if err := json.Unmarshal(data, &f); err != nil {
 			return err
 		}
@@ -456,4 +463,139 @@ func (f *ForgeManifestLoader) GetClientManifest() *ClientManifest {
 
 func (c *CustomManifestLoader) GetClientManifest() *ClientManifest {
 	return c.manifest
+}
+
+type FabricManifestLoader struct {
+	VanillaVersion string     `json:"version"`
+	LoaderVersion  string     `json:"loaderVersion"`
+	PackURL        string     `json:"packUrl"`
+	Pack           *modLoader `json:"pack"`
+
+	state    *SetupState
+	manifest *ClientManifest
+	err      error
+}
+
+func (f *FabricManifestLoader) VersionName() string {
+	return f.VanillaVersion + "-fabric-" + f.LoaderVersion
+}
+
+func (f *FabricManifestLoader) StartSetup(dataPath string, profilePath string) {
+	f.state = NewState("Fabricのセットアップ", "fabric_setup")
+	go func() {
+		_ = os.MkdirAll(dataPath, 0755)
+		_ = os.MkdirAll(profilePath, 0755)
+		ver, err := GetVersion(f.VanillaVersion)
+		if err != nil {
+			slog.Error("Failed to get version", "error", err)
+			f.err = err
+			return
+		}
+		m, err := GetClientManifest(ver)
+		if err != nil {
+			slog.Error("Failed to get client manifest", "error", err)
+			f.err = err
+			return
+		}
+		f.manifest = m
+
+		f.state.AddStep(&JavaSetupStep{
+			manifest: m,
+		})
+		f.state.AddStep(&ClientDownloadStep{
+			manifest: m,
+		})
+		f.state.AddStep(&AssetsDownloadStep{
+			manifest: m,
+		})
+		f.state.AddStep(&LibraryDownloadStep{
+			manifest: m,
+		})
+		
+		// Fabric specific installation (Loader and Libraries)
+		fabricLoader := NewFabricLoader(f.VanillaVersion, f.LoaderVersion)
+		f.state.AddStep(&FabricSetupStep{
+			loader: fabricLoader,
+		})
+		
+		if err := f.state.Do(&SetupContext{
+			dataPath:    dataPath,
+			profilePath: profilePath,
+		}); err != nil {
+			slog.Error("Failed to run setup state", "error", err)
+		}
+	}()
+}
+
+func (f *FabricManifestLoader) IsDone() bool {
+	if f.err != nil {
+		return true
+	}
+	if f.state != nil {
+		return f.state.IsDone()
+	}
+	return false
+}
+
+func (f *FabricManifestLoader) CurrentStatus() string {
+	if f.state != nil {
+		return f.state.FriendlyName()
+	}
+	return "初期化中"
+}
+
+func (f *FabricManifestLoader) CurrentProgress() float64 {
+	if f.state != nil {
+		return float64(f.state.CurrentProgress())
+	}
+	return 1.0
+}
+
+func (f *FabricManifestLoader) TotalProgress() float64 {
+	if f.state != nil {
+		return float64(f.state.Progress())
+	}
+	return 0.0
+}
+
+func (f *FabricManifestLoader) Error() error {
+	if f.err != nil {
+		return f.err
+	}
+	if f.state != nil {
+		return f.state.Error()
+	}
+	return nil
+}
+
+func (f *FabricManifestLoader) Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount, stdout, stderr io.Writer) error {
+	// Legacy boot logic, now handled by GameRunner using ModLoader
+	return nil
+}
+
+func (f *FabricManifestLoader) GetClientManifest() *ClientManifest {
+	return f.manifest
+}
+
+type FabricSetupStep struct {
+	loader *FabricLoader
+}
+
+func (s *FabricSetupStep) FriendlyName() string {
+	return "Fabricのインストール"
+}
+
+func (s *FabricSetupStep) Name() string {
+	return "fabric_setup"
+}
+
+func (s *FabricSetupStep) Progress() float32 {
+	return 0.0
+}
+
+func (s *FabricSetupStep) Do(ctx *SetupContext) error {
+	profile := &Profile{
+		Path: ctx.profilePath,
+	}
+	return s.loader.Install(context.Background(), profile)
 }

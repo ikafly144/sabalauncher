@@ -24,14 +24,14 @@ Move existing Forge logic into the new modular structure.
 - [x] Task: Refactor GameRunner Integration
     - [x] Update `GameRunner` to use `ModLoader` and `LaunchConfig`
     - [x] Verify Forge still launches correctly after refactoring
-- [ ] Task: Conductor - User Manual Verification 'Forge Refactoring' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Forge Refactoring' (Protocol in workflow.md)
 
 ## Phase 3: Add Support for New Loaders
 Implement the new mod loaders following the same pattern.
 
-- [ ] Task: Implement `FabricLoader`
-    - [ ] Write tests for Fabric installation and config (Red)
-    - [ ] Implement Fabric installation logic (Green)
+- [x] Task: Implement `FabricLoader`
+    - [x] Write tests for Fabric installation and config (Red)
+    - [x] Implement Fabric installation logic (Green)
 - [ ] Task: Implement `NeoForgeLoader`
     - [ ] Write tests for NeoForge (Red)
     - [ ] Implement NeoForge installation logic (Green)
