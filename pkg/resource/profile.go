@@ -52,6 +52,23 @@ func (p *PublicProfile) UnmarshalJSON(data []byte) error {
 	if p.Version != CurrentProfileVersion {
 		return fmt.Errorf("unsupported profile version: %d", p.Version)
 	}
+
+	// Validation
+	if p.ModLoader == "" {
+		return fmt.Errorf("missing mandatory field: 'mod_loader'")
+	}
+	validLoaders := []string{"vanilla", "forge", "fabric", "neoforge", "quilt"}
+	isValid := false
+	for _, loader := range validLoaders {
+		if strings.ToLower(p.ModLoader) == loader {
+			isValid = true
+			break
+		}
+	}
+	if !isValid {
+		return fmt.Errorf("invalid mod_loader '%s'. Supported loaders are: %s", p.ModLoader, strings.Join(validLoaders, ", "))
+	}
+
 	aux.Alias.Manifest = aux.Manifest.ManifestLoader
 	return nil
 }

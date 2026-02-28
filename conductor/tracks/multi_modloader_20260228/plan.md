@@ -38,14 +38,14 @@ Implement the new mod loaders following the same pattern.
 - [x] Task: Implement `QuiltLoader`
     - [x] Write tests for Quilt (Red)
     - [x] Implement Quilt installation logic (Green)
-- [ ] Task: Conductor - User Manual Verification 'New Loaders' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'New Loaders' (Protocol in workflow.md)
 
 ## Phase 4: Validation and UX Improvements
 Ensure errors are handled gracefully.
 
-- [ ] Task: Implement Manifest Validation
-    - [ ] Add checks for mandatory `mod_loader` field
-    - [ ] Create user-friendly error messages for missing/invalid loaders
+- [x] Task: Implement Manifest Validation
+    - [x] Add checks for mandatory `mod_loader` field
+    - [x] Create user-friendly error messages for missing/invalid loaders
 - [ ] Task: Final Integration Test
     - [ ] Verify all 4 loaders work in a production-like environment
 - [ ] Task: Conductor - User Manual Verification 'Validation and UX' (Protocol in workflow.md)
