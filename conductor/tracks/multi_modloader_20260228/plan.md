@@ -2,7 +2,7 @@
 
 This plan outlines the steps to refactor the launch flow and add support for Fabric, NeoForge, and Quilt.
 
-## Phase 1: Core Abstractions and Interfaces
+## Phase 1: Core Abstractions and Interfaces [checkpoint: c75d87d]
 This phase focuses on defining the new architecture.
 
 - [x] Task: Define Core Interfaces [eeb8c9b]
