@@ -16,6 +16,7 @@ type msaAuthenticator struct {
 	user      string
 	mcProfile *msa.MinecraftProfile
 	account   *msa.MinecraftAccount
+	lastErr   error
 	mu        sync.RWMutex
 }
 
@@ -41,9 +42,16 @@ func NewAuthenticator(cachePath string) (Authenticator, error) {
 	}, nil
 }
 
+func (a *msaAuthenticator) GetLastError() error {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.lastErr
+}
+
 func (a *msaAuthenticator) TrySilentLogin(ctx context.Context) error {
 	a.mu.Lock()
 	a.status = AuthStatusLoggingIn
+	a.lastErr = nil
 	a.mu.Unlock()
 
 	// Try to get the Minecraft account from cache (silent flow)
@@ -59,6 +67,7 @@ func (a *msaAuthenticator) TrySilentLogin(ctx context.Context) error {
 	if err != nil {
 		a.mu.Lock()
 		a.status = AuthStatusError
+		a.lastErr = err
 		a.mu.Unlock()
 		return err
 	}
@@ -67,6 +76,7 @@ func (a *msaAuthenticator) TrySilentLogin(ctx context.Context) error {
 	if err != nil {
 		a.mu.Lock()
 		a.status = AuthStatusError
+		a.lastErr = err
 		a.mu.Unlock()
 		return err
 	}
@@ -81,13 +91,15 @@ func (a *msaAuthenticator) TrySilentLogin(ctx context.Context) error {
 	return nil
 }
 
-func (a *msaAuthenticator) Login(ctx context.Context) error {
+func (a *msaAuthenticator) Login(ctx context.Context, method msa.LoginMethod) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.status = AuthStatusLoggingIn
+	a.lastErr = nil
 
-	if err := a.session.StartLogin(); err != nil {
+	if err := a.session.StartLogin(method); err != nil {
 		a.status = AuthStatusError
+		a.lastErr = err
 		return err
 	}
 	return nil
@@ -99,6 +111,7 @@ func (a *msaAuthenticator) WaitLogin(ctx context.Context) error {
 	if err != nil {
 		a.mu.Lock()
 		a.status = AuthStatusError
+		a.lastErr = err
 		a.mu.Unlock()
 		return err
 	}
@@ -108,6 +121,7 @@ func (a *msaAuthenticator) WaitLogin(ctx context.Context) error {
 	if err != nil {
 		a.mu.Lock()
 		a.status = AuthStatusError
+		a.lastErr = err
 		a.mu.Unlock()
 		return err
 	}
@@ -116,6 +130,7 @@ func (a *msaAuthenticator) WaitLogin(ctx context.Context) error {
 	if err != nil {
 		a.mu.Lock()
 		a.status = AuthStatusError
+		a.lastErr = err
 		a.mu.Unlock()
 		return err
 	}
@@ -124,6 +139,7 @@ func (a *msaAuthenticator) WaitLogin(ctx context.Context) error {
 	if err != nil {
 		a.mu.Lock()
 		a.status = AuthStatusError
+		a.lastErr = err
 		a.mu.Unlock()
 		return err
 	}
@@ -159,8 +175,11 @@ func (a *msaAuthenticator) GetMinecraftAccount() (*msa.MinecraftAccount, error) 
 func (a *msaAuthenticator) Logout() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	// MSA library handles token removal via client.RemoveAccount, 
-	// but we'd need to expose that from the msa package.
+	
+	if err := a.session.Logout(); err != nil {
+		return err
+	}
+	
 	a.user = ""
 	a.mcProfile = nil
 	a.status = AuthStatusLoggedOut
@@ -187,4 +206,19 @@ func (a *msaAuthenticator) DeviceCode() (url, code string) {
 	}
 	dc := a.session.DeviceCode()
 	return dc.Result.VerificationURL, dc.Result.UserCode
+}
+
+func (a *msaAuthenticator) LoginURL() string {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	if a.session == nil {
+		return ""
+	}
+	if url := a.session.InteractiveURL(); url != "" {
+		return url
+	}
+	if dc := a.session.DeviceCode(); dc != nil {
+		return dc.Result.VerificationURL
+	}
+	return ""
 }

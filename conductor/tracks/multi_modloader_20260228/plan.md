@@ -21,9 +21,9 @@ Move existing Forge logic into the new modular structure.
     - [x] Write failing tests for `ForgeLoader` (Red)
     - [x] Port existing Forge installation logic to `ForgeLoader.Install` (Green)
     - [x] Port existing Forge argument generation to `ForgeLoader.GenerateLaunchConfig`
-- [ ] Task: Refactor `GameRunner` Integration
-    - [ ] Update `GameRunner` to use `ModLoader` and `LaunchConfig`
-    - [ ] Verify Forge still launches correctly after refactoring
+- [x] Task: Refactor GameRunner Integration
+    - [x] Update `GameRunner` to use `ModLoader` and `LaunchConfig`
+    - [x] Verify Forge still launches correctly after refactoring
 - [ ] Task: Conductor - User Manual Verification 'Forge Refactoring' (Protocol in workflow.md)
 
 ## Phase 3: Add Support for New Loaders

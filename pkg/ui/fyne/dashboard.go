@@ -13,18 +13,17 @@ import (
 func (ui *FyneUI) showMainView() {
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Launcher", ui.makeDashboardView()),
-		container.NewTabItem("Profiles", ui.makeProfileView()),
 		container.NewTabItem("Account", ui.makeAccountView()),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 
-	// Wrap in a layout that includes the header
+	// Border layout ensures tabs fill the remaining space below header
 	content := container.NewBorder(createHeader(), nil, nil, nil, tabs)
 	ui.window.SetContent(content)
 }
 
 func (ui *FyneUI) showDashboardView() {
-	ui.showMainView() // Default to tabbed view
+	ui.showMainView()
 }
 
 func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
@@ -37,16 +36,31 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		ui.selectedProfileName = profiles[0].Name
 	}
 
-	// Profile selection (left side)
+	// Profile selection (left side) with Icons
 	profileList := widget.NewList(
 		func() int { return len(profiles) },
-		func() fyne.CanvasObject { return widget.NewLabel("Template Label") },
+		func() fyne.CanvasObject {
+			icon := canvas.NewImageFromImage(nil)
+			icon.SetMinSize(fyne.NewSize(32, 32))
+			icon.FillMode = canvas.ImageFillContain
+			return container.NewHBox(icon, widget.NewLabel("Template Label"))
+		},
 		func(id widget.ListItemID, obj fyne.CanvasObject) {
 			if id >= len(profiles) {
 				return
 			}
 			p := profiles[id]
-			label := obj.(*widget.Label)
+			box := obj.(*fyne.Container)
+			icon := box.Objects[0].(*canvas.Image)
+			label := box.Objects[1].(*widget.Label)
+
+			if p.IconImage != nil {
+				icon.Image = p.IconImage
+			} else {
+				icon.Image = nil
+			}
+			icon.Refresh()
+
 			label.SetText(p.DisplayName)
 			if p.Name == ui.selectedProfileName {
 				label.TextStyle = fyne.TextStyle{Bold: true}
@@ -57,8 +71,14 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	)
 	profileList.OnSelected = func(id widget.ListItemID) {
 		ui.selectedProfileName = profiles[id].Name
-		ui.showMainView() // Refresh to update detail view
+		ui.showMainView()
 	}
+
+	// Sidebar with Add Profile button
+	addBtn := widget.NewButton("Add Profile", func() {
+		ui.showAddProfileDialog()
+	})
+	sidebar := container.NewBorder(nil, container.NewPadded(addBtn), nil, nil, profileList)
 
 	// Right side: Detail View
 	var currentProfile core.Profile
@@ -71,51 +91,69 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		}
 	}
 
-	var detailContainer fyne.CanvasObject
+	var detailArea fyne.CanvasObject
 	if found {
 		detailTitle := widget.NewLabelWithStyle(currentProfile.DisplayName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 		detailDesc := widget.NewLabel(currentProfile.Description)
 		detailDesc.Wrapping = fyne.TextWrapWord
 		detailVersion := widget.NewLabel("Version: " + currentProfile.VersionName)
 		
-		detailContainer = container.NewVBox(
-			detailTitle,
+		icon := canvas.NewImageFromImage(currentProfile.IconImage)
+		icon.SetMinSize(fyne.NewSize(64, 64))
+		icon.FillMode = canvas.ImageFillContain
+
+		// Action Buttons for current profile
+		playBtn := widget.NewButton("PLAY", func() {
+			ui.showLaunchOverlay()
+			go func() {
+				_ = ui.discord.SetActivity(ui.selectedProfileName)
+				if err := ui.runner.Launch(ui.selectedProfileName); err != nil {
+					fyne.Do(func() {
+						dialog.ShowError(err, ui.window)
+					})
+				}
+				_ = ui.discord.ClearActivity()
+				fyne.Do(func() {
+					ui.showMainView()
+				})
+			}()
+		})
+		playBtn.Importance = widget.HighImportance
+
+		deleteBtn := widget.NewButton("Delete Profile", func() {
+			dialog.ShowConfirm("Delete Profile", "Are you sure you want to delete "+currentProfile.DisplayName+"?", func(ok bool) {
+				if ok {
+					if err := ui.profiles.DeleteProfile(currentProfile.Source); err != nil {
+						dialog.ShowError(err, ui.window)
+					} else {
+						ui.selectedProfileName = "" // Reset selection
+						ui.showMainView()
+					}
+				}
+			}, ui.window)
+		})
+		deleteBtn.Importance = widget.DangerImportance
+
+		actions := container.NewHBox(playBtn, deleteBtn)
+
+		detailContainer := container.NewVBox(
+			container.NewHBox(icon, detailTitle),
 			detailVersion,
 			widget.NewSeparator(),
 			detailDesc,
+			layout.NewSpacer(),
+			container.NewPadded(actions),
 		)
+		detailArea = container.NewPadded(detailContainer)
 	} else {
-		detailContainer = widget.NewLabel("Select a profile to see details")
+		detailArea = container.NewCenter(widget.NewLabel("Select a profile to see details"))
 	}
 
-	// Banner
-	banner := canvas.NewImageFromFile("assets/launcher_banner.jpg")
-	banner.FillMode = canvas.ImageFillContain
-	banner.SetMinSize(fyne.NewSize(400, 150))
-
-	// Main Layout
-	mainSplit := container.NewHSplit(profileList, container.NewScroll(detailContainer))
+	// Main Layout (Responsive Split)
+	mainSplit := container.NewHSplit(sidebar, detailArea)
 	mainSplit.Offset = 0.3
 
-	// Bottom Bar: Play Button
-	playBtn := widget.NewButton("PLAY", func() {
-		if ui.selectedProfileName == "" {
-			dialog.ShowInformation("No Profile", "Please select a profile first.", ui.window)
-			return
-		}
-		ui.showLaunchOverlay()
-		go func() {
-			_ = ui.discord.SetActivity(ui.selectedProfileName)
-			if err := ui.runner.Launch(ui.selectedProfileName); err != nil {
-				dialog.ShowError(err, ui.window)
-			}
-			_ = ui.discord.ClearActivity()
-			ui.showMainView()
-		}()
-	})
-	playBtn.Importance = widget.HighImportance
-	
-	return container.NewBorder(banner, playBtn, nil, nil, mainSplit)
+	return mainSplit
 }
 
 func (ui *FyneUI) makeAccountView() fyne.CanvasObject {
@@ -125,12 +163,13 @@ func (ui *FyneUI) makeAccountView() fyne.CanvasObject {
 	})
 	logoutBtn.Importance = widget.DangerImportance
 
-	return container.NewVBox(
+	content := container.NewVBox(
 		widget.NewLabelWithStyle("Account Information", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("Logged in as: "+ui.auth.GetUserDisplay()),
 		layout.NewSpacer(),
 		logoutBtn,
 	)
+	return container.NewPadded(content)
 }
 
 func (ui *FyneUI) showLaunchOverlay() {
@@ -157,24 +196,34 @@ func (ui *FyneUI) showLaunchOverlay() {
 
 	go func() {
 		for event := range progressChan {
-			taskLabel.SetText(event.TaskName)
-			statusLabel.SetText(event.Status)
-			progressBar.SetValue(event.Percentage / 100.0)
+			fyne.Do(func() {
+				taskLabel.SetText(event.TaskName)
+				statusLabel.SetText(event.Status)
+				progressBar.SetValue(event.Percentage / 100.0)
+			})
 		}
 	}()
 
 	go func() {
 		for entry := range logsChan {
-			logLine := "[" + string(entry.Level) + "] " + entry.Message + "\n"
-			logEntry.SetText(logEntry.Text + logLine)
+			fyne.Do(func() {
+				logLine := "[" + string(entry.Level) + "] " + entry.Message + "\n"
+				logEntry.SetText(logEntry.Text + logLine)
+			})
 		}
 	}()
 
-	ui.window.SetContent(container.NewBorder(
-		container.NewVBox(createHeader(), taskLabel, progressBar, statusLabel),
-		stopBtn,
+	// Responsive launch overlay layout
+	topInfo := container.NewVBox(taskLabel, progressBar, statusLabel)
+	
+	// NewBorder makes the logEntry (center) fill the window between top info and stop button
+	content := container.NewBorder(
+		container.NewVBox(createHeader(), container.NewPadded(topInfo)),
+		container.NewPadded(stopBtn),
 		nil,
 		nil,
-		container.NewScroll(logEntry),
-	))
+		container.NewPadded(container.NewScroll(logEntry)),
+	)
+	
+	ui.window.SetContent(content)
 }

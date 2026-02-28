@@ -11,6 +11,5 @@ func createHeader() fyne.CanvasObject {
 	return container.NewHBox(
 		widget.NewLabel("SabaLauncher"),
 		layout.NewSpacer(),
-		widget.NewButton("Settings", func() {}),
 	)
 }

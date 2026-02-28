@@ -54,7 +54,7 @@
 ## Phase 6: Final Integration & Gio Removal
 - [x] Task: End-to-End System Testing [7be1997]
     - [x] Verify the full flow: Login -> Add Profile -> Download -> Play.
-- [ ] Task: Remove Legacy Gio Dependencies
-    - [ ] Delete `gioui.org` related code and cleanup `go.mod`.
-    - [ ] Remove old UI packages (`pages`, `applayout`).
+- [x] Task: Remove Legacy Gio Dependencies [cfb880e]
+    - [x] Delete `gioui.org` related code and cleanup `go.mod`.
+    - [x] Remove old UI packages (`pages`, `applayout`).
 - [ ] Task: Conductor - User Manual Verification 'Final Integration & Gio Removal' (Protocol in workflow.md)

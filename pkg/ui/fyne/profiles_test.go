@@ -1,11 +1,8 @@
 package fyne
 
 import (
-	"fmt"
 	"testing"
-	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/test"
-	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/stretchr/testify/mock"
@@ -40,46 +37,6 @@ func (m *mockProfileManager) GetFullProfile(name string) (*resource.Profile, err
 	return args.Get(0).(*resource.Profile), args.Error(1)
 }
 
-func TestShowProfileView(t *testing.T) {
-	a := test.NewApp()
-	w := a.NewWindow("Test")
-	
-	m := new(mockProfileManager)
-	m.On("GetProfiles").Return([]core.Profile{
-		{Name: "test", DisplayName: "Test Profile"},
-	}, nil)
-	
-	ui := &FyneUI{
-		app:      a,
-		window:   w,
-		profiles: m,
-		discord:  new(mockDiscordManager),
-	}
-	
-	ui.showProfileView()
-	
-	if ui.window.Content() == nil {
-		t.Fatal("Window content is nil")
-	}
-}
-
-func TestShowProfileView_Error(t *testing.T) {
-	a := test.NewApp()
-	w := a.NewWindow("Test")
-	
-	m := new(mockProfileManager)
-	m.On("GetProfiles").Return([]core.Profile{}, fmt.Errorf("error"))
-	
-	ui := &FyneUI{
-		app:      a,
-		window:   w,
-		profiles: m,
-		discord:  new(mockDiscordManager),
-	}
-	
-	ui.showProfileView()
-}
-
 func TestShowAddProfileDialog(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
@@ -91,31 +48,4 @@ func TestShowAddProfileDialog(t *testing.T) {
 	}
 	
 	ui.showAddProfileDialog()
-}
-
-func TestShowProfileView_Buttons(t *testing.T) {
-	a := test.NewApp()
-	w := a.NewWindow("Test")
-	
-	m := new(mockProfileManager)
-	m.On("GetProfiles").Return([]core.Profile{}, nil)
-	
-	ui := &FyneUI{
-		app:      a,
-		window:   w,
-		profiles: m,
-		auth:     new(mockAuthenticator),
-		discord:  new(mockDiscordManager),
-	}
-	ui.auth.(*mockAuthenticator).On("GetStatus").Return(core.AuthStatusLoggedOut)
-	
-	ui.showProfileView()
-	
-	// Manual button calls
-	container := ui.window.Content().(*fyne.Container)
-	for _, obj := range container.Objects {
-		if btn, ok := obj.(*widget.Button); ok {
-			btn.OnTapped()
-		}
-	}
 }

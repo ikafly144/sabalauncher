@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 )
 
 // ForgeLoader implements the ModLoader interface for the Forge mod loader.
@@ -99,17 +101,82 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 		classpath += classpathSeparator + filepath.Join(dataPath, "libraries", library.Downloads.Artifact.Path)
 	}
 
-	// 3. Resolve Arguments (this logic should ideally be shared with Vanilla)
-	// For now, we'll implement it specifically for Forge here.
-	
-	config := &LaunchConfig{
-		MainClass: manifest.MainClass,
-		Classpath: []string{classpath}, // LaunchConfig expects a list of JAR paths, but BootGame currently uses a joined string. 
-		// For compatibility with BootGame's current structure, we might need to adjust LaunchConfig or BootGame.
-		// Let's assume LaunchConfig.Classpath is a list of paths.
+	// 3. Resolve Arguments
+	cmdMap := map[string]string{
+		"natives_directory":   filepath.Join(dataPath, "bin", manifest.ID),
+		"launcher_name":       "SabaLauncher",
+		"launcher_version":    "1.0",
+		"classpath":           classpath,
+		"library_directory":   filepath.Join(dataPath, "libraries"),
+		"classpath_separator": classpathSeparator,
 	}
+
+	var jvmArgs []string
+	memory, err := profile.ActualMemory()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get actual memory: %w", err)
+	}
+	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
+	jvmArgs = append(jvmArgs, defaultJvmArgs...)
+
+	for _, arg := range manifest.Arguments.Jvm {
+		if arg == nil {
+			continue
+		}
+		switch arg := arg.(type) {
+		case JvmArgumentString:
+			val := arg.String()
+			for before, after := range cmdMap {
+				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
+			}
+			jvmArgs = append(jvmArgs, val)
+		case JvmArgumentRule:
+			if !slices.ContainsFunc(arg.Rules, func(rule JvmArgumentRuleType) bool {
+				return rule.Action.Allowed() != rule.OS.Matched()
+			}) {
+				continue
+			}
+			for _, a := range arg.Value {
+				for before, after := range cmdMap {
+					a = strings.ReplaceAll(a, fmt.Sprintf("${%s}", before), after)
+				}
+				jvmArgs = append(jvmArgs, a)
+			}
+		}
+	}
+
+	// Forge specific game arguments are usually in manifest.Arguments.Game
+	var gameArgs []string
+	// Note: tokens and player info will be handled by GameRunner/BootGameFromConfig
 	
-	// TODO: Populate JVMArguments and GameArguments
+	for _, arg := range manifest.Arguments.Game {
+		if arg == nil {
+			continue
+		}
+		switch arg := arg.(type) {
+		case GameArgumentString:
+			// We skip placeholders that are handled dynamically during boot
+			val := arg.String()
+			if !strings.Contains(val, "${") {
+				gameArgs = append(gameArgs, val)
+			} else {
+				// For now, let's include them and let BootGameFromConfig handle them
+				gameArgs = append(gameArgs, val)
+			}
+		case GameArgumentRule:
+			// TODO: Handle rules if necessary
+			for _, a := range arg.Value {
+				gameArgs = append(gameArgs, a)
+			}
+		}
+	}
+
+	config := &LaunchConfig{
+		MainClass:     manifest.MainClass,
+		JVMArguments:  jvmArgs,
+		GameArguments: gameArgs,
+		Classpath:     []string{classpath},
+	}
 	
 	return config, nil
 }

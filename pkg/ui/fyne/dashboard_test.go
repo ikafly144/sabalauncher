@@ -2,7 +2,6 @@ package fyne
 
 import (
 	"testing"
-	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/test"
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/stretchr/testify/mock"
@@ -43,26 +42,28 @@ func TestShowDashboardView(t *testing.T) {
 	
 	mp := new(mockProfileManager)
 	mp.On("GetProfiles").Return([]core.Profile{
-		{Name: "test", DisplayName: "Test Profile"},
+		{Name: "test", DisplayName: "Test Profile", Description: "Desc", VersionName: "1.20.1"},
 	}, nil)
 	
 	mr := new(mockGameRunner)
+	ma := new(mockAuthenticator)
+	ma.On("GetStatus").Return(core.AuthStatusLoggedIn)
+	ma.On("GetUserDisplay").Return("TestUser")
 	
 	ui := &FyneUI{
 		app:      a,
 		window:   w,
 		profiles: mp,
 		runner:   mr,
+		auth:     ma,
 		discord:  new(mockDiscordManager),
 	}
 	
-	// This should fail to compile or run as showDashboardView doesn't exist
 	ui.showDashboardView()
 	
 	if ui.window.Content() == nil {
 		t.Fatal("Window content is nil")
 	}
-	_ = fyne.NewPos(0, 0) // Use fyne
 }
 
 func TestShowLaunchOverlay(t *testing.T) {

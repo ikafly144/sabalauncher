@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -25,6 +26,121 @@ var curseForgeAPIKey = secret.GetSecret("CURSEFORGE_API_KEY")
 type ModLoader interface {
 	Install(ctx context.Context, profile *Profile) error
 	GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error)
+}
+
+// GetModLoader returns the appropriate ModLoader implementation for the given profile.
+func GetModLoader(profile *Profile) (ModLoader, error) {
+	switch strings.ToLower(profile.ModLoader) {
+	case "forge":
+		// For Forge, we need the version information. 
+		// Currently, this is stored in the ManifestLoader if it's a ForgeManifestLoader.
+		// We might need to extract this more cleanly later.
+		if fl, ok := profile.Manifest.(*ForgeManifestLoader); ok {
+			return NewForgeLoader(fl.VanillaVersion, fl.ForgeVersion), nil
+		}
+		return nil, fmt.Errorf("forge mod loader requires forge manifest information")
+	case "vanilla", "":
+		return NewVanillaLoader(profile.Manifest.VersionName()), nil
+	default:
+		return nil, fmt.Errorf("unsupported mod loader: %s", profile.ModLoader)
+	}
+}
+
+// VanillaLoader implements the ModLoader interface for plain Minecraft.
+type VanillaLoader struct {
+	Version string
+}
+
+func NewVanillaLoader(version string) *VanillaLoader {
+	return &VanillaLoader{Version: version}
+}
+
+func (v *VanillaLoader) Install(ctx context.Context, profile *Profile) error {
+	// Vanilla installation is currently handled by VanillaManifestLoader.
+	// For now, we can just ensure the basic files are there or rely on the existing system.
+	return nil
+}
+
+func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
+	dataPath := DataDir
+	
+	ver, err := GetVersion(v.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get version: %w", err)
+	}
+	clientManifest, err := GetClientManifest(ver)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get client manifest: %w", err)
+	}
+
+	classpath := filepath.Join(dataPath, "versions", clientManifest.ID, clientManifest.ID+".jar")
+	classpathSeparator := string(os.PathListSeparator)
+	for _, library := range clientManifest.Libraries {
+		if library.Downloads.Classifiers != nil {
+			for _, classifier := range library.Downloads.Classifiers {
+				classpath += classpathSeparator + filepath.Join(dataPath, "libraries", classifier.Path)
+			}
+		}
+		classpath += classpathSeparator + filepath.Join(dataPath, "libraries", library.Downloads.Artifact.Path)
+	}
+
+	cmdMap := map[string]string{
+		"natives_directory":   filepath.Join(dataPath, "bin", clientManifest.ID),
+		"launcher_name":       "SabaLauncher",
+		"launcher_version":    "1.0",
+		"classpath":           classpath,
+		"library_directory":   filepath.Join(dataPath, "libraries"),
+		"classpath_separator": classpathSeparator,
+	}
+
+	var jvmArgs []string
+	memory, err := profile.ActualMemory()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get actual memory: %w", err)
+	}
+	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
+	jvmArgs = append(jvmArgs, defaultJvmArgs...)
+
+	for _, arg := range clientManifest.Arguments.Jvm {
+		if arg == nil {
+			continue
+		}
+		switch arg := arg.(type) {
+		case JvmArgumentString:
+			val := arg.String()
+			for before, after := range cmdMap {
+				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
+			}
+			jvmArgs = append(jvmArgs, val)
+		case JvmArgumentRule:
+			if !slices.ContainsFunc(arg.Rules, func(rule JvmArgumentRuleType) bool {
+				return rule.Action.Allowed() != rule.OS.Matched()
+			}) {
+				continue
+			}
+			for _, a := range arg.Value {
+				for before, after := range cmdMap {
+					a = strings.ReplaceAll(a, fmt.Sprintf("${%s}", before), after)
+				}
+				jvmArgs = append(jvmArgs, a)
+			}
+		}
+	}
+
+	config := &LaunchConfig{
+		MainClass:    clientManifest.MainClass,
+		JVMArguments: jvmArgs,
+		Classpath:    []string{classpath},
+	}
+
+	// Game arguments will be handled in a similar way if needed, 
+	// but currently BootGameFromConfig needs them.
+	// Actually, most game arguments are dynamic (tokens, UUIDs).
+	// We might want to keep the dynamic ones in BootGameFromConfig or pass them here.
+	
+	// For now, let's keep the dynamic ones in GameRunner/BootGame.
+	
+	return config, nil
 }
 
 // DependencyResolver defines the interface for resolving mod dependencies.

@@ -12,15 +12,25 @@ import (
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
+	"github.com/ikafly144/sabalauncher/pkg/browser"
 	"github.com/ikafly144/sabalauncher/secret"
 )
 
 var msaClientID = secret.GetSecret("MSA_CLIENT_ID")
 
+type LoginMethod string
+
+const (
+	LoginMethodDeviceCode LoginMethod = "device_code"
+	LoginMethodBrowser    LoginMethod = "browser"
+)
+
 type Session interface {
-	StartLogin() error
+	StartLogin(method LoginMethod) error
 	DeviceCode() *public.DeviceCode
+	InteractiveURL() string
 	AuthResult() (*public.AuthResult, error)
+	Logout() error
 	impl()
 }
 
@@ -114,18 +124,42 @@ func NewSession(c *CacheAccessor) (Session, error) {
 var _ Session = (*session)(nil)
 
 type session struct {
-	client      public.Client
-	result      *public.AuthResult
-	resultError error
-	deviceCode  *public.DeviceCode
+	client         public.Client
+	result         *public.AuthResult
+	resultError    error
+	deviceCode     *public.DeviceCode
+	interactiveURL string
 
 	done sync.WaitGroup
 }
 
 func (s *session) impl() {}
 
-func (s *session) StartLogin() error {
-	deviceCode, err := s.client.AcquireTokenByDeviceCode(context.Background(), []string{"XboxLive.signin", "XboxLive.offline_access"})
+func (s *session) StartLogin(method LoginMethod) error {
+	scopes := []string{"XboxLive.signin", "XboxLive.offline_access"}
+
+	if method == LoginMethodBrowser {
+		s.done.Add(1)
+		go func() {
+			defer s.done.Done()
+			// MSAL Go defaults to http://localhost if not specified, 
+			// but we must ensure the Azure Portal has "http://localhost" registered 
+			// under "Mobile and desktop applications".
+			result, err := s.client.AcquireTokenInteractive(context.Background(), scopes, public.WithOpenURL(func(url string) error {
+				s.interactiveURL = url
+				return browser.Open(url)
+			}))
+			if err != nil {
+				s.result = nil
+				s.resultError = err
+				return
+			}
+			s.handleResult(result)
+		}()
+		return nil
+	}
+
+	deviceCode, err := s.client.AcquireTokenByDeviceCode(context.Background(), scopes)
 	if err != nil {
 		return err
 	}
@@ -140,44 +174,72 @@ func (s *session) StartLogin() error {
 			s.resultError = err
 			return
 		}
-		accounts, err := s.client.Accounts(context.Background())
-		if err != nil {
-			s.result = nil
-			s.resultError = fmt.Errorf("failed to get accounts: %w", err)
-		} else if len(accounts) == 0 {
-			s.result = nil
-			s.resultError = fmt.Errorf("no accounts found after login")
-		}
-		if len(accounts) > 1 {
-			for _, account := range accounts {
-				if account.Key() != result.Account.Key() {
-					slog.Info("Multiple accounts found", "account", account)
-					if err := s.client.RemoveAccount(context.Background(), account); err != nil {
-						slog.Error("Failed to remove account", "account", account, "error", err)
-					}
-					break
-				}
-			}
-		}
-		slog.Info("Login successful", "result", result)
-		if len(result.DeclinedScopes) > 0 {
-			slog.Warn("Login with declined scopes", "declinedScopes", result.DeclinedScopes)
-		}
-		if !slices.Contains(result.GrantedScopes, "XboxLive.signin") || !slices.Contains(result.GrantedScopes, "XboxLive.offline_access") {
-			s.result = nil
-			s.resultError = fmt.Errorf("missing scopes: %v", result.GrantedScopes)
-		}
-		s.result = &result
-		s.resultError = nil
+		s.handleResult(result)
 	}()
 	return nil
+}
+
+func (s *session) handleResult(result public.AuthResult) {
+	accounts, err := s.client.Accounts(context.Background())
+	if err != nil {
+		s.result = nil
+		s.resultError = fmt.Errorf("failed to get accounts: %w", err)
+		return
+	} else if len(accounts) == 0 {
+		s.result = nil
+		s.resultError = fmt.Errorf("no accounts found after login")
+		return
+	}
+	if len(accounts) > 1 {
+		for _, account := range accounts {
+			if account.Key() != result.Account.Key() {
+				slog.Info("Multiple accounts found", "account", account)
+				if err := s.client.RemoveAccount(context.Background(), account); err != nil {
+					slog.Error("Failed to remove account", "account", account, "error", err)
+				}
+				break
+			}
+		}
+	}
+	slog.Info("Login successful", "result", result)
+	if len(result.DeclinedScopes) > 0 {
+		slog.Warn("Login with declined scopes", "declinedScopes", result.DeclinedScopes)
+	}
+	if !slices.Contains(result.GrantedScopes, "XboxLive.signin") || !slices.Contains(result.GrantedScopes, "XboxLive.offline_access") {
+		s.result = nil
+		s.resultError = fmt.Errorf("missing scopes: %v", result.GrantedScopes)
+		return
+	}
+	s.result = &result
+	s.resultError = nil
 }
 
 func (s *session) DeviceCode() *public.DeviceCode {
 	return s.deviceCode
 }
 
+func (s *session) InteractiveURL() string {
+	return s.interactiveURL
+}
+
 func (s *session) AuthResult() (*public.AuthResult, error) {
 	s.done.Wait()
 	return s.result, s.resultError
+}
+
+func (s *session) Logout() error {
+	accounts, err := s.client.Accounts(context.Background())
+	if err != nil {
+		return err
+	}
+	for _, account := range accounts {
+		if err := s.client.RemoveAccount(context.Background(), account); err != nil {
+			return err
+		}
+	}
+	s.result = nil
+	s.resultError = nil
+	s.deviceCode = nil
+	s.interactiveURL = ""
+	return nil
 }

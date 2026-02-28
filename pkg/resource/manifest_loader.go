@@ -25,6 +25,7 @@ type ManifestLoader interface {
 	TotalProgress() float64
 	Error() error
 	Boot(dataPath string, profile *Profile, account *msa.MinecraftAccount, stdout, stderr io.Writer) error
+	GetClientManifest() *ClientManifest
 }
 
 type ManifestLoaderUnmarshal struct {
@@ -443,4 +444,16 @@ const forgeDownloadURL = "https://maven.minecraftforge.net/net/minecraftforge/fo
 
 func (f *ForgeManifestLoader) VersionName() string {
 	return f.fullForgeVersion()
+}
+
+func (v *VanillaManifestLoader) GetClientManifest() *ClientManifest {
+	return v.manifest
+}
+
+func (f *ForgeManifestLoader) GetClientManifest() *ClientManifest {
+	return f.bootManifest
+}
+
+func (c *CustomManifestLoader) GetClientManifest() *ClientManifest {
+	return c.manifest
 }

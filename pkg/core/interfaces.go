@@ -22,7 +22,7 @@ type Authenticator interface {
 	// TrySilentLogin attempts to login using cached credentials.
 	TrySilentLogin(ctx context.Context) error
 	// Login starts the interactive login process.
-	Login(ctx context.Context) error	// Logout clears the current session.
+	Login(ctx context.Context, method msa.LoginMethod) error	// Logout clears the current session.
 	Logout() error
 	// GetStatus returns the current authentication status.
 	GetStatus() AuthStatus
@@ -35,8 +35,12 @@ type Authenticator interface {
 	// DeviceCode returns the device code information for the user to login.
 	// This should only be called when status is AuthStatusLoggingIn.
 	DeviceCode() (url, code string)
+	// LoginURL returns the URL to open in a browser for the current login process.
+	LoginURL() string
 	// WaitLogin blocks until the authentication process is complete or the context is cancelled.
 	WaitLogin(ctx context.Context) error
+	// GetLastError returns the last error that occurred during authentication.
+	GetLastError() error
 }
 
 // Profile represents a game configuration.

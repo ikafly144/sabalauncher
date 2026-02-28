@@ -1,70 +1,53 @@
 package fyne
 
 import (
+	"image/color"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/ikafly144/sabalauncher/pkg/browser"
 )
-
-func (ui *FyneUI) showProfileView() {
-	profiles, err := ui.profiles.GetProfiles()
-	if err != nil {
-		dialog.ShowError(err, ui.window)
-		return
-	}
-	
-	list := container.NewVBox()
-	for _, p := range profiles {
-		profile := p // Capture for closure
-		item := container.NewHBox(
-			widget.NewLabel(profile.DisplayName),
-			widget.NewButton("Delete", func() {
-				dialog.ShowConfirm("Delete Profile", "Are you sure you want to delete "+profile.DisplayName+"?", func(ok bool) {
-					if ok {
-						if err := ui.profiles.DeleteProfile(profile.Source); err != nil {
-							dialog.ShowError(err, ui.window)
-						} else {
-							ui.showProfileView()
-						}
-					}
-				}, ui.window)
-			}),
-		)
-		list.Add(item)
-	}
-	
-	addBtn := widget.NewButton("Add Profile", func() {
-		ui.showAddProfileDialog()
-	})
-	
-	backBtn := widget.NewButton("Back to Dashboard", func() {
-		ui.showDashboardView()
-	})
-	
-	ui.window.SetContent(container.NewVBox(
-		createHeader(),
-		widget.NewLabel("Profiles"),
-		list,
-		addBtn,
-		backBtn,
-	))
-}
 
 func (ui *FyneUI) showAddProfileDialog() {
 	entry := widget.NewEntry()
-	entry.SetPlaceHolder("https://example.com/profiles.json")
-	
+	entry.SetPlaceHolder("profile url or select local file")
+
+	browseBtn := widget.NewButton("Browse", func() {
+		// Attempt to get HWND. On Windows, Fyne uses GLFW.
+		// For now, we pass 0 and let the browser package handle it if needed,
+		// or we can try to find the window.
+		path, err := browser.SelectFile(0, "JSON files (*.json)|*.json")
+		if err != nil {
+			dialog.ShowError(err, ui.window)
+			return
+		}
+		if path != "" {
+			entry.SetText(path)
+		}
+	})
+
+	// Force a minimum width for the entry to make the dialog wider
+	rect := canvas.NewRectangle(color.Transparent)
+	rect.SetMinSize(fyne.NewSize(400, 0))
+	inputContainer := container.NewStack(rect, entry)
+
 	items := []*widget.FormItem{
-		widget.NewFormItem("Profile URL", entry),
+		widget.NewFormItem("Profile URL/Path", container.NewBorder(nil, nil, nil, browseBtn, inputContainer)),
 	}
-	
-	dialog.ShowForm("Add New Profile", "Add", "Cancel", items, func(ok bool) {
+
+	d := dialog.NewForm("Add New Profile", "Add", "Cancel", items, func(ok bool) {
 		if ok {
 			if err := ui.profiles.AddProfile(entry.Text); err != nil {
 				dialog.ShowError(err, ui.window)
 			} else {
-				ui.showProfileView()
+				ui.showMainView()
 			}
 		}
 	}, ui.window)
+
+	d.Resize(fyne.NewSize(500, 200))
+	d.Show()
 }

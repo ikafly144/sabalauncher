@@ -553,13 +553,13 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		return errors.New("client manifest is nil")
 	}
 	slog.Info("Booting game", "version", clientManifest.ID)
+
+	// Construct a LaunchConfig from the legacy BootGame logic
 	javaPath, err := GetJavaExecutablePath(clientManifest.JavaVersion.Component, "C:\\")
 	if err != nil {
 		return err
 	}
-	slog.Info("Java executable path", "path", javaPath)
 
-	var cmds []string
 	classpath := filepath.Join(dataDir, "versions", clientManifest.ID, clientManifest.ID+".jar")
 	classpathSeparator := string(os.PathListSeparator)
 	for _, library := range clientManifest.Libraries {
@@ -579,14 +579,14 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		"library_directory":   filepath.Join(dataDir, "libraries"),
 		"classpath_separator": classpathSeparator,
 	}
-	cmds = append(cmds, javaPath)
+
+	var jvmArgs []string
 	memory, err := profile.ActualMemory()
 	if err != nil {
 		return fmt.Errorf("failed to get actual memory: %w", err)
 	}
-	cmds = append(cmds, "-Xmx"+strconv.FormatUint(memory, 10)+"M")
-
-	cmds = append(cmds, defaultJvmArgs...)
+	jvmArgs = append(jvmArgs, "-Xmx"+strconv.FormatUint(memory, 10)+"M")
+	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
 	for _, arg := range clientManifest.Arguments.Jvm {
 		if arg == nil {
@@ -594,27 +594,25 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		}
 		switch arg := arg.(type) {
 		case JvmArgumentString:
+			val := arg.String()
 			for before, after := range cmdMap {
-				arg = JvmArgumentString(strings.ReplaceAll(arg.String(), fmt.Sprintf("${%s}", before), after))
+				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
 			}
-			cmds = append(cmds, arg.String())
+			jvmArgs = append(jvmArgs, val)
 		case JvmArgumentRule:
 			if !slices.ContainsFunc(arg.Rules, func(rule JvmArgumentRuleType) bool {
 				return rule.Action.Allowed() != rule.OS.Matched()
 			}) {
-				slog.Info("Skipping JVM argument", "argument", arg)
 				continue
 			}
 			for _, a := range arg.Value {
 				for before, after := range cmdMap {
 					a = strings.ReplaceAll(a, fmt.Sprintf("${%s}", before), after)
 				}
-				cmds = append(cmds, a)
+				jvmArgs = append(jvmArgs, a)
 			}
 		}
 	}
-
-	cmds = append(cmds, clientManifest.MainClass)
 
 	mcProfile, err := account.GetMinecraftProfile()
 	if err != nil {
@@ -648,10 +646,11 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		}
 		switch arg := arg.(type) {
 		case GameArgumentString:
+			val := arg.String()
 			for before, after := range gameArgsMap {
-				arg = GameArgumentString(strings.ReplaceAll(arg.String(), fmt.Sprintf("${%s}", before), after))
+				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
 			}
-			gameArgs = append(gameArgs, arg.String())
+			gameArgs = append(gameArgs, val)
 		case GameArgumentRule:
 			if !slices.ContainsFunc(arg.Rules, func(rule GameArgumentRuleType) bool {
 				if !rule.Action.Allowed() {
@@ -664,7 +663,6 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 					return false
 				}
 			}) {
-				slog.Info("Skipping game argument", "argument", arg)
 				continue
 			}
 			for _, a := range arg.Value {
@@ -676,13 +674,43 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		}
 	}
 
-	cmds = append(cmds, gameArgs...)
+	config := &LaunchConfig{
+		MainClass:     clientManifest.MainClass,
+		JVMArguments:  jvmArgs,
+		GameArguments: gameArgs,
+		Classpath:     []string{classpath}, // BootGameFromConfig handles classpath joining if needed, but here we provide the full string for now
+	}
+
+	return BootGameFromConfig(javaPath, config, profile, account, stdout, stderr)
+}
+
+// BootGameFromConfig launches the game using the provided LaunchConfig.
+func BootGameFromConfig(javaPath string, config *LaunchConfig, profile *Profile, account *msa.MinecraftAccountAuthResult, stdout, stderr io.Writer) error {
+	slog.Info("Booting game from config", "mainClass", config.MainClass)
+
+	mcProfile, err := account.GetMinecraftProfile()
+	if err != nil {
+		return err
+	}
+
+	var cmds []string
+	cmds = append(cmds, javaPath)
+	cmds = append(cmds, config.JVMArguments...)
+	
+	// Ensure classpath is handled. LaunchConfig.Classpath is a list of JARs.
+	// Minecraft expects -cp <joined_classpath>
+	if len(config.Classpath) > 0 {
+		cp := strings.Join(config.Classpath, string(os.PathListSeparator))
+		cmds = append(cmds, "-cp", cp)
+	}
+
+	cmds = append(cmds, config.MainClass)
+	cmds = append(cmds, config.GameArguments...)
 
 	slog.Info("Game command", "cmd", cmds)
 	_ = os.MkdirAll(profile.Path, os.ModePerm)
 
 	cmd := exec.Command(cmds[0], cmds[1:]...)
-
 	cmd.Stdout = io.MultiWriter(stdout, slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer())
 	cmd.Stderr = io.MultiWriter(stderr, slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer())
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()

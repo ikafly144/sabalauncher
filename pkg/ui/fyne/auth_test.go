@@ -21,8 +21,8 @@ func (m *mockAuthenticator) TrySilentLogin(ctx context.Context) error {
 	return args.Error(0)
 }
 
-func (m *mockAuthenticator) Login(ctx context.Context) error {
-	args := m.Called(ctx)
+func (m *mockAuthenticator) Login(ctx context.Context, method msa.LoginMethod) error {
+	args := m.Called(ctx, method)
 	return args.Error(0)
 }
 
@@ -46,8 +46,18 @@ func (m *mockAuthenticator) DeviceCode() (string, string) {
 	return args.String(0), args.String(1)
 }
 
+func (m *mockAuthenticator) LoginURL() string {
+	args := m.Called()
+	return args.String(0)
+}
+
 func (m *mockAuthenticator) WaitLogin(ctx context.Context) error {
 	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *mockAuthenticator) GetLastError() error {
+	args := m.Called()
 	return args.Error(0)
 }
 
@@ -81,8 +91,10 @@ func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 	
 	m := new(mockAuthenticator)
 	m.On("GetStatus").Return(core.AuthStatusLoggedOut)
-	m.On("Login", mock.Anything).Return(nil)
+	m.On("Login", mock.Anything, mock.Anything).Return(nil)
+	m.On("LoginURL").Return("http://example.com")
 	m.On("WaitLogin", mock.Anything).Return(nil)
+	m.On("GetUserDisplay").Return("TestUser")
 	
 	mp := new(mockProfileManager)
 	mp.On("GetProfiles").Return([]core.Profile{}, nil)
@@ -136,9 +148,12 @@ func TestShowAuthView_Error_Retry(t *testing.T) {
 	w := a.NewWindow("Test")
 	
 	m := new(mockAuthenticator)
+	m.On("GetLastError").Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusError)
-	m.On("Login", mock.Anything).Return(nil)
+	m.On("Login", mock.Anything, mock.Anything).Return(nil)
+	m.On("LoginURL").Return("http://example.com")
 	m.On("WaitLogin", mock.Anything).Return(nil)
+	m.On("GetUserDisplay").Return("TestUser")
 	
 	mp := new(mockProfileManager)
 	mp.On("GetProfiles").Return([]core.Profile{}, nil)
@@ -191,6 +206,7 @@ func TestShowAuthView_Error(t *testing.T) {
 	w := a.NewWindow("Test")
 	
 	m := new(mockAuthenticator)
+	m.On("GetLastError").Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusError)
 	
 	ui := &FyneUI{
@@ -212,10 +228,12 @@ func TestStartLogin(t *testing.T) {
 	w := a.NewWindow("Test")
 	
 	m := new(mockAuthenticator)
-	m.On("Login", mock.Anything).Return(nil)
+	m.On("Login", mock.Anything, mock.Anything).Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusLoggingIn).Once()
-	m.On("DeviceCode").Return("http://example.com", "CODE")
+	m.On("DeviceCode").Return("http://example.com", "CODE").Maybe()
+	m.On("LoginURL").Return("http://example.com").Maybe()
 	m.On("WaitLogin", mock.Anything).Return(nil)
+	m.On("GetUserDisplay").Return("TestUser")
 	
 	mp := new(mockProfileManager)
 	mp.On("GetProfiles").Return([]core.Profile{}, nil)
@@ -228,7 +246,7 @@ func TestStartLogin(t *testing.T) {
 		discord:  new(mockDiscordManager),
 	}
 	
-	ui.startLogin()
+	ui.startLogin(msa.LoginMethodBrowser)
 	
 	m.AssertExpectations(t)
 }
@@ -238,7 +256,8 @@ func TestStartLogin_Fail(t *testing.T) {
 	w := a.NewWindow("Test")
 	
 	m := new(mockAuthenticator)
-	m.On("Login", mock.Anything).Return(fmt.Errorf("fail"))
+	m.On("Login", mock.Anything, mock.Anything).Return(fmt.Errorf("fail"))
+	m.On("GetLastError").Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusError)
 	
 	ui := &FyneUI{
@@ -248,7 +267,7 @@ func TestStartLogin_Fail(t *testing.T) {
 		discord: new(mockDiscordManager),
 	}
 	
-	ui.startLogin()
+	ui.startLogin(msa.LoginMethodBrowser)
 	
 	m.AssertExpectations(t)
 }
@@ -258,10 +277,11 @@ func TestStartLogin_WaitFail(t *testing.T) {
 	w := a.NewWindow("Test")
 	
 	m := new(mockAuthenticator)
-	m.On("Login", mock.Anything).Return(nil)
+	m.On("Login", mock.Anything, mock.Anything).Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusLoggingIn).Once()
 	m.On("DeviceCode").Return("http://example.com", "CODE")
 	m.On("WaitLogin", mock.Anything).Return(fmt.Errorf("fail"))
+	m.On("GetLastError").Return(nil)
 	m.On("GetStatus").Return(core.AuthStatusError).Once()
 	
 	ui := &FyneUI{
@@ -271,7 +291,7 @@ func TestStartLogin_WaitFail(t *testing.T) {
 		discord: new(mockDiscordManager),
 	}
 	
-	ui.startLogin()
+	ui.startLogin(msa.LoginMethodBrowser)
 	
 	m.AssertExpectations(t)
 }

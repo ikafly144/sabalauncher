@@ -1,0 +1,8 @@
+{
+  "track_id": "multi_modloader_20260228",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-28T14:45:00Z",
+  "updated_at": "2026-02-28T14:45:00Z",
+  "description": "対応mod Loaderを追加します。現在Forgeに対応していますが追加でfabric, neoforge, quiltに対応します。 また、現在の起動フローの処理がメンテナンス性が低いのであなたがインターフェースを切り出し、改善してください。"
+}

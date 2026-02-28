@@ -5,6 +5,8 @@ import (
 	"io"
 	"sync"
 	"time"
+
+	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
 type gameRunner struct {
@@ -87,8 +89,33 @@ func (r *gameRunner) Launch(profileName string) error {
 	stdout := &logWriter{source: "Game", ch: r.logsChan}
 	stderr := &logWriter{source: "Game", ch: r.logsChan}
 
-	// 3. Boot Game
-	if err := fullProfile.Manifest.Boot(r.dataPath, fullProfile, account, stdout, stderr); err != nil {
+	// 3. Boot Game using ModLoader and LaunchConfig
+	loader, err := resource.GetModLoader(fullProfile)
+	if err != nil {
+		return fmt.Errorf("failed to get mod loader: %w", err)
+	}
+
+	config, err := loader.GenerateLaunchConfig(fullProfile)
+	if err != nil {
+		return fmt.Errorf("failed to generate launch config: %w", err)
+	}
+
+	manifest := fullProfile.Manifest.GetClientManifest()
+	if manifest == nil {
+		return fmt.Errorf("client manifest is missing")
+	}
+
+	javaPath, err := resource.GetJavaExecutablePath(manifest.JavaVersion.Component, "C:\\")
+	if err != nil {
+		return fmt.Errorf("failed to get java executable path: %w", err)
+	}
+
+	mcAccount, err := account.GetMinecraftAccount()
+	if err != nil {
+		return fmt.Errorf("failed to get minecraft account: %w", err)
+	}
+
+	if err := resource.BootGameFromConfig(javaPath, config, fullProfile, mcAccount, stdout, stderr); err != nil {
 		return fmt.Errorf("boot failed: %w", err)
 	}
 
