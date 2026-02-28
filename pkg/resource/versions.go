@@ -681,16 +681,45 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		Classpath:     []string{classpath}, // BootGameFromConfig handles classpath joining if needed, but here we provide the full string for now
 	}
 
-	return BootGameFromConfig(javaPath, config, profile, account, stdout, stderr)
-}
+	return BootGameFromConfig(javaPath, config, clientManifest, profile, account, stdout, stderr)
+	}
 
-// BootGameFromConfig launches the game using the provided LaunchConfig.
-func BootGameFromConfig(javaPath string, config *LaunchConfig, profile *Profile, account *msa.MinecraftAccountAuthResult, stdout, stderr io.Writer) error {
+	// BootGameFromConfig launches the game using the provided LaunchConfig.
+	func BootGameFromConfig(javaPath string, config *LaunchConfig, clientManifest *ClientManifest, profile *Profile, account *msa.MinecraftAccountAuthResult, stdout, stderr io.Writer) error {
 	slog.Info("Booting game from config", "mainClass", config.MainClass)
 
 	mcProfile, err := account.GetMinecraftProfile()
 	if err != nil {
 		return err
+	}
+
+	var gameArgsMap = map[string]string{
+		"auth_player_name":      mcProfile.Username,
+		"version_name":          clientManifest.ID,
+		"game_directory":        profile.Path,
+		"assets_root":           filepath.Join(DataDir, "assets"),
+		"assets_index_name":     clientManifest.AssetIndex.ID,
+		"auth_uuid":             mcProfile.UUID.String(),
+		"auth_access_token":     account.AccessToken,
+		"clientid":              "launcher",
+		"auth_xuid":             mcProfile.UUID.String(),
+		"user_type":             "msa",
+		"version_type":          clientManifest.Type,
+		"resolution_width":      "1280",
+		"resolution_height":     "720",
+		"quickPlayPath":         "",
+		"quickPlayMultiplayer":  profile.ServerAddress,
+		"quickPlayRealms":       "",
+		"quickPlaySingleplayer": "",
+	}
+
+	var resolvedGameArgs []string
+	for _, arg := range config.GameArguments {
+		val := arg
+		for before, after := range gameArgsMap {
+			val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
+		}
+		resolvedGameArgs = append(resolvedGameArgs, val)
 	}
 
 	var cmds []string
@@ -705,8 +734,7 @@ func BootGameFromConfig(javaPath string, config *LaunchConfig, profile *Profile,
 	}
 
 	cmds = append(cmds, config.MainClass)
-	cmds = append(cmds, config.GameArguments...)
-
+	cmds = append(cmds, resolvedGameArgs...)
 	slog.Info("Game command", "cmd", cmds)
 	_ = os.MkdirAll(profile.Path, os.ModePerm)
 

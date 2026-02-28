@@ -18,6 +18,7 @@ import (
 type ManifestSetupPhase int
 
 type ManifestLoader interface {
+	Type() string
 	VersionName() string
 	StartSetup(dataPath string, profilePath string)
 	IsDone() bool
@@ -92,6 +93,10 @@ type CustomManifestLoader struct {
 	VanillaManifestLoader
 }
 
+func (v *CustomManifestLoader) Type() string {
+	return "custom"
+}
+
 func (v *CustomManifestLoader) StartSetup(dataPath string, profile string) {
 	v.state = NewState("Customのセットアップ", "custom_setup")
 	go func() {
@@ -140,6 +145,10 @@ type VanillaManifestLoader struct {
 	err   error
 
 	manifest *ClientManifest `json:"-"`
+}
+
+func (v *VanillaManifestLoader) Type() string {
+	return "vanilla"
 }
 
 func (v *VanillaManifestLoader) VersionName() string {
@@ -269,6 +278,10 @@ type ForgeManifestLoader struct {
 	state        *SetupState
 	bootManifest *ClientManifest
 	err          error
+}
+
+func (f *ForgeManifestLoader) Type() string {
+	return "forge"
 }
 
 func (f *ForgeManifestLoader) fullForgeVersion() string {
@@ -488,6 +501,10 @@ type FabricManifestLoader struct {
 	err      error
 }
 
+func (f *FabricManifestLoader) Type() string {
+	return "fabric"
+}
+
 func (f *FabricManifestLoader) VersionName() string {
 	return f.VanillaVersion + "-fabric-" + f.LoaderVersion
 }
@@ -623,6 +640,10 @@ type NeoForgeManifestLoader struct {
 	err      error
 }
 
+func (n *NeoForgeManifestLoader) Type() string {
+	return "neoforge"
+}
+
 func (n *NeoForgeManifestLoader) VersionName() string {
 	return n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
 }
@@ -755,6 +776,10 @@ type QuiltManifestLoader struct {
 	state    *SetupState
 	manifest *ClientManifest
 	err      error
+}
+
+func (q *QuiltManifestLoader) Type() string {
+	return "quilt"
 }
 
 func (q *QuiltManifestLoader) VersionName() string {

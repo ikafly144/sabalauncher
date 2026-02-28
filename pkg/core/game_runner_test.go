@@ -56,10 +56,9 @@ func TestGameRunner_LaunchFlow(t *testing.T) {
 			manifest := &mockManifestLoader{}
 			profile := &resource.Profile{
 				PublicProfile: resource.PublicProfile{
-					Name:      "test",
-					ModLoader: loaderType,
-					Manifest:  manifest,
-					Version:   1,
+					Name:     "test",
+					Manifest: manifest,
+					Version:  1,
 				},
 				Path: "test-path",
 			}

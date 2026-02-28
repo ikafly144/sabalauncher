@@ -9,7 +9,7 @@ func TestPublicProfile_UnmarshalJSON(t *testing.T) {
 	data := `{
 		"name": "test-profile",
 		"mod_loader": "fabric",
-		"version": 1,
+		"version": 2,
 		"manifest": {
 			"loaderType": "vanilla",
 			"version": "1.21"
@@ -24,9 +24,6 @@ func TestPublicProfile_UnmarshalJSON(t *testing.T) {
 	if p.Name != "test-profile" {
 		t.Errorf("Expected name 'test-profile', got '%s'", p.Name)
 	}
-	if p.ModLoader != "fabric" {
-		t.Errorf("Expected mod_loader 'fabric', got '%s'", p.ModLoader)
-	}
 	if p.Manifest == nil {
 		t.Fatal("Expected manifest to be non-nil")
 	}
@@ -38,7 +35,7 @@ func TestPublicProfile_UnmarshalJSON(t *testing.T) {
 func TestPublicProfile_UnmarshalJSON_MissingModLoader(t *testing.T) {
 	data := `{
 		"name": "test-profile",
-		"version": 1,
+		"version": 2,
 		"manifest": {
 			"loaderType": "vanilla",
 			"version": "1.21"
@@ -60,7 +57,7 @@ func TestPublicProfile_UnmarshalJSON_InvalidModLoader(t *testing.T) {
 	data := `{
 		"name": "test-profile",
 		"mod_loader": "invalid-loader",
-		"version": 1,
+		"version": 2,
 		"manifest": {
 			"loaderType": "vanilla",
 			"version": "1.21"

@@ -30,7 +30,7 @@ type ModLoader interface {
 
 // GetModLoader returns the appropriate ModLoader implementation for the given profile.
 func GetModLoader(profile *Profile) (ModLoader, error) {
-	switch strings.ToLower(profile.ModLoader) {
+	switch profile.Manifest.Type() {
 	case "forge":
 		// For Forge, we need the version information.
 		// Currently, this is stored in the ManifestLoader if it's a ForgeManifestLoader.
@@ -57,7 +57,7 @@ func GetModLoader(profile *Profile) (ModLoader, error) {
 	case "vanilla", "":
 		return NewVanillaLoader(profile.Manifest.VersionName()), nil
 	default:
-		return nil, fmt.Errorf("unsupported mod loader: %s", profile.ModLoader)
+		return nil, fmt.Errorf("unsupported mod loader: %s", profile.Manifest.Type())
 	}
 }
 
@@ -148,15 +148,36 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 		Classpath:    []string{classpath},
 	}
 
-	// Game arguments will be handled in a similar way if needed,
-	// but currently BootGameFromConfig needs them.
-	// Actually, most game arguments are dynamic (tokens, UUIDs).
-	// We might want to keep the dynamic ones in BootGameFromConfig or pass them here.
+	var gameArgs []string
+	for _, arg := range clientManifest.Arguments.Game {
+		if arg == nil {
+			continue
+		}
+		switch arg := arg.(type) {
+		case GameArgumentString:
+			gameArgs = append(gameArgs, arg.String())
+		case GameArgumentRule:
+			if !slices.ContainsFunc(arg.Rules, func(rule GameArgumentRuleType) bool {
+				if !rule.Action.Allowed() {
+					return false
+				}
+				switch {
+				case rule.Features.IsQuickPlayMultiplayer:
+					return profile.ServerAddress != ""
+				default:
+					return false
+				}
+			}) {
+				continue
+			}
+			for _, a := range arg.Value {
+				gameArgs = append(gameArgs, a)
+			}
+		}
+	}
+	config.GameArguments = gameArgs
 
-	// For now, let's keep the dynamic ones in GameRunner/BootGame.
-
-	return config, nil
-}
+	return config, nil}
 
 // DependencyResolver defines the interface for resolving mod dependencies.
 type DependencyResolver interface {
