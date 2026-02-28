@@ -1,5 +1,5 @@
 # Initial Concept
-SabaLauncher is a specialized Minecraft launcher designed to make joining modded servers effortless. By utilizing profile URLs provided by server administrators, it automates the entire process of installing Modpacks, Forge, and necessary configuration files.
+SabaLauncher is a specialized Minecraft launcher designed to make joining modded servers effortless. By utilizing profile URLs provided by server administrators, it automates the entire process of installing Modpacks, various mod loaders (Forge, Fabric, NeoForge, Quilt), and necessary configuration files.
 
 # Product Guide
 
@@ -12,7 +12,7 @@ To provide the most seamless and beginner-friendly Minecraft joining experience.
 - **Modpack Creators:** Who require an efficient distribution channel to ensure all players are using the correct environment.
 
 ## Core Features
-- **Automated Environment Setup:** Complete installation of Modpacks, Forge, and settings via profile URLs.
+- **Automated Environment Setup:** Complete installation of Modpacks, various mod loaders (Forge, Fabric, NeoForge, Quilt), and settings via profile URLs.
 - **Seamless Updates:** Automatic background synchronization of launcher and Modpack versions to ensure compatibility.
 - **Integrated Ecosystem:** 
     - Secure Microsoft account authentication for safety.
