@@ -12,7 +12,7 @@ This phase focuses on defining the new architecture.
 - [x] Task: Update Profile Manifest Schema [5047b9f]
     - [x] Add `ModLoader` field to `ProfileManifest` struct
     - [x] Update JSON parsing and validation logic
-- [ ] Task: Conductor - User Manual Verification 'Core Abstractions' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Core Abstractions' (Protocol in workflow.md)
 
 ## Phase 2: Refactor Forge Implementation
 Move existing Forge logic into the new modular structure.
