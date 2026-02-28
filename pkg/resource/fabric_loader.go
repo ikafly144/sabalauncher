@@ -63,7 +63,7 @@ type FabricLibraryInfo struct {
 }
 
 // Install handles the downloading of Fabric loader and its dependencies.
-func (f *FabricLoader) Install(ctx context.Context, profile *Profile) error {
+func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing Fabric", "gameVersion", f.GameVersion, "loaderVersion", f.LoaderVersion)
 
 	url := fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s", f.GameVersion, f.LoaderVersion)
@@ -130,10 +130,9 @@ func (f *FabricLoader) Install(ctx context.Context, profile *Profile) error {
 	}
 
 	// GenerateLaunchConfig produces the configuration required to launch the game with Fabric.
-	func (f *FabricLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
-	dataPath := DataDir
-	metaPath := filepath.Join(dataPath, "versions", f.GameVersion+"-fabric-"+f.LoaderVersion, "fabric-meta.json")
-
+	func (f *FabricLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
+		dataPath := DataDir
+		metaPath := filepath.Join(dataPath, "versions", f.GameVersion+"-fabric-"+f.LoaderVersion, "fabric-meta.json")
 	file, err := os.Open(metaPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open fabric meta: %w", err)
@@ -147,7 +146,7 @@ func (f *FabricLoader) Install(ctx context.Context, profile *Profile) error {
 
 	// 1. Get Vanilla Launch Config as base
 	vanillaLoader := NewVanillaLoader(f.GameVersion)
-	config, err := vanillaLoader.GenerateLaunchConfig(profile)
+	config, err := vanillaLoader.GenerateLaunchConfig(inst)
 	if err != nil {
 		return nil, err
 	}

@@ -10,9 +10,9 @@ import (
 )
 
 type gameRunner struct {
-	auth     Authenticator
-	profiles ProfileManager
-	dataPath string
+	auth      Authenticator
+	instances InstanceManager
+	dataPath  string
 
 	progressChan chan ProgressEvent
 	logsChan     chan LogEntry
@@ -21,17 +21,17 @@ type gameRunner struct {
 	mu      sync.RWMutex
 }
 
-func NewGameRunner(auth Authenticator, profiles ProfileManager, dataDir string) GameRunner {
+func NewGameRunner(auth Authenticator, instances InstanceManager, dataDir string) GameRunner {
 	return &gameRunner{
 		auth:         auth,
-		profiles:     profiles,
+		instances:    instances,
 		dataPath:     dataDir,
 		progressChan: make(chan ProgressEvent, 100),
 		logsChan:     make(chan LogEntry, 1000),
 	}
 }
 
-func (r *gameRunner) Launch(profileName string) error {
+func (r *gameRunner) Launch(instanceName string) error {
 	r.mu.Lock()
 	if r.running {
 		r.mu.Unlock()
@@ -46,7 +46,7 @@ func (r *gameRunner) Launch(profileName string) error {
 		r.mu.Unlock()
 	}()
 
-	fullProfile, err := r.profiles.GetFullProfile(profileName)
+	inst, err := r.instances.GetInstance(instanceName)
 	if err != nil {
 		return err
 	}
@@ -57,25 +57,25 @@ func (r *gameRunner) Launch(profileName string) error {
 	}
 
 	// 1. Start Setup
-	fullProfile.Manifest.StartSetup(r.dataPath, fullProfile.Path)
+	state := resource.SetupInstance(r.dataPath, inst)
 
 	// 2. Monitor Progress
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
-	for !fullProfile.Manifest.IsDone() {
+	for !state.IsDone() {
 		select {
 		case <-ticker.C:
 			r.progressChan <- ProgressEvent{
-				TaskName:   fullProfile.Manifest.CurrentStatus(),
-				Percentage: fullProfile.Manifest.TotalProgress() * 100.0,
-				Status:     fmt.Sprintf("%.1f%%", fullProfile.Manifest.CurrentProgress()*100.0),
+				TaskName:   state.FriendlyName(),
+				Percentage: float64(state.Progress()) * 100.0,
+				Status:     fmt.Sprintf("%.1f%%", state.CurrentProgress()*100.0),
 				IsFinished: false,
 			}
 		}
 	}
 
-	if err := fullProfile.Manifest.Error(); err != nil {
+	if err := state.Error(); err != nil {
 		return fmt.Errorf("setup failed: %w", err)
 	}
 
@@ -90,19 +90,19 @@ func (r *gameRunner) Launch(profileName string) error {
 	stderr := &logWriter{source: "Game", ch: r.logsChan}
 
 	// 3. Boot Game using ModLoader and LaunchConfig
-	loader, err := resource.GetModLoader(fullProfile)
+	loader, err := resource.GetModLoader(inst)
 	if err != nil {
 		return fmt.Errorf("failed to get mod loader: %w", err)
 	}
 
-	config, err := loader.GenerateLaunchConfig(fullProfile)
+	config, err := loader.GenerateLaunchConfig(inst)
 	if err != nil {
 		return fmt.Errorf("failed to generate launch config: %w", err)
 	}
 
-	manifest := fullProfile.Manifest.GetClientManifest()
-	if manifest == nil {
-		return fmt.Errorf("client manifest is missing")
+	manifest, err := resource.GetClientManifestForInstance(inst)
+	if err != nil {
+		return fmt.Errorf("failed to get client manifest: %w", err)
 	}
 
 	javaPath, err := resource.GetJavaExecutablePath(manifest.JavaVersion.Component, "C:\\")
@@ -115,7 +115,7 @@ func (r *gameRunner) Launch(profileName string) error {
 		return fmt.Errorf("failed to get minecraft account: %w", err)
 	}
 
-	if err := resource.BootGameFromConfig(javaPath, config, manifest, fullProfile, mcAccount, stdout, stderr); err != nil {
+	if err := resource.BootGameFromConfig(javaPath, config, manifest, inst, mcAccount, stdout, stderr); err != nil {
 		return fmt.Errorf("boot failed: %w", err)
 	}
 

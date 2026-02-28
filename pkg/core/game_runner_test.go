@@ -16,60 +16,33 @@ func (m *mockAuth) GetMinecraftAccount() (*msa.MinecraftAccount, error) {
 	return &msa.MinecraftAccount{}, nil
 }
 
-type mockProfileManager struct {
-	ProfileManager
-	profile *resource.Profile
+type mockInstanceManager struct {
+	InstanceManager
+	inst *resource.Instance
 }
 
-func (m *mockProfileManager) GetFullProfile(name string) (*resource.Profile, error) {
-	return m.profile, nil
-}
-
-type mockManifestLoader struct {
-	resource.ManifestLoader
-	loaderType string
-	done       bool
-}
-
-func (m *mockManifestLoader) Type() string { return m.loaderType }
-func (m *mockManifestLoader) StartSetup(dataPath, profilePath string) {
-	m.done = true
-}
-func (m *mockManifestLoader) IsDone() bool             { return m.done }
-func (m *mockManifestLoader) CurrentStatus() string    { return "Done" }
-func (m *mockManifestLoader) TotalProgress() float64   { return 1.0 }
-func (m *mockManifestLoader) CurrentProgress() float64 { return 1.0 }
-func (m *mockManifestLoader) Error() error             { return nil }
-func (m *mockManifestLoader) GetClientManifest() *resource.ClientManifest {
-	return &resource.ClientManifest{
-		ID: "1.20.1",
-		JavaVersion: resource.JavaVersion{
-			Component:    "java-runtime-gamma",
-			MajorVersion: 17,
-		},
-	}
+func (m *mockInstanceManager) GetInstance(name string) (*resource.Instance, error) {
+	return m.inst, nil
 }
 
 func TestGameRunner_LaunchFlow(t *testing.T) {
-	loaders := []string{"vanilla", "forge", "fabric", "neoforge", "quilt"}
+	loaders := []string{"vanilla", "forge", "fabric-loader", "neoforge", "quilt-loader"}
 
 	for _, loaderType := range loaders {
 		t.Run(loaderType, func(t *testing.T) {
-			manifest := &mockManifestLoader{loaderType: loaderType}
-			profile := &resource.Profile{
-				PublicProfile: resource.PublicProfile{
-					Name:      "test",
-					ModLoader: loaderType,
-					Manifest:  manifest,
-					Version:   2,
+			inst := &resource.Instance{
+				Name: "test",
+				Versions: []resource.InstanceVersion{
+					{ID: "minecraft", Version: "1.20.1"},
+					{ID: loaderType, Version: "1.0.0"},
 				},
 				Path: "test-path",
 			}
 
 			auth := &mockAuth{}
-			pm := &mockProfileManager{profile: profile}
+			im := &mockInstanceManager{inst: inst}
 
-			runner := NewGameRunner(auth, pm, "data-dir")
+			runner := NewGameRunner(auth, im, "data-dir")
 
 			if runner == nil {
 				t.Fatal("Failed to create GameRunner")

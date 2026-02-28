@@ -26,8 +26,9 @@ func NewForgeLoader(vanillaVersion, forgeVersion string) *ForgeLoader {
 }
 
 // Install handles the downloading and installation of Forge.
-func (f *ForgeLoader) Install(ctx context.Context, profile *Profile) error {
+func (f *ForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing Forge", "vanillaVersion", f.VanillaVersion, "forgeVersion", f.ForgeVersion)
+
 
 	// This logic is currently spread across ForgeManifestLoader and SetupState.
 	// For the refactor, we'll implement it here or call existing helpers.
@@ -72,7 +73,7 @@ func (f *ForgeLoader) Install(ctx context.Context, profile *Profile) error {
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with Forge.
-func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
+func (f *ForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
 	dataPath := DataDir
 	forgeDir := f.VanillaVersion + "-forge-" + f.ForgeVersion
 
@@ -115,10 +116,7 @@ func (f *ForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 	}
 
 	var jvmArgs []string
-	memory, err := profile.ActualMemory()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get actual memory: %w", err)
-	}
+	memory := uint64(2048) // Default memory, can be adapted later if Instance adds memory settings
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 

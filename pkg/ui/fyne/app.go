@@ -9,26 +9,26 @@ type FyneUI struct {
 	app    fyne.App
 	window fyne.Window
 
-	auth     core.Authenticator
-	profiles core.ProfileManager
-	runner   core.GameRunner
-	discord  core.DiscordManager
+	auth      core.Authenticator
+	instances core.InstanceManager
+	runner    core.GameRunner
+	discord   core.DiscordManager
 
-	selectedProfileName string
+	selectedInstanceName string
 }
 
-func NewFyneUI(a fyne.App, auth core.Authenticator, profiles core.ProfileManager, runner core.GameRunner, discord core.DiscordManager) *FyneUI {
+func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManager, runner core.GameRunner, discord core.DiscordManager) *FyneUI {
 	w := a.NewWindow("SabaLauncher")
 	w.Resize(fyne.NewSize(800, 600))
 	w.SetFixedSize(false)
 
 	return &FyneUI{
-		app:      a,
-		window:   w,
-		auth:     auth,
-		profiles: profiles,
-		runner:   runner,
-		discord:  discord,
+		app:       a,
+		window:    w,
+		auth:      auth,
+		instances: instances,
+		runner:    runner,
+		discord:   discord,
 	}
 }
 

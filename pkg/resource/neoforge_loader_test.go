@@ -62,11 +62,11 @@ func TestNeoForgeLoader_GenerateLaunchConfig(t *testing.T) {
 	os.WriteFile(filepath.Join(versionDir, neoforgeDir+".json"), manifestBytes, 0644)
 
 	loader := NewNeoForgeLoader("1.20.1", "47.1.0")
-	profile := &Profile{
+	inst := &Instance{
 		Path: filepath.Join(tempDir, "profiles", "test"),
 	}
 
-	config, err := loader.GenerateLaunchConfig(profile)
+	config, err := loader.GenerateLaunchConfig(inst)
 	if err != nil {
 		t.Fatalf("Failed to generate launch config: %v", err)
 	}

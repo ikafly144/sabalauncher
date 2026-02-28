@@ -38,22 +38,25 @@ func EndActivity(activity *client.Activity) error {
 	return nil
 }
 
-func SetActivity(profile *Profile, mcProfile *msa.MinecraftProfile) (*client.Activity, error) {
-	activity := mapActivity(*profile, mcProfile)
+func SetActivity(inst *Instance, mcProfile *msa.MinecraftProfile) (*client.Activity, error) {
+	activity := mapActivity(*inst, mcProfile)
 	if err := client.SetActivity(activity); err != nil {
 		return nil, err
 	}
 	return &activity, nil
 }
 
-func mapActivity(profile Profile, mcProfile *msa.MinecraftProfile) client.Activity {
+func mapActivity(inst Instance, mcProfile *msa.MinecraftProfile) client.Activity {
 	t := time.Now()
 	version := "Unknown Version"
-	if profile.Manifest != nil {
-		version = profile.Manifest.VersionName()
+	for _, v := range inst.Versions {
+		if v.ID == "minecraft" {
+			version = v.Version
+			break
+		}
 	}
 	return client.Activity{
-		State:      fmt.Sprintf("%sをプレイ中", profile.Display()),
+		State:      fmt.Sprintf("%sをプレイ中", inst.Name),
 		Details:    fmt.Sprintf("%s %s", mcProfile.Username, version),
 		LargeImage: "launcher_icon",
 		LargeText:  "SabaLauncherでプレイ中",

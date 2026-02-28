@@ -548,7 +548,7 @@ var (
 	}
 )
 
-func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.MinecraftAccountAuthResult, dataDir string, stdout, stderr io.Writer) error {
+func BootGame(clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, dataDir string, stdout, stderr io.Writer) error {
 	if clientManifest == nil {
 		return errors.New("client manifest is nil")
 	}
@@ -581,10 +581,7 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 	}
 
 	var jvmArgs []string
-	memory, err := profile.ActualMemory()
-	if err != nil {
-		return fmt.Errorf("failed to get actual memory: %w", err)
-	}
+	memory := uint64(2048) // Fixed for now
 	jvmArgs = append(jvmArgs, "-Xmx"+strconv.FormatUint(memory, 10)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
@@ -623,7 +620,7 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 	var gameArgsMap = map[string]string{
 		"auth_player_name":      mcProfile.Username,
 		"version_name":          clientManifest.ID,
-		"game_directory":        profile.Path,
+		"game_directory":        inst.Path,
 		"assets_root":           filepath.Join(dataDir, "assets"),
 		"assets_index_name":     clientManifest.AssetIndex.ID,
 		"auth_uuid":             mcProfile.UUID.String(),
@@ -635,7 +632,7 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		"resolution_width":      "1280",
 		"resolution_height":     "720",
 		"quickPlayPath":         "",
-		"quickPlayMultiplayer":  profile.ServerAddress,
+		"quickPlayMultiplayer":  "",
 		"quickPlayRealms":       "",
 		"quickPlaySingleplayer": "",
 	}
@@ -656,12 +653,7 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 				if !rule.Action.Allowed() {
 					return false
 				}
-				switch {
-				case rule.Features.IsQuickPlayMultiplayer:
-					return profile.ServerAddress != ""
-				default:
-					return false
-				}
+				return false
 			}) {
 				continue
 			}
@@ -681,11 +673,10 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		Classpath:     []string{classpath}, // BootGameFromConfig handles classpath joining if needed, but here we provide the full string for now
 	}
 
-	return BootGameFromConfig(javaPath, config, clientManifest, profile, account, stdout, stderr)
-	}
-
+	return BootGameFromConfig(javaPath, config, clientManifest, inst, account, stdout, stderr)
+}
 	// BootGameFromConfig launches the game using the provided LaunchConfig.
-	func BootGameFromConfig(javaPath string, config *LaunchConfig, clientManifest *ClientManifest, profile *Profile, account *msa.MinecraftAccountAuthResult, stdout, stderr io.Writer) error {
+	func BootGameFromConfig(javaPath string, config *LaunchConfig, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, stdout, stderr io.Writer) error {
 	slog.Info("Booting game from config", "mainClass", config.MainClass)
 
 	mcProfile, err := account.GetMinecraftProfile()
@@ -696,7 +687,7 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 	var gameArgsMap = map[string]string{
 		"auth_player_name":      mcProfile.Username,
 		"version_name":          clientManifest.ID,
-		"game_directory":        profile.Path,
+		"game_directory":        inst.Path,
 		"assets_root":           filepath.Join(DataDir, "assets"),
 		"assets_index_name":     clientManifest.AssetIndex.ID,
 		"auth_uuid":             mcProfile.UUID.String(),
@@ -708,7 +699,7 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 		"resolution_width":      "1280",
 		"resolution_height":     "720",
 		"quickPlayPath":         "",
-		"quickPlayMultiplayer":  profile.ServerAddress,
+		"quickPlayMultiplayer":  "", // TODO: Address ServerAddress later
 		"quickPlayRealms":       "",
 		"quickPlaySingleplayer": "",
 	}
@@ -736,15 +727,15 @@ func BootGame(clientManifest *ClientManifest, profile *Profile, account *msa.Min
 	cmds = append(cmds, config.MainClass)
 	cmds = append(cmds, resolvedGameArgs...)
 	slog.Info("Game command", "cmd", cmds)
-	_ = os.MkdirAll(profile.Path, os.ModePerm)
+	_ = os.MkdirAll(inst.Path, os.ModePerm)
 
 	cmd := exec.Command(cmds[0], cmds[1:]...)
 	cmd.Stdout = io.MultiWriter(stdout, slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer())
 	cmd.Stderr = io.MultiWriter(stderr, slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer())
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()
-	cmd.Dir = profile.Path
+	cmd.Dir = inst.Path
 
-	activity, err := SetActivity(profile, mcProfile)
+	activity, err := SetActivity(inst, mcProfile)
 	if err != nil {
 		slog.Error("Failed to set activity", "error", err)
 	}

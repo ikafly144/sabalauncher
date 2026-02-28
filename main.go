@@ -61,20 +61,20 @@ func main() {
 		log.Fatalf("failed to initialize authenticator: %v", err)
 	}
 
-	profiles, err := core.NewProfileManager(resource.DataDir)
+	instances, err := core.NewInstanceManager(resource.DataDir)
 	if err != nil {
-		log.Fatalf("failed to initialize profile manager: %v", err)
+		log.Fatalf("failed to initialize instance manager: %v", err)
 	}
 
-	runner := core.NewGameRunner(auth, profiles, resource.DataDir)
-	discord := core.NewDiscordManager(auth, profiles)
+	runner := core.NewGameRunner(auth, instances, resource.DataDir)
+	discord := core.NewDiscordManager(auth, instances)
 
 	// Try to resume session
 	_ = auth.TrySilentLogin(context.Background())
 
 	// Initialize Fyne App
 	a := app.NewWithID("net.sabafly.sabalauncher")
-	ui := fyne.NewFyneUI(a, auth, profiles, runner, discord)
+	ui := fyne.NewFyneUI(a, auth, instances, runner, discord)
 
 	// Run UI
 	ui.Run()

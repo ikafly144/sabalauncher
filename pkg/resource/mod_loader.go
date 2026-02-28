@@ -24,41 +24,44 @@ var curseForgeAPIKey = secret.GetSecret("CURSEFORGE_API_KEY")
 
 // ModLoader defines the interface for different mod loaders like Forge, Fabric, etc.
 type ModLoader interface {
-	Install(ctx context.Context, profile *Profile) error
-	GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error)
+	Install(ctx context.Context, inst *Instance) error
+	GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error)
 }
 
-// GetModLoader returns the appropriate ModLoader implementation for the given profile.
-func GetModLoader(profile *Profile) (ModLoader, error) {
-	switch profile.Manifest.Type() {
-	case "forge":
-		// For Forge, we need the version information.
-		// Currently, this is stored in the ManifestLoader if it's a ForgeManifestLoader.
-		// We might need to extract this more cleanly later.
-		if fl, ok := profile.Manifest.(*ForgeManifestLoader); ok {
-			return NewForgeLoader(fl.VanillaVersion, fl.ForgeVersion), nil
+// GetModLoader returns the appropriate ModLoader implementation for the given instance.
+func GetModLoader(inst *Instance) (ModLoader, error) {
+	var vanillaVer, forgeVer, fabricVer, neoforgeVer, quiltVer string
+	for _, v := range inst.Versions {
+		switch v.ID {
+		case "minecraft":
+			vanillaVer = v.Version
+		case "forge":
+			forgeVer = v.Version
+		case "fabric-loader":
+			fabricVer = v.Version
+		case "neoforge":
+			neoforgeVer = v.Version
+		case "quilt-loader":
+			quiltVer = v.Version
 		}
-		return nil, fmt.Errorf("forge mod loader requires forge manifest information")
-	case "fabric":
-		if fl, ok := profile.Manifest.(*FabricManifestLoader); ok {
-			return NewFabricLoader(fl.VanillaVersion, fl.LoaderVersion), nil
-		}
-		return nil, fmt.Errorf("fabric mod loader requires fabric manifest information")
-	case "neoforge":
-		if fl, ok := profile.Manifest.(*NeoForgeManifestLoader); ok {
-			return NewNeoForgeLoader(fl.VanillaVersion, fl.NeoForgeVersion), nil
-		}
-		return nil, fmt.Errorf("neoforge mod loader requires neoforge manifest information")
-	case "quilt":
-		if fl, ok := profile.Manifest.(*QuiltManifestLoader); ok {
-			return NewQuiltLoader(fl.VanillaVersion, fl.LoaderVersion), nil
-		}
-		return nil, fmt.Errorf("quilt mod loader requires quilt manifest information")
-	case "vanilla", "":
-		return NewVanillaLoader(profile.Manifest.VersionName()), nil
-	default:
-		return nil, fmt.Errorf("unsupported mod loader: %s", profile.Manifest.Type())
 	}
+
+	if vanillaVer == "" {
+		return nil, fmt.Errorf("vanilla version not specified in instance")
+	}
+
+	if forgeVer != "" {
+		return NewForgeLoader(vanillaVer, forgeVer), nil
+	} else if fabricVer != "" {
+		return NewFabricLoader(vanillaVer, fabricVer), nil
+	} else if neoforgeVer != "" {
+		return NewNeoForgeLoader(vanillaVer, neoforgeVer), nil
+	} else if quiltVer != "" {
+		return NewQuiltLoader(vanillaVer, quiltVer), nil
+	}
+
+	// Default to vanilla
+	return NewVanillaLoader(vanillaVer), nil
 }
 
 // VanillaLoader implements the ModLoader interface for plain Minecraft.
@@ -70,13 +73,12 @@ func NewVanillaLoader(version string) *VanillaLoader {
 	return &VanillaLoader{Version: version}
 }
 
-func (v *VanillaLoader) Install(ctx context.Context, profile *Profile) error {
-	// Vanilla installation is currently handled by VanillaManifestLoader.
-	// For now, we can just ensure the basic files are there or rely on the existing system.
+func (v *VanillaLoader) Install(ctx context.Context, inst *Instance) error {
+	// Vanilla installation is handled by Instance setup.
 	return nil
 }
 
-func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
+func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
 	dataPath := DataDir
 
 	ver, err := GetVersion(v.Version)
@@ -112,10 +114,7 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 	}
 
 	var jvmArgs []string
-	memory, err := profile.ActualMemory()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get actual memory: %w", err)
-	}
+	memory := uint64(2048) // Default memory, can be adapted later if Instance adds memory settings
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
@@ -150,9 +149,6 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 			}
 			for _, a := range arg.Value {
 				if a == "-cp" {
-					// This is unlikely inside a rule, but let's be safe.
-					// However, skipNext logic doesn't work well here.
-					// We'll just skip the value if it's -cp or contains ${classpath}
 					continue
 				}
 				if strings.Contains(a, "${classpath}") {
@@ -185,12 +181,7 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 				if !rule.Action.Allowed() {
 					return false
 				}
-				switch {
-				case rule.Features.IsQuickPlayMultiplayer:
-					return profile.ServerAddress != ""
-				default:
-					return false
-				}
+				return false // QuickPlay logic handled differently now
 			}) {
 				continue
 			}
@@ -201,11 +192,12 @@ func (v *VanillaLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, e
 	}
 	config.GameArguments = gameArgs
 
-	return config, nil}
+	return config, nil
+}
 
 // DependencyResolver defines the interface for resolving mod dependencies.
 type DependencyResolver interface {
-	ResolveDependencies(profile *Profile) ([]string, error)
+	ResolveDependencies(inst *Instance) ([]string, error)
 }
 
 // LaunchConfig contains the configuration required to launch the game with a specific mod loader.

@@ -20,12 +20,12 @@ func TestFabricLoader_Install(t *testing.T) {
 	defer func() { DataDir = oldDataDir }()
 
 	loader := NewFabricLoader("1.20.1", "0.15.11")
-	profile := &Profile{
+	inst := &Instance{
 		Path: filepath.Join(tempDir, "profiles", "test"),
 	}
 
 	ctx := context.Background()
-	err = loader.Install(ctx, profile)
+	err = loader.Install(ctx, inst)
 	if err != nil {
 		t.Fatalf("Fabric install failed: %v", err)
 	}

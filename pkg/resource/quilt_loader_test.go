@@ -20,12 +20,12 @@ func TestQuiltLoader_Install(t *testing.T) {
 	defer func() { DataDir = oldDataDir }()
 
 	loader := NewQuiltLoader("1.20.1", "0.23.1")
-	profile := &Profile{
+	inst := &Instance{
 		Path: filepath.Join(tempDir, "profiles", "test"),
 	}
 
 	ctx := context.Background()
-	err = loader.Install(ctx, profile)
+	err = loader.Install(ctx, inst)
 	if err != nil {
 		t.Fatalf("Quilt install failed: %v", err)
 	}
@@ -58,14 +58,13 @@ func TestQuiltLoader_GenerateLaunchConfig(t *testing.T) {
 	metaFile.Close()
 
 	loader := NewQuiltLoader("1.20.1", "0.23.1")
-	profile := &Profile{
+	inst := &Instance{
 		Path: filepath.Join(tempDir, "profiles", "test"),
 	}
 
 	if loader.GameVersion != "1.20.1" {
 		t.Errorf("Expected game version 1.20.1, got %s", loader.GameVersion)
 	}
-	if profile.Path == "" {
-		t.Errorf("Profile path is empty")
-	}
-}
+	if inst.Path == "" {
+		t.Errorf("Instance path is empty")
+	}}

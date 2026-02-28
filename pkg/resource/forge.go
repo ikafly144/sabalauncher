@@ -13,6 +13,8 @@ import (
 	"github.com/ikafly144/sabalauncher/pkg/runcmd"
 )
 
+const forgeDownloadURL = "https://maven.minecraftforge.net/net/minecraftforge/forge/${version}/forge-${version}-installer.jar"
+
 func DownloadForge(versionName, forgeDirName, dataPath string) (*DownloadWorker, string, error) {
 	var worker DownloadWorker
 	tmpPath := os.TempDir()

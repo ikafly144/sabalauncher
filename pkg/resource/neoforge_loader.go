@@ -31,7 +31,7 @@ func NewNeoForgeLoader(vanillaVersion, neoforgeVersion string) *NeoForgeLoader {
 }
 
 // Install handles the downloading and execution of the NeoForge installer.
-func (n *NeoForgeLoader) Install(ctx context.Context, profile *Profile) error {
+func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	dataPath := DataDir
 	neoforgeDir := n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
 
@@ -91,7 +91,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, profile *Profile) error {
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with NeoForge.
-func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
+func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
 	dataPath := DataDir
 	neoforgeDir := n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
 
@@ -134,10 +134,7 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, 
 	}
 
 	var jvmArgs []string
-	memory, err := profile.ActualMemory()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get actual memory: %w", err)
-	}
+	memory := uint64(2048) // Fixed default memory
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 

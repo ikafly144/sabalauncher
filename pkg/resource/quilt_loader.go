@@ -37,7 +37,7 @@ type QuiltLibraryInfo struct {
 }
 
 // Install handles the downloading of Quilt loader and its dependencies.
-func (q *QuiltLoader) Install(ctx context.Context, profile *Profile) error {
+func (q *QuiltLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing Quilt", "gameVersion", q.GameVersion, "loaderVersion", q.LoaderVersion)
 
 	url := fmt.Sprintf("https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json", q.GameVersion, q.LoaderVersion)
@@ -99,7 +99,7 @@ func (q *QuiltLoader) Install(ctx context.Context, profile *Profile) error {
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with Quilt.
-func (q *QuiltLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, error) {
+func (q *QuiltLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
 	dataPath := DataDir
 	metaPath := filepath.Join(dataPath, "versions", q.GameVersion+"-quilt-"+q.LoaderVersion, "quilt-meta.json")
 
@@ -116,7 +116,7 @@ func (q *QuiltLoader) GenerateLaunchConfig(profile *Profile) (*LaunchConfig, err
 
 	// 1. Get Vanilla Launch Config as base
 	vanillaLoader := NewVanillaLoader(q.GameVersion)
-	config, err := vanillaLoader.GenerateLaunchConfig(profile)
+	config, err := vanillaLoader.GenerateLaunchConfig(inst)
 	if err != nil {
 		return nil, err
 	}

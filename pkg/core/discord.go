@@ -5,19 +5,19 @@ import (
 )
 
 type discordManager struct {
-	auth     Authenticator
-	profiles ProfileManager
+	auth      Authenticator
+	instances InstanceManager
 }
 
-func NewDiscordManager(auth Authenticator, profiles ProfileManager) DiscordManager {
+func NewDiscordManager(auth Authenticator, instances InstanceManager) DiscordManager {
 	return &discordManager{
-		auth:     auth,
-		profiles: profiles,
+		auth:      auth,
+		instances: instances,
 	}
 }
 
-func (d *discordManager) SetActivity(profileName string) error {
-	fullProfile, err := d.profiles.GetFullProfile(profileName)
+func (d *discordManager) SetActivity(instanceName string) error {
+	inst, err := d.instances.GetInstance(instanceName)
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ func (d *discordManager) SetActivity(profileName string) error {
 		return err
 	}
 
-	_, err = resource.SetActivity(fullProfile, mcProfile)
+	_, err = resource.SetActivity(inst, mcProfile)
 	return err
 }
 

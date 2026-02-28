@@ -37,6 +37,11 @@ func (s *SetupState) IsDone() bool {
 	return s.done
 }
 
+func (s *SetupState) Fail(err error) {
+	s.err = err
+	s.done = true
+}
+
 func (s *SetupState) Error() error {
 	return s.err // Return the error of the setup state if no step is being processed
 }
