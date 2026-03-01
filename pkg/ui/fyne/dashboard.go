@@ -101,9 +101,22 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		detailVersion := widget.NewLabel(i18n.T("version_label", versionStr))
 
 		// Action Buttons for current instance
+		isRemote := currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != ""
+
 		playBtn := widget.NewButton(i18n.T("play_btn"), func() {
 			ui.showLaunchOverlay()
 			go func() {
+				if isRemote {
+					// Force update before launch
+					if err := ui.instances.UpdateInstance(currentInstance.Name, ""); err != nil {
+						fyne.Do(func() {
+							dialog.ShowError(fmt.Errorf("failed to update before play: %w", err), ui.window)
+							ui.showMainView()
+						})
+						return
+					}
+				}
+
 				_ = ui.discord.SetActivity(ui.selectedInstanceName)
 				if err := ui.runner.Launch(ui.selectedInstanceName); err != nil {
 					fyne.Do(func() {
@@ -119,11 +132,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		playBtn.Importance = widget.HighImportance
 
 		updateBtn := widget.NewButton(i18n.T("update_btn"), func() {
-			if currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != "" {
-				ui.startUpdate(currentInstance.Name, "")
-			} else {
-				ui.showUpdateInstanceDialog(currentInstance.Name)
-			}
+			ui.showUpdateInstanceDialog(currentInstance.Name)
 		})
 
 		deleteBtn := widget.NewButton(i18n.T("delete_instance_btn"), func() {
@@ -140,7 +149,12 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		})
 		deleteBtn.Importance = widget.DangerImportance
 
-		actions := container.NewHBox(playBtn, updateBtn, deleteBtn)
+		var actions fyne.CanvasObject
+		if isRemote {
+			actions = container.NewHBox(playBtn, deleteBtn)
+		} else {
+			actions = container.NewHBox(playBtn, updateBtn, deleteBtn)
+		}
 
 		detailContainer := container.NewVBox(
 			detailTitle,
