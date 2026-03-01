@@ -51,7 +51,11 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			}
 			p := instances[id]
 			box := obj.(*fyne.Container)
+			icon := box.Objects[0].(*canvas.Image)
 			label := box.Objects[1].(*widget.Label)
+
+			icon.Resource = resourceLauncherIcon
+			icon.Refresh()
 
 			label.SetText(p.Name)
 			if p.Name == ui.selectedInstanceName {

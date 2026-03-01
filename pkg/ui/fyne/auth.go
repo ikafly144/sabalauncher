@@ -51,7 +51,12 @@ func (ui *FyneUI) createLoggedOutView() fyne.CanvasObject {
 		go ui.startLogin(msa.LoginMethodDeviceCode)
 	})
 
+	icon := canvas.NewImageFromResource(resourceLauncherIcon)
+	icon.SetMinSize(fyne.NewSize(128, 128))
+	icon.FillMode = canvas.ImageFillContain
+
 	content := container.NewVBox(
+		container.NewCenter(icon),
 		widget.NewLabelWithStyle(i18n.T("welcome_title"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle(i18n.T("login_prompt"), fyne.TextAlignCenter, fyne.TextStyle{}),
 		browserLoginBtn,
