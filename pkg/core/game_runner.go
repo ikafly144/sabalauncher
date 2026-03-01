@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sync"
@@ -19,6 +20,7 @@ type gameRunner struct {
 	logsChan     chan LogEntry
 
 	running bool
+	cancel  context.CancelFunc
 	mu      sync.RWMutex
 }
 
@@ -38,12 +40,15 @@ func (r *gameRunner) Launch(instanceName string) error {
 		r.mu.Unlock()
 		return fmt.Errorf("game is already running")
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	r.running = true
+	r.cancel = cancel
 	r.mu.Unlock()
 
 	defer func() {
 		r.mu.Lock()
 		r.running = false
+		r.cancel = nil
 		r.mu.Unlock()
 	}()
 
@@ -66,6 +71,8 @@ func (r *gameRunner) Launch(instanceName string) error {
 
 	for !state.IsDone() {
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-ticker.C:
 			r.progressChan <- ProgressEvent{
 				TaskName:   state.FriendlyName(),
@@ -116,7 +123,7 @@ func (r *gameRunner) Launch(instanceName string) error {
 		return fmt.Errorf("failed to get minecraft account: %w", err)
 	}
 
-	if err := resource.BootGameFromConfig(javaPath, config, manifest, inst, mcAccount, stdout, stderr); err != nil {
+	if err := resource.BootGameFromConfig(ctx, javaPath, config, manifest, inst, mcAccount, stdout, stderr); err != nil {
 		return fmt.Errorf("boot failed: %w", err)
 	}
 
@@ -124,6 +131,12 @@ func (r *gameRunner) Launch(instanceName string) error {
 }
 
 func (r *gameRunner) Stop() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.running || r.cancel == nil {
+		return nil
+	}
+	r.cancel()
 	return nil
 }
 

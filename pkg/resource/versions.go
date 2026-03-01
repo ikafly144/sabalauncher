@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -548,7 +549,7 @@ var (
 	}
 )
 
-func BootGame(clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, dataDir string, stdout, stderr io.Writer) error {
+func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, dataDir string, stdout, stderr io.Writer) error {
 	if clientManifest == nil {
 		return errors.New("client manifest is nil")
 	}
@@ -673,10 +674,10 @@ func BootGame(clientManifest *ClientManifest, inst *Instance, account *msa.Minec
 		Classpath:     []string{classpath}, // BootGameFromConfig handles classpath joining if needed, but here we provide the full string for now
 	}
 
-	return BootGameFromConfig(javaPath, config, clientManifest, inst, account, stdout, stderr)
+	return BootGameFromConfig(ctx, javaPath, config, clientManifest, inst, account, stdout, stderr)
 }
 	// BootGameFromConfig launches the game using the provided LaunchConfig.
-	func BootGameFromConfig(javaPath string, config *LaunchConfig, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, stdout, stderr io.Writer) error {
+func BootGameFromConfig(ctx context.Context, javaPath string, config *LaunchConfig, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, stdout, stderr io.Writer) error {
 	slog.Info("Booting game from config", "mainClass", config.MainClass)
 
 	mcProfile, err := account.GetMinecraftProfile()
@@ -729,7 +730,7 @@ func BootGame(clientManifest *ClientManifest, inst *Instance, account *msa.Minec
 	slog.Info("Game command", "cmd", cmds)
 	_ = os.MkdirAll(inst.Path, os.ModePerm)
 
-	cmd := exec.Command(cmds[0], cmds[1:]...)
+	cmd := exec.CommandContext(ctx, cmds[0], cmds[1:]...)
 	cmd.Stdout = io.MultiWriter(stdout, slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer())
 	cmd.Stderr = io.MultiWriter(stderr, slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer())
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()
