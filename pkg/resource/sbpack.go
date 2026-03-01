@@ -478,7 +478,9 @@ func ApplySBPack(inst *Instance, packPath string) error {
 		}
 	}
 
-	inst.Upstream.Version = newIndex.Version
+	if inst.Upstream != nil {
+		inst.Upstream.Version = newIndex.Version
+	}
 	inst.Versions = make([]InstanceVersion, 0, len(newIndex.Dependencies))
 	for id, ver := range newIndex.Dependencies {
 		inst.Versions = append(inst.Versions, InstanceVersion{ID: id, Version: ver})
@@ -524,16 +526,19 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 		return fmt.Errorf("sb.patch.json not found in patch")
 	}
 
-	if inst.Upstream == nil || inst.Upstream.Version != patch.FromVersion {
-		return fmt.Errorf("version mismatch: instance is at %s, patch requires %s",
-			func() string {
-				if inst.Upstream != nil {
-					return inst.Upstream.Version
-				} else {
-					return "unknown"
-				}
-			}(),
-			patch.FromVersion)
+	// Load current index from disk to check modpack version
+	var currentIndex SBIndex
+	currentIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
+	if err != nil {
+		return fmt.Errorf("failed to read current index: %w", err)
+	}
+	if err := json.Unmarshal(currentIndexBytes, &currentIndex); err != nil {
+		return fmt.Errorf("failed to parse current index: %w", err)
+	}
+
+	if currentIndex.Version != patch.FromVersion {
+		return fmt.Errorf("version mismatch: instance modpack is at %s, patch requires %s",
+			currentIndex.Version, patch.FromVersion)
 	}
 
 	// 1. Delete removed files
@@ -624,7 +629,9 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 	}
 
 	// Update instance state
-	inst.Upstream.Version = patch.ToVersion
+	if inst.Upstream != nil {
+		inst.Upstream.Version = patch.ToVersion
+	}
 	inst.Versions = make([]InstanceVersion, 0, len(patch.NewIndex.Dependencies))
 	for id, ver := range patch.NewIndex.Dependencies {
 		inst.Versions = append(inst.Versions, InstanceVersion{
