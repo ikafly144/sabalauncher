@@ -1,7 +1,7 @@
 package core
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -11,9 +11,13 @@ import (
 	"path/filepath"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-github/v66/github"
 )
 
-const RepoURL = "https://api.github.com/repos/ikafly144/sabalauncher/releases/latest"
+const (
+	RepoOwner = "ikafly144"
+	RepoName  = "sabalauncher"
+)
 
 type UpdateInfo struct {
 	Version      string
@@ -32,38 +36,19 @@ func CheckForUpdate(currentVersionStr string) (*UpdateInfo, error) {
 		return nil, fmt.Errorf("invalid current version %s: %w", currentVersionStr, err)
 	}
 
-	req, err := http.NewRequest(http.MethodGet, RepoURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "SabaLauncher-Updater")
-
-	resp, err := http.DefaultClient.Do(req)
+	client := github.NewClient(nil)
+	release, _, err := client.Repositories.GetLatestRelease(context.Background(), RepoOwner, RepoName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch latest release: %w", err)
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	if release.TagName == nil {
+		return nil, fmt.Errorf("release tag name is nil")
 	}
 
-	var release struct {
-		TagName string `json:"tag_name"`
-		Body    string `json:"body"`
-		Assets  []struct {
-			Name               string `json:"name"`
-			BrowserDownloadURL string `json:"browser_download_url"`
-		} `json:"assets"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return nil, fmt.Errorf("failed to parse release info: %w", err)
-	}
-
-	latestVersion, err := semver.NewVersion(release.TagName)
+	latestVersion, err := semver.NewVersion(*release.TagName)
 	if err != nil {
-		return nil, fmt.Errorf("invalid release version %s: %w", release.TagName, err)
+		return nil, fmt.Errorf("invalid release version %s: %w", *release.TagName, err)
 	}
 
 	if !latestVersion.GreaterThan(currentVersion) {
@@ -73,8 +58,8 @@ func CheckForUpdate(currentVersionStr string) (*UpdateInfo, error) {
 	// Find the MSI asset
 	var downloadURL string
 	for _, asset := range release.Assets {
-		if asset.Name == "SabaLauncher.msi" {
-			downloadURL = asset.BrowserDownloadURL
+		if asset.GetName() == "SabaLauncher.msi" {
+			downloadURL = asset.GetBrowserDownloadURL()
 			break
 		}
 	}
@@ -84,9 +69,9 @@ func CheckForUpdate(currentVersionStr string) (*UpdateInfo, error) {
 	}
 
 	return &UpdateInfo{
-		Version:      release.TagName,
+		Version:      *release.TagName,
 		DownloadURL:  downloadURL,
-		ReleaseNotes: release.Body,
+		ReleaseNotes: release.GetBody(),
 	}, nil
 }
 
@@ -104,7 +89,7 @@ func DownloadAndRunInstaller(downloadURL string) error {
 
 	tempDir := os.TempDir()
 	msiPath := filepath.Join(tempDir, "SabaLauncher_Update.msi")
-	
+
 	out, err := os.Create(msiPath)
 	if err != nil {
 		return fmt.Errorf("failed to create temp msi file: %w", err)
@@ -118,7 +103,7 @@ func DownloadAndRunInstaller(downloadURL string) error {
 	out.Close()
 
 	slog.Info("Running installer", "path", msiPath)
-	
+
 	// Run msiexec /i <path> /passive
 	// /passive: display only progress bar
 	// /i: install
@@ -130,6 +115,6 @@ func DownloadAndRunInstaller(downloadURL string) error {
 	// Exit the application so the installer can replace the files
 	slog.Info("Installer started, exiting application")
 	os.Exit(0)
-	
+
 	return nil
 }
