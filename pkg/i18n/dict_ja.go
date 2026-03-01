@@ -37,6 +37,9 @@ var dictJA = map[string]string{
 	"delete_instance_confirm_body": "%s を削除してもよろしいですか？",
 	"select_instance_prompt": "インスタンスを選択して詳細を表示",
 	"settings_title": "設定",
+	"account_section_title": "アカウント",
+	"username_label": "ユーザー名: %s",
+	"uuid_label": "UUID: %s",
 
 	// launch overlay
 	"preparing": "準備中...",

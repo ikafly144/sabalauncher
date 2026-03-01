@@ -2,7 +2,9 @@ package fyne
 
 import (
 	"fyne.io/fyne/v2/test"
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/pkg/core"
+	"github.com/ikafly144/sabalauncher/pkg/msa"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/stretchr/testify/mock"
 	"testing"
@@ -50,6 +52,7 @@ func TestShowDashboardView(t *testing.T) {
 	ma := new(mockAuthenticator)
 	ma.On("GetStatus").Return(core.AuthStatusLoggedIn)
 	ma.On("GetUserDisplay").Return("TestUser")
+	ma.On("GetMinecraftProfile").Return(&msa.MinecraftProfile{Username: "TestUser", UUID: uuid.New()}, nil).Maybe()
 
 	ui := &FyneUI{
 		app:       a,

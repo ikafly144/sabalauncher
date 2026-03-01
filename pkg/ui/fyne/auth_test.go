@@ -9,6 +9,7 @@ import (
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"testing"
 )
@@ -163,6 +164,7 @@ func TestShowAuthView_LoggedIn_Buttons(t *testing.T) {
 	m := new(mockAuthenticator)
 	m.On("GetStatus").Return(core.AuthStatusLoggedIn)
 	m.On("GetUserDisplay").Return("TestUser")
+	m.On("GetMinecraftProfile").Return(&msa.MinecraftProfile{Username: "TestUser", UUID: uuid.New()}, nil).Maybe()
 	m.On("Logout").Return(nil)
 
 	ui := &FyneUI{
@@ -274,6 +276,7 @@ func TestStartLogin(t *testing.T) {
 	m.On("LoginURL").Return("http://example.com").Maybe()
 	m.On("WaitLogin", mock.Anything).Return(nil)
 	m.On("GetUserDisplay").Return("TestUser").Maybe()
+	m.On("GetMinecraftProfile").Return(&msa.MinecraftProfile{Username: "TestUser", UUID: uuid.New()}, nil).Maybe()
 
 	mp := new(mockInstanceManager)
 	mp.On("GetInstances").Return([]*resource.Instance{}, nil)

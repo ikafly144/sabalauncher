@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
@@ -161,6 +162,27 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 }
 
 func (ui *FyneUI) makeSettingsView() fyne.CanvasObject {
+	// Account section
+	profile, err := ui.auth.GetMinecraftProfile()
+	var accountInfo fyne.CanvasObject
+	if err == nil {
+		uri, _ := storage.ParseURI(fmt.Sprintf("https://mc-heads.net/avatar/%s/64", profile.UUID))
+		avatar := canvas.NewImageFromURI(uri)
+		avatar.SetMinSize(fyne.NewSize(64, 64))
+		avatar.FillMode = canvas.ImageFillContain
+
+		usernameLabel := widget.NewLabel(i18n.T("username_label", profile.Username))
+		uuidLabel := widget.NewLabel(i18n.T("uuid_label", profile.UUID.String()))
+		uuidLabel.TextStyle = fyne.TextStyle{Monospace: true}
+
+		accountInfo = container.NewHBox(
+			avatar,
+			container.NewVBox(usernameLabel, uuidLabel),
+		)
+	} else {
+		accountInfo = widget.NewLabel("Failed to load account info: " + err.Error())
+	}
+
 	logoutBtn := widget.NewButton(i18n.T("logout"), func() {
 		_ = ui.auth.Logout()
 		ui.showAuthView()
@@ -170,6 +192,9 @@ func (ui *FyneUI) makeSettingsView() fyne.CanvasObject {
 	return container.NewVBox(
 		widget.NewLabelWithStyle(i18n.T("settings_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
+		widget.NewLabelWithStyle(i18n.T("account_section_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		container.NewPadded(accountInfo),
+		layout.NewSpacer(),
 		container.NewPadded(logoutBtn),
 	)
 }

@@ -37,6 +37,9 @@ var dictEN = map[string]string{
 	"delete_instance_confirm_body": "Are you sure you want to delete %s?",
 	"select_instance_prompt": "Select an instance to see details",
 	"settings_title": "Settings",
+	"account_section_title": "Account",
+	"username_label": "Username: %s",
+	"uuid_label": "UUID: %s",
 
 	// launch overlay
 	"preparing": "Preparing...",
