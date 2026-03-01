@@ -171,6 +171,7 @@ func UpdateInstanceRemote(inst *Instance) error {
 
 	// Find the chain of patches from current version to latest
 	applying := false
+	appliedCount := 0
 	for _, p := range repo.Patches {
 		if !applying {
 			if p.ID == inst.Upstream.Version {
@@ -196,6 +197,15 @@ func UpdateInstanceRemote(inst *Instance) error {
 			}
 		}
 		inst.Upstream.Version = p.ID
+		appliedCount++
+	}
+
+	if !applying {
+		return fmt.Errorf("current version '%s' not found in repository manifest", inst.Upstream.Version)
+	}
+
+	if appliedCount == 0 && inst.Upstream.Version != repo.LatestPatch {
+		return fmt.Errorf("failed to find update path from '%s' to '%s'", inst.Upstream.Version, repo.LatestPatch)
 	}
 
 	return nil
@@ -407,15 +417,29 @@ func ApplySBPack(inst *Instance, packPath string) error {
 			}
 			destPath := filepath.Join(inst.Path, relPath)
 			if f.FileInfo().IsDir() {
-				os.MkdirAll(destPath, 0755)
+				if err := os.MkdirAll(destPath, 0755); err != nil {
+					return err
+				}
 				continue
 			}
-			os.MkdirAll(filepath.Dir(destPath), 0755)
-			rc, _ := f.Open()
-			df, _ := os.Create(destPath)
-			io.Copy(df, rc)
+			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+				return err
+			}
+			rc, err := f.Open()
+			if err != nil {
+				return err
+			}
+			df, err := os.Create(destPath)
+			if err != nil {
+				rc.Close()
+				return err
+			}
+			_, err = io.Copy(df, rc)
 			df.Close()
 			rc.Close()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -427,8 +451,12 @@ func ApplySBPack(inst *Instance, packPath string) error {
 		}
 		destPath := filepath.Join(inst.Path, fileInfo.Path)
 		if verifyHashes(destPath, fileInfo.Hashes) != nil && len(fileInfo.Downloads) > 0 {
-			os.MkdirAll(filepath.Dir(destPath), 0755)
-			downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes)
+			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+				return err
+			}
+			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes); err != nil {
+				return err
+			}
 		}
 		if strings.HasPrefix(fileInfo.Path, "mods/") && strings.HasSuffix(fileInfo.Path, ".jar") {
 			modName := filepath.Base(fileInfo.Path)

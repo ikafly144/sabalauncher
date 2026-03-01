@@ -16,11 +16,12 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    env:
+      # Modpackのソース（sb.index.jsonがある場所）を指定します
+      SOURCE_DIR: 'sources'
     steps:
       - name: Checkout Modpack Source
         uses: actions/checkout@v4
-        with:
-          path: source
 
       - name: Checkout gh-pages Branch
         uses: actions/checkout@v4
@@ -48,8 +49,8 @@ jobs:
       - name: Build SBPack
         run: |
           mkdir -p build
-          # sourceディレクトリ（sb.index.jsonとoverridesがある場所）をpackします
-          sbutils pack source build/${{ env.VERSION }}.sbpack
+          # SOURCE_DIR（sb.index.jsonとoverridesがある場所）をpackします
+          sbutils pack ${{ env.SOURCE_DIR }} build/${{ env.VERSION }}.sbpack
 
       - name: Generate Repository and Patch
         run: |
@@ -88,6 +89,8 @@ jobs:
           if [ -n "$PREV_VERSION" ] && [ "$PREV_VERSION" != "null" ] && [ "$PREV_VERSION" != "${{ env.VERSION }}" ]; then
             if [ -f "${PREV_VERSION}.sbpack" ]; then
               PATCH_FILE="${PREV_VERSION}-to-${{ env.VERSION }}.sbpatch"
+              # SOURCE_DIR ではなく、展開された古いpackと新しいpackを比較する必要があります
+              # ここでは現在のディレクトリにある古いpackと新しいpackを比較します
               sbutils diff "${PREV_VERSION}.sbpack" "${{ env.VERSION }}.sbpack" "$PATCH_FILE"
               
               sbutils repo add "${{ env.VERSION }}" sbpatch "$PATCH_FILE" "$BASE_URL/$PATCH_FILE" "$PATCH_FILE"

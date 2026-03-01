@@ -118,18 +118,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 
 		updateBtn := widget.NewButton("Update", func() {
 			if currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != "" {
-				ui.showLaunchOverlay()
-				go func() {
-					err := ui.instances.UpdateInstance(currentInstance.Name, "")
-					if err != nil {
-						fyne.Do(func() {
-							dialog.ShowError(err, ui.window)
-						})
-					}
-					fyne.Do(func() {
-						ui.showMainView()
-					})
-				}()
+				ui.startUpdate(currentInstance.Name, "")
 			} else {
 				ui.showUpdateInstanceDialog(currentInstance.Name)
 			}

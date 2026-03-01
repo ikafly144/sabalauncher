@@ -72,6 +72,10 @@ func (ui *FyneUI) showUpdateInstanceDialog(instanceName string) {
 		return // Canceled
 	}
 
+	ui.startUpdate(instanceName, path)
+}
+
+func (ui *FyneUI) startUpdate(instanceName string, path string) {
 	progress := dialog.NewCustom("Updating...", "Cancel", widget.NewProgressBarInfinite(), ui.window)
 	progress.Show()
 
