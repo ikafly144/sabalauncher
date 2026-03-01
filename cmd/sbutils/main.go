@@ -26,6 +26,8 @@ func main() {
 		runDiff(os.Args[2:])
 	case "patch":
 		runPatch(os.Args[2:])
+	case "repo":
+		runRepo(os.Args[2:])
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
 		printUsage()
@@ -49,4 +51,6 @@ func printUsage() {
 	fmt.Println("      Create a patch from old to new sbpack")
 	fmt.Println("  patch <base.sbpack> <patch.sbpatch> <output.sbpack>")
 	fmt.Println("      Apply a patch to a base sbpack to generate a new sbpack")
+	fmt.Println("  repo <init|add|set-latest> [arguments]")
+	fmt.Println("      Manage an sbrepository manifest.json")
 }
