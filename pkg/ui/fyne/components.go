@@ -9,7 +9,7 @@ import (
 )
 
 func createHeader() fyne.CanvasObject {
-	icon := canvas.NewImageFromResource(resourceLauncherIcon)
+	icon := canvas.NewImageFromResource(resourceDefaultIcon)
 	icon.SetMinSize(fyne.NewSize(24, 24))
 	icon.FillMode = canvas.ImageFillContain
 

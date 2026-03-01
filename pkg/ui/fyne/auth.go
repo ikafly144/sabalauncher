@@ -51,7 +51,7 @@ func (ui *FyneUI) createLoggedOutView() fyne.CanvasObject {
 		go ui.startLogin(msa.LoginMethodDeviceCode)
 	})
 
-	icon := canvas.NewImageFromResource(resourceLauncherIcon)
+	icon := canvas.NewImageFromResource(resourceDefaultIcon)
 	icon.SetMinSize(fyne.NewSize(128, 128))
 	icon.FillMode = canvas.ImageFillContain
 

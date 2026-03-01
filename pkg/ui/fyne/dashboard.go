@@ -54,7 +54,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			icon := box.Objects[0].(*canvas.Image)
 			label := box.Objects[1].(*widget.Label)
 
-			icon.Resource = resourceLauncherIcon
+			icon.Resource = resourceDefaultIcon
 			icon.Refresh()
 
 			label.SetText(p.Name)
