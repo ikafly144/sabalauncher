@@ -9,7 +9,7 @@ import (
 func TestNewFyneUI(t *testing.T) {
 	a := test.NewApp()
 	m := new(mockAuthenticator)
-	ui := NewFyneUI(a, m, nil, nil, nil)
+	ui := NewFyneUI(a, m, nil, nil, nil, "1.0.0")
 
 	if ui == nil {
 		t.Fatal("Failed to create FyneUI")

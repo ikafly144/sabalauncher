@@ -17,6 +17,7 @@ require (
 )
 
 require (
+	aead.dev/minisign v0.2.0 // indirect
 	fyne.io/systray v1.12.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
@@ -50,6 +51,7 @@ require (
 	github.com/mattn/go-zglob v0.0.6 // indirect
 	github.com/mh-cbon/go-msi v0.0.0-20230202123407-9625c3dd3939 // indirect
 	github.com/mh-cbon/stringexec v0.0.0-20160727103857-5a080a1a4118 // indirect
+	github.com/minio/selfupdate v0.6.0 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.5.1 // indirect
 	github.com/otiai10/copy v1.14.1 // indirect
@@ -68,6 +70,7 @@ require (
 	github.com/urfave/cli v1.22.17 // indirect
 	github.com/yuin/goldmark v1.7.8 // indirect
 	go.opencensus.io v0.24.0 // indirect
+	golang.org/x/crypto v0.44.0 // indirect
 	golang.org/x/image v0.33.0 // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.47.0 // indirect

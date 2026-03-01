@@ -82,7 +82,7 @@ func main() {
 
 	// Initialize Fyne App
 	a := app.NewWithID("net.sabafly.sabalauncher")
-	ui := fyne.NewFyneUI(a, auth, instances, runner, discord)
+	ui := fyne.NewFyneUI(a, auth, instances, runner, discord, version)
 
 	// Run UI
 	ui.Run()

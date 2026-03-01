@@ -14,10 +14,11 @@ type FyneUI struct {
 	runner    core.GameRunner
 	discord   core.DiscordManager
 
+	version              string
 	selectedInstanceName string
 }
 
-func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManager, runner core.GameRunner, discord core.DiscordManager) *FyneUI {
+func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManager, runner core.GameRunner, discord core.DiscordManager, version string) *FyneUI {
 	w := a.NewWindow("SabaLauncher")
 	w.Resize(fyne.NewSize(800, 600))
 	w.SetFixedSize(false)
@@ -29,10 +30,12 @@ func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManag
 		instances: instances,
 		runner:    runner,
 		discord:   discord,
+		version:   version,
 	}
 }
 
 func (ui *FyneUI) Run() {
+	ui.CheckForUpdates(ui.version)
 	if ui.auth.GetStatus() == core.AuthStatusLoggedIn {
 		ui.showMainView()
 	} else {
