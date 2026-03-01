@@ -10,6 +10,7 @@ var dictJA = map[string]string{
 	"login_device": "Microsoftでログイン (デバイスコード)",
 	"logging_in": "ログイン中...",
 	"open_browser_btn": "ブラウザでログインページを開く",
+	"copy_code_btn": "コードをコピー",
 	"device_code_step1": "1. 開く: %s",
 	"device_code_step2": "2. コードを入力: %s",
 	"browser_login_prompt": "ブラウザでログインを完了してください。",

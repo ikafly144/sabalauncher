@@ -83,7 +83,12 @@ func (ui *FyneUI) createLoggingInView() fyne.CanvasObject {
 			widget.NewLabelWithStyle(i18n.T("logging_in"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 			container.NewCenter(qrImage),
 			widget.NewLabel(i18n.T("device_code_step1", url)),
-			widget.NewLabel(i18n.T("device_code_step2", code)),
+			container.NewHBox(
+				widget.NewLabel(i18n.T("device_code_step2", code)),
+				widget.NewButton(i18n.T("copy_code_btn"), func() {
+					ui.window.Clipboard().SetContent(code)
+				}),
+			),
 			widget.NewButton(i18n.T("open_browser_btn"), func() {
 				_ = browser.Open(url)
 			}),

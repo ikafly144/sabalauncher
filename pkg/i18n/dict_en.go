@@ -10,6 +10,7 @@ var dictEN = map[string]string{
 	"login_device": "Login with Microsoft (Device Code)",
 	"logging_in": "Logging in...",
 	"open_browser_btn": "Open Login Page in Browser",
+	"copy_code_btn": "Copy Code",
 	"device_code_step1": "1. Open: %s",
 	"device_code_step2": "2. Enter code: %s",
 	"browser_login_prompt": "Please complete the login in your browser.",
