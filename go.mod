@@ -65,6 +65,7 @@ require (
 	github.com/rymdport/portal v0.4.2 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect

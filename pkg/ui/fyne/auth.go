@@ -14,6 +14,7 @@ import (
 	"github.com/ikafly144/sabalauncher/pkg/core"
 	"github.com/ikafly144/sabalauncher/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/skip2/go-qrcode"
 )
 
 func (ui *FyneUI) showAuthView() {
@@ -67,8 +68,20 @@ func (ui *FyneUI) createLoggingInView() fyne.CanvasObject {
 
 	var content *fyne.Container
 	if url != "" && code != "" {
+		qrCode, err := qrcode.Encode(url, qrcode.Medium, 256)
+		var qrImage fyne.CanvasObject
+		if err == nil {
+			img := canvas.NewImageFromResource(fyne.NewStaticResource("qr.png", qrCode))
+			img.SetMinSize(fyne.NewSize(200, 200))
+			img.FillMode = canvas.ImageFillContain
+			qrImage = img
+		} else {
+			qrImage = widget.NewLabel("Failed to generate QR code")
+		}
+
 		content = container.NewVBox(
 			widget.NewLabelWithStyle(i18n.T("logging_in"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+			container.NewCenter(qrImage),
 			widget.NewLabel(i18n.T("device_code_step1", url)),
 			widget.NewLabel(i18n.T("device_code_step2", code)),
 			widget.NewButton(i18n.T("open_browser_btn"), func() {
