@@ -10,8 +10,8 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
-	"github.com/ikafly144/sabalauncher/pkg/i18n"
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 func (ui *FyneUI) showMainView() {
@@ -93,7 +93,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	var detailArea fyne.CanvasObject
 	if found {
 		detailTitle := widget.NewLabelWithStyle(currentInstance.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-		
+
 		versionStr := i18n.T("unknown_version")
 		for _, v := range currentInstance.Versions {
 			if v.ID == "minecraft" {
@@ -101,7 +101,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 				break
 			}
 		}
-		
+
 		detailVersion := widget.NewLabel(i18n.T("version_label", versionStr))
 
 		// Action Buttons for current instance

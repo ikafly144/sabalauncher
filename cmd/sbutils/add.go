@@ -14,7 +14,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 type downloadedFileMetadata struct {

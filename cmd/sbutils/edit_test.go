@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 func sha1Hex(data []byte) string {

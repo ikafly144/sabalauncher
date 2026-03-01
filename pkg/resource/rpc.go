@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/hugolgst/rich-go/client"
-	"github.com/ikafly144/sabalauncher/pkg/i18n"
-	"github.com/ikafly144/sabalauncher/pkg/msa"
-	"github.com/ikafly144/sabalauncher/secret"
+	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
+	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
+	"github.com/ikafly144/sabalauncher/v2/secret"
 )
 
 var DiscordClientID = secret.GetSecret("DISCORD_CLIENT_ID")

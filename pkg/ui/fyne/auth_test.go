@@ -3,15 +3,16 @@ package fyne
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
-	"github.com/ikafly144/sabalauncher/pkg/core"
-	"github.com/ikafly144/sabalauncher/pkg/msa"
-	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/google/uuid"
+	"github.com/ikafly144/sabalauncher/v2/pkg/core"
+	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 type mockInstanceManager struct {

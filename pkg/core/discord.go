@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 type discordManager struct {

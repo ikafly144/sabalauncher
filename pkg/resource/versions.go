@@ -18,9 +18,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ikafly144/sabalauncher/pkg/msa"
-	"github.com/ikafly144/sabalauncher/pkg/osinfo"
-	"github.com/ikafly144/sabalauncher/pkg/runcmd"
+	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
+	"github.com/ikafly144/sabalauncher/v2/pkg/osinfo"
+	"github.com/ikafly144/sabalauncher/v2/pkg/runcmd"
 )
 
 const (
@@ -676,7 +676,8 @@ func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instanc
 
 	return BootGameFromConfig(ctx, javaPath, config, clientManifest, inst, account, stdout, stderr)
 }
-	// BootGameFromConfig launches the game using the provided LaunchConfig.
+
+// BootGameFromConfig launches the game using the provided LaunchConfig.
 func BootGameFromConfig(ctx context.Context, javaPath string, config *LaunchConfig, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, stdout, stderr io.Writer) error {
 	slog.Info("Booting game from config", "mainClass", config.MainClass)
 

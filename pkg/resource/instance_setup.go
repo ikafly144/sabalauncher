@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/ikafly144/sabalauncher/pkg/i18n"
+	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 )
 
 // SetupInstance prepares an Instance by orchestrating downloads and installations

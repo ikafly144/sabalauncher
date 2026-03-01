@@ -2,8 +2,8 @@ package fyne
 
 import (
 	"fyne.io/fyne/v2"
-	"github.com/ikafly144/sabalauncher/pkg/core"
-	"github.com/ikafly144/sabalauncher/pkg/i18n"
+	"github.com/ikafly144/sabalauncher/v2/pkg/core"
+	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 )
 
 type FyneUI struct {

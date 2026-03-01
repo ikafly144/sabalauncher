@@ -1,13 +1,14 @@
 package fyne
 
 import (
+	"testing"
+
 	"fyne.io/fyne/v2/test"
 	"github.com/google/uuid"
-	"github.com/ikafly144/sabalauncher/pkg/core"
-	"github.com/ikafly144/sabalauncher/pkg/msa"
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/core"
+	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 type mockGameRunner struct {

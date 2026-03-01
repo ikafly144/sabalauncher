@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ikafly144/sabalauncher/pkg/osinfo"
+	"github.com/ikafly144/sabalauncher/v2/pkg/osinfo"
 )
 
 type ClientManifest struct {

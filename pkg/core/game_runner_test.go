@@ -3,8 +3,8 @@ package core
 import (
 	"testing"
 
-	"github.com/ikafly144/sabalauncher/pkg/msa"
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 // Mock objects for testing

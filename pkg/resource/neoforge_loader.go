@@ -13,7 +13,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ikafly144/sabalauncher/pkg/runcmd"
+	"github.com/ikafly144/sabalauncher/v2/pkg/runcmd"
 )
 
 // NeoForgeLoader implements the ModLoader interface for the NeoForge mod loader.

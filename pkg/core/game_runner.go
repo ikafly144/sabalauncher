@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ikafly144/sabalauncher/pkg/i18n"
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 type gameRunner struct {

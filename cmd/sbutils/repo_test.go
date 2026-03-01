@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 func TestRepoCommands(t *testing.T) {
@@ -35,7 +35,7 @@ func TestRepoCommands(t *testing.T) {
 	// Test Add
 	testFilePath := "test_file.sbpack"
 	os.WriteFile(testFilePath, []byte("dummy data"), 0644)
-	
+
 	runRepoAdd([]string{"1.0.0", "sbpack", testFilePath, "http://example.com/v1.sbpack", "local_v1.sbpack"})
 
 	manifestBytes, _ = os.ReadFile("manifest.json")

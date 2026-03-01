@@ -12,7 +12,7 @@ import (
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
-	"github.com/ikafly144/sabalauncher/pkg/browser"
+	"github.com/ikafly144/sabalauncher/v2/pkg/browser"
 )
 
 var ClientID string

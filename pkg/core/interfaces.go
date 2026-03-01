@@ -2,8 +2,9 @@ package core
 
 import (
 	"context"
-	"github.com/ikafly144/sabalauncher/pkg/msa"
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+
+	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 // AuthStatus represents the current state of authentication.

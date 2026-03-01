@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 func runInit(args []string) {

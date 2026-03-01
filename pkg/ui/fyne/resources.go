@@ -2,7 +2,7 @@ package fyne
 
 import (
 	"fyne.io/fyne/v2"
-	"github.com/ikafly144/sabalauncher/assets"
+	"github.com/ikafly144/sabalauncher/v2/assets"
 )
 
 var resourceLauncherIcon = &fyne.StaticResource{

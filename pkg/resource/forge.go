@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ikafly144/sabalauncher/pkg/runcmd"
+	"github.com/ikafly144/sabalauncher/v2/pkg/runcmd"
 )
 
 const forgeDownloadURL = "https://maven.minecraftforge.net/net/minecraftforge/forge/${version}/forge-${version}-installer.jar"

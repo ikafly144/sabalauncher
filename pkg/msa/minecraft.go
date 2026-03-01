@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
-	"github.com/ikafly144/sabalauncher/pkg/browser"
+	"github.com/ikafly144/sabalauncher/v2/pkg/browser"
 
 	"github.com/google/uuid"
 )

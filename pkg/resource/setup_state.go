@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ikafly144/sabalauncher/pkg/i18n"
+	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 )
 
 func NewState(friendlyName, name string) *SetupState {

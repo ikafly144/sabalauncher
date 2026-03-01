@@ -10,10 +10,10 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"github.com/ikafly144/sabalauncher/pkg/browser"
-	"github.com/ikafly144/sabalauncher/pkg/core"
-	"github.com/ikafly144/sabalauncher/pkg/i18n"
-	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/ikafly144/sabalauncher/v2/pkg/browser"
+	"github.com/ikafly144/sabalauncher/v2/pkg/core"
+	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
+	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
 	"github.com/skip2/go-qrcode"
 )
 

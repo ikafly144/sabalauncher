@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ikafly144/sabalauncher/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 func runRepo(args []string) {
@@ -123,7 +123,7 @@ func runRepoSetLatest(args []string) {
 
 	id := args[0]
 	repo := readManifest("manifest.json")
-	
+
 	// Verify ID exists
 	found := false
 	for _, p := range repo.Patches {
@@ -132,7 +132,7 @@ func runRepoSetLatest(args []string) {
 			break
 		}
 	}
-	
+
 	if !found {
 		fmt.Printf("Warning: Patch ID '%s' not found in manifest\n", id)
 	}

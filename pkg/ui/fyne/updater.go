@@ -6,8 +6,8 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"github.com/ikafly144/sabalauncher/pkg/core"
-	"github.com/ikafly144/sabalauncher/pkg/i18n"
+	"github.com/ikafly144/sabalauncher/v2/pkg/core"
+	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 )
 
 func (ui *FyneUI) CheckForUpdates(currentVersion string) {

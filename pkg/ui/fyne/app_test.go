@@ -1,9 +1,10 @@
 package fyne
 
 import (
-	"fyne.io/fyne/v2/test"
-	"github.com/ikafly144/sabalauncher/pkg/core"
 	"testing"
+
+	"fyne.io/fyne/v2/test"
+	"github.com/ikafly144/sabalauncher/v2/pkg/core"
 )
 
 func TestNewFyneUI(t *testing.T) {
