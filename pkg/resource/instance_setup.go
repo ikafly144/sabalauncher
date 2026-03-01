@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+
+	"github.com/ikafly144/sabalauncher/pkg/i18n"
 )
 
 // SetupInstance prepares an Instance by orchestrating downloads and installations
 // based on its specified versions (vanilla, forge, fabric, etc.) and mods.
 func SetupInstance(dataPath string, inst *Instance) *SetupState {
-	state := NewState(fmt.Sprintf("%s のセットアップ", inst.Name), "instance_setup")
+	state := NewState(i18n.T("setup_instance_name", inst.Name), "instance_setup")
 
 	go func() {
 		_ = os.MkdirAll(dataPath, 0755)
@@ -91,7 +93,7 @@ type InstanceLoaderSetupStep struct {
 }
 
 func (s *InstanceLoaderSetupStep) FriendlyName() string {
-	return "Mod Loaderのインストール"
+	return i18n.T("setup_modloader")
 }
 
 func (s *InstanceLoaderSetupStep) Name() string {
@@ -111,7 +113,7 @@ type InstanceModsSetupStep struct {
 }
 
 func (s *InstanceModsSetupStep) FriendlyName() string {
-	return "Modのダウンロード"
+	return i18n.T("setup_mods")
 }
 
 func (s *InstanceModsSetupStep) Name() string {

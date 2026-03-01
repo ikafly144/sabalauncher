@@ -746,7 +746,7 @@ func BootGame(clientManifest *ClientManifest, inst *Instance, account *msa.Minec
 	}
 
 	if activity != nil {
-		if err := EndActivity(activity); err != nil {
+		if err := ClearActivity(); err != nil {
 			slog.Error("Failed to end activity", "error", err)
 		}
 	}

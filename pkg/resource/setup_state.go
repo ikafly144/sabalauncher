@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+
+	"github.com/ikafly144/sabalauncher/pkg/i18n"
 )
 
 func NewState(friendlyName, name string) *SetupState {
@@ -125,7 +127,7 @@ type JavaSetupStep struct {
 var _ Step = (*JavaSetupStep)(nil)
 
 func (j *JavaSetupStep) FriendlyName() string {
-	return "実行環境のセットアップ"
+	return i18n.T("setup_java")
 }
 
 func (j *JavaSetupStep) Name() string {
@@ -161,7 +163,7 @@ type ClientDownloadStep struct {
 var _ Step = (*ClientDownloadStep)(nil)
 
 func (c *ClientDownloadStep) FriendlyName() string {
-	return "クライアントのダウンロード"
+	return i18n.T("setup_client")
 }
 
 func (c *ClientDownloadStep) Name() string {
@@ -197,7 +199,7 @@ type AssetsDownloadStep struct {
 var _ Step = (*AssetsDownloadStep)(nil)
 
 func (a *AssetsDownloadStep) FriendlyName() string {
-	return "アセットのダウンロード"
+	return i18n.T("setup_assets")
 }
 
 func (a *AssetsDownloadStep) Name() string {
@@ -233,7 +235,7 @@ type LibraryDownloadStep struct {
 var _ Step = (*LibraryDownloadStep)(nil)
 
 func (l *LibraryDownloadStep) FriendlyName() string {
-	return "ライブラリのダウンロード"
+	return i18n.T("setup_library")
 }
 
 func (l *LibraryDownloadStep) Name() string {
@@ -261,7 +263,7 @@ func (l *LibraryDownloadStep) Progress() float32 {
 }
 
 func NewForgeSetupStep(vanillaVersionName, forgeVersionName string, vanillaManifest *ClientManifest, manifest *ClientManifest) Step {
-	state := NewState("Forgeのセットアップ", "forge_setup")
+	state := NewState(i18n.T("setup_forge"), "forge_setup")
 	step := &ForgeDownloadStep{
 		vanillaVersionName: vanillaVersionName,
 		forgeVersionName:   forgeVersionName,
@@ -286,7 +288,7 @@ type ForgeDownloadStep struct {
 var _ Step = (*ForgeDownloadStep)(nil)
 
 func (f *ForgeDownloadStep) FriendlyName() string {
-	return "Forgeのセットアップ"
+	return i18n.T("setup_forge")
 }
 
 func (f *ForgeDownloadStep) Name() string {
@@ -329,7 +331,7 @@ type ForgeInstallStep struct {
 var _ Step = (*ForgeInstallStep)(nil)
 
 func (f *ForgeInstallStep) FriendlyName() string {
-	return "Forgeのインストール"
+	return i18n.T("install_forge")
 }
 
 func (f *ForgeInstallStep) Name() string {
@@ -371,7 +373,7 @@ func (f *ForgeInstallStep) Progress() float32 {
 }
 
 func NewModDownloadStep(zipReader *zip.Reader, oldMods, newMods *modLoader) Step {
-	state := NewState("Modのダウンロード", "mod_download")
+	state := NewState(i18n.T("setup_mods"), "mod_download")
 	state.AddStep(&ModDownloadStep{
 		zipReader: zipReader,
 		oldMods:   oldMods,
@@ -391,7 +393,7 @@ type ModDownloadStep struct {
 var _ Step = (*ModDownloadStep)(nil)
 
 func (m *ModDownloadStep) FriendlyName() string {
-	return "Modのダウンロード"
+	return i18n.T("setup_mods")
 }
 
 func (m *ModDownloadStep) Name() string {

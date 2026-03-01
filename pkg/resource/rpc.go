@@ -2,39 +2,22 @@ package resource
 
 import (
 	_ "embed"
-	"fmt"
 	"time"
 
 	"github.com/hugolgst/rich-go/client"
+	"github.com/ikafly144/sabalauncher/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
+	"github.com/ikafly144/sabalauncher/secret"
 )
 
-var DiscordClientID string
+var DiscordClientID = secret.GetSecret("DISCORD_CLIENT_ID")
 
 func Login() error {
-	if err := client.Login(DiscordClientID); err != nil {
-		return err
-	}
-	return nil
+	return client.Login(DiscordClientID)
 }
 
 func Logout() {
 	client.Logout()
-}
-
-func EndActivity(activity *client.Activity) error {
-	if activity == nil {
-		return nil
-	}
-	t := time.Now()
-	if activity.Timestamps == nil {
-		activity.Timestamps = &client.Timestamps{}
-	}
-	activity.Timestamps.End = &t
-	if err := client.SetActivity(*activity); err != nil {
-		return err
-	}
-	return nil
 }
 
 func SetActivity(inst *Instance, mcProfile *msa.MinecraftProfile) (*client.Activity, error) {
@@ -45,20 +28,19 @@ func SetActivity(inst *Instance, mcProfile *msa.MinecraftProfile) (*client.Activ
 	return &activity, nil
 }
 
+func ClearActivity() error {
+	Logout()
+	return Login()
+}
+
 func mapActivity(inst Instance, mcProfile *msa.MinecraftProfile) client.Activity {
 	t := time.Now()
-	version := "Unknown Version"
-	for _, v := range inst.Versions {
-		if v.ID == "minecraft" {
-			version = v.Version
-			break
-		}
-	}
+	// Removed unused version variable since it's not being formatting locally
 	return client.Activity{
-		State:      fmt.Sprintf("%sをプレイ中", inst.Name),
-		Details:    fmt.Sprintf("%s %s", mcProfile.Username, version),
+		State:      i18n.T("playing_state", inst.Name),
+		Details:    i18n.T("playing_details"),
 		LargeImage: "launcher_icon",
-		LargeText:  "SabaLauncherでプレイ中",
+		LargeText:  i18n.T("app_title"),
 		Timestamps: &client.Timestamps{
 			Start: &t,
 		},

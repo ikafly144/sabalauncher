@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ikafly144/sabalauncher/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
@@ -80,7 +81,7 @@ func (r *gameRunner) Launch(instanceName string) error {
 	}
 
 	r.progressChan <- ProgressEvent{
-		TaskName:   "Starting Game...",
+		TaskName:   i18n.T("starting_game"),
 		Percentage: 100.0,
 		Status:     "Done",
 		IsFinished: true,

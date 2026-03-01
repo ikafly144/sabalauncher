@@ -1,13 +1,13 @@
 package fyne
 
 import (
-	"fmt"
 	"log/slog"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/core"
+	"github.com/ikafly144/sabalauncher/pkg/i18n"
 )
 
 func (ui *FyneUI) CheckForUpdates(currentVersion string) {
@@ -30,10 +30,9 @@ func (ui *FyneUI) CheckForUpdates(currentVersion string) {
 }
 
 func (ui *FyneUI) showUpdatePrompt(update *core.UpdateInfo) {
-	msg := fmt.Sprintf("A new version (%s) is available.\nWould you like to update now?\n\nRelease Notes:\n%s",
-		update.Version, update.ReleaseNotes)
+	msg := i18n.T("update_available_body", update.Version, update.ReleaseNotes)
 
-	d := dialog.NewConfirm("Update Available", msg, func(ok bool) {
+	d := dialog.NewConfirm(i18n.T("update_available_title"), msg, func(ok bool) {
 		if ok {
 			ui.startUpdateDownload(update.DownloadURL)
 		}
@@ -43,7 +42,7 @@ func (ui *FyneUI) showUpdatePrompt(update *core.UpdateInfo) {
 }
 
 func (ui *FyneUI) startUpdateDownload(url string) {
-	progress := dialog.NewCustom("Downloading Update", "Cancel", widget.NewProgressBarInfinite(), ui.window)
+	progress := dialog.NewCustom(i18n.T("downloading_update"), i18n.T("cancel"), widget.NewProgressBarInfinite(), ui.window)
 	progress.Show()
 
 	go func() {

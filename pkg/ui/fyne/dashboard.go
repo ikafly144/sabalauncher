@@ -9,13 +9,14 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/ikafly144/sabalauncher/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
 func (ui *FyneUI) showMainView() {
 	tabs := container.NewAppTabs(
-		container.NewTabItem("Launcher", ui.makeDashboardView()),
-		container.NewTabItem("Settings", ui.makeSettingsView()),
+		container.NewTabItem(i18n.T("tab_launcher"), ui.makeDashboardView()),
+		container.NewTabItem(i18n.T("tab_settings"), ui.makeSettingsView()),
 	)
 	ui.window.SetContent(tabs)
 }
@@ -27,7 +28,7 @@ func (ui *FyneUI) showDashboardView() {
 func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	instances, err := ui.instances.GetInstances()
 	if err != nil {
-		return widget.NewLabel("Error: " + err.Error())
+		return widget.NewLabel(i18n.T("error_prefix", err.Error()))
 	}
 
 	if ui.selectedInstanceName == "" && len(instances) > 0 {
@@ -65,10 +66,10 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	}
 
 	// Sidebar with Import Profile button
-	importBtn := widget.NewButton("Import Modpack", func() {
+	importBtn := widget.NewButton(i18n.T("import_modpack"), func() {
 		ui.showImportModpackDialog()
 	})
-	registerRemoteBtn := widget.NewButton("Register Remote", func() {
+	registerRemoteBtn := widget.NewButton(i18n.T("register_remote"), func() {
 		ui.showRegisterRemoteModpackDialog()
 	})
 	sidebar := container.NewBorder(nil, container.NewVBox(container.NewPadded(importBtn), container.NewPadded(registerRemoteBtn)), nil, nil, instanceList)
@@ -88,7 +89,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	if found {
 		detailTitle := widget.NewLabelWithStyle(currentInstance.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 		
-		versionStr := "Unknown Version"
+		versionStr := i18n.T("unknown_version")
 		for _, v := range currentInstance.Versions {
 			if v.ID == "minecraft" {
 				versionStr = v.Version
@@ -96,10 +97,10 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			}
 		}
 		
-		detailVersion := widget.NewLabel("Version: " + versionStr)
+		detailVersion := widget.NewLabel(i18n.T("version_label", versionStr))
 
 		// Action Buttons for current instance
-		playBtn := widget.NewButton("PLAY", func() {
+		playBtn := widget.NewButton(i18n.T("play_btn"), func() {
 			ui.showLaunchOverlay()
 			go func() {
 				_ = ui.discord.SetActivity(ui.selectedInstanceName)
@@ -116,7 +117,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		})
 		playBtn.Importance = widget.HighImportance
 
-		updateBtn := widget.NewButton("Update", func() {
+		updateBtn := widget.NewButton(i18n.T("update_btn"), func() {
 			if currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != "" {
 				ui.startUpdate(currentInstance.Name, "")
 			} else {
@@ -124,8 +125,8 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			}
 		})
 
-		deleteBtn := widget.NewButton("Delete Instance", func() {
-			dialog.ShowConfirm("Delete Instance", "Are you sure you want to delete "+currentInstance.Name+"?", func(ok bool) {
+		deleteBtn := widget.NewButton(i18n.T("delete_instance_btn"), func() {
+			dialog.ShowConfirm(i18n.T("delete_instance_confirm_title"), i18n.T("delete_instance_confirm_body", currentInstance.Name), func(ok bool) {
 				if ok {
 					if err := ui.instances.DeleteInstance(currentInstance.Name); err != nil {
 						dialog.ShowError(err, ui.window)
@@ -149,7 +150,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		)
 		detailArea = container.NewPadded(detailContainer)
 	} else {
-		detailArea = container.NewCenter(widget.NewLabel("Select an instance to see details"))
+		detailArea = container.NewCenter(widget.NewLabel(i18n.T("select_instance_prompt")))
 	}
 
 	// Main Layout (Responsive Split)
@@ -160,14 +161,14 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 }
 
 func (ui *FyneUI) makeSettingsView() fyne.CanvasObject {
-	logoutBtn := widget.NewButton("Logout", func() {
+	logoutBtn := widget.NewButton(i18n.T("logout"), func() {
 		_ = ui.auth.Logout()
 		ui.showAuthView()
 	})
 	logoutBtn.Importance = widget.DangerImportance
 
 	return container.NewVBox(
-		widget.NewLabelWithStyle("Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(i18n.T("settings_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		container.NewPadded(logoutBtn),
 	)
@@ -175,8 +176,8 @@ func (ui *FyneUI) makeSettingsView() fyne.CanvasObject {
 
 func (ui *FyneUI) showLaunchOverlay() {
 	progress := widget.NewProgressBar()
-	status := widget.NewLabel("Preparing...")
-	stopBtn := widget.NewButton("STOP", func() {
+	status := widget.NewLabel(i18n.T("preparing"))
+	stopBtn := widget.NewButton(i18n.T("stop_btn"), func() {
 		ui.runner.Stop()
 	})
 	stopBtn.Importance = widget.DangerImportance

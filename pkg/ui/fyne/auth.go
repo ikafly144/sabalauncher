@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/browser"
 	"github.com/ikafly144/sabalauncher/pkg/core"
+	"github.com/ikafly144/sabalauncher/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/pkg/msa"
 )
 
@@ -40,18 +41,18 @@ func (ui *FyneUI) showAuthView() {
 }
 
 func (ui *FyneUI) createLoggedOutView() fyne.CanvasObject {
-	browserLoginBtn := widget.NewButton("Login with Microsoft (Browser)", func() {
+	browserLoginBtn := widget.NewButton(i18n.T("login_browser"), func() {
 		go ui.startLogin(msa.LoginMethodBrowser)
 	})
 	browserLoginBtn.Importance = widget.HighImportance
 
-	deviceLoginBtn := widget.NewButton("Login with Microsoft (Device Code)", func() {
+	deviceLoginBtn := widget.NewButton(i18n.T("login_device"), func() {
 		go ui.startLogin(msa.LoginMethodDeviceCode)
 	})
 
 	content := container.NewVBox(
-		widget.NewLabelWithStyle("Welcome to SabaLauncher", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Please login to continue", fyne.TextAlignCenter, fyne.TextStyle{}),
+		widget.NewLabelWithStyle(i18n.T("welcome_title"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(i18n.T("login_prompt"), fyne.TextAlignCenter, fyne.TextStyle{}),
 		browserLoginBtn,
 		deviceLoginBtn,
 	)
@@ -67,10 +68,10 @@ func (ui *FyneUI) createLoggingInView() fyne.CanvasObject {
 	var content *fyne.Container
 	if url != "" && code != "" {
 		content = container.NewVBox(
-			widget.NewLabelWithStyle("Logging in...", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-			widget.NewLabel("1. Open: "+url),
-			widget.NewLabel("2. Enter code: "+code),
-			widget.NewButton("Open Login Page in Browser", func() {
+			widget.NewLabelWithStyle(i18n.T("logging_in"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+			widget.NewLabel(i18n.T("device_code_step1", url)),
+			widget.NewLabel(i18n.T("device_code_step2", code)),
+			widget.NewButton(i18n.T("open_browser_btn"), func() {
 				_ = browser.Open(url)
 			}),
 			layout.NewSpacer(),
@@ -78,9 +79,9 @@ func (ui *FyneUI) createLoggingInView() fyne.CanvasObject {
 		)
 	} else {
 		content = container.NewVBox(
-			widget.NewLabelWithStyle("Logging in...", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-			widget.NewLabel("Please complete the login in your browser."),
-			widget.NewButton("Open Login Page in Browser", func() {
+			widget.NewLabelWithStyle(i18n.T("logging_in"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+			widget.NewLabel(i18n.T("browser_login_prompt")),
+			widget.NewButton(i18n.T("open_browser_btn"), func() {
 				loginURL := ui.auth.LoginURL()
 				if loginURL != "" {
 					_ = browser.Open(loginURL)
@@ -97,18 +98,18 @@ func (ui *FyneUI) createLoggingInView() fyne.CanvasObject {
 }
 
 func (ui *FyneUI) createLoggedInView() fyne.CanvasObject {
-	dashboardBtn := widget.NewButton("Go to Dashboard", func() {
+	dashboardBtn := widget.NewButton(i18n.T("go_to_dashboard"), func() {
 		ui.showMainView()
 	})
 	dashboardBtn.Importance = widget.HighImportance
 
-	logoutBtn := widget.NewButton("Logout", func() {
+	logoutBtn := widget.NewButton(i18n.T("logout"), func() {
 		_ = ui.auth.Logout()
 		ui.showAuthView()
 	})
 
 	content := container.NewVBox(
-		widget.NewLabelWithStyle("Logged in as:", fyne.TextAlignCenter, fyne.TextStyle{}),
+		widget.NewLabelWithStyle(i18n.T("logged_in_as"), fyne.TextAlignCenter, fyne.TextStyle{}),
 		widget.NewLabelWithStyle(ui.auth.GetUserDisplay(), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		dashboardBtn,
 		logoutBtn,
@@ -119,17 +120,17 @@ func (ui *FyneUI) createLoggedInView() fyne.CanvasObject {
 }
 
 func (ui *FyneUI) createErrorView() fyne.CanvasObject {
-	retryBrowserBtn := widget.NewButton("Retry Login (Browser)", func() {
+	retryBrowserBtn := widget.NewButton(i18n.T("retry_browser"), func() {
 		go ui.startLogin(msa.LoginMethodBrowser)
 	})
 	retryBrowserBtn.Importance = widget.HighImportance
 
-	retryDeviceBtn := widget.NewButton("Retry Login (Device Code)", func() {
+	retryDeviceBtn := widget.NewButton(i18n.T("retry_device"), func() {
 		go ui.startLogin(msa.LoginMethodDeviceCode)
 	})
 
 	err := ui.auth.GetLastError()
-	errMsg := "Something went wrong during login."
+	errMsg := i18n.T("default_login_error")
 	if err != nil {
 		errMsg = err.Error()
 	}
@@ -138,7 +139,7 @@ func (ui *FyneUI) createErrorView() fyne.CanvasObject {
 	errLabel.Wrapping = fyne.TextWrapWord
 
 	content := container.NewVBox(
-		widget.NewLabelWithStyle("Authentication Error", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle(i18n.T("auth_error_title"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		errLabel,
 		retryBrowserBtn,
 		retryDeviceBtn,

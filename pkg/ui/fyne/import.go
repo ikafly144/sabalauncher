@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/pkg/browser"
+	"github.com/ikafly144/sabalauncher/pkg/i18n"
 )
 
 func (ui *FyneUI) showImportModpackDialog() {
@@ -20,7 +21,7 @@ func (ui *FyneUI) showImportModpackDialog() {
 	}
 
 	// Show progress or immediate import
-	progress := dialog.NewCustom("Importing...", "Cancel", widget.NewProgressBarInfinite(), ui.window)
+	progress := dialog.NewCustom(i18n.T("importing_progress"), i18n.T("cancel"), widget.NewProgressBarInfinite(), ui.window)
 	progress.Show()
 
 	go func() {
@@ -39,12 +40,12 @@ func (ui *FyneUI) showRegisterRemoteModpackDialog() {
 	entry.SetPlaceHolder("https://repository.example/repo/manifest.json")
 
 	items := []*widget.FormItem{
-		widget.NewFormItem("Manifest URL", entry),
+		widget.NewFormItem(i18n.T("manifest_url_label"), entry),
 	}
 
-	d := dialog.NewForm("Register Remote Modpack", "Register", "Cancel", items, func(ok bool) {
+	d := dialog.NewForm(i18n.T("register_remote_title"), i18n.T("register_btn"), i18n.T("cancel"), items, func(ok bool) {
 		if ok {
-			progress := dialog.NewCustom("Registering...", "Cancel", widget.NewProgressBarInfinite(), ui.window)
+			progress := dialog.NewCustom(i18n.T("registering_progress"), i18n.T("cancel"), widget.NewProgressBarInfinite(), ui.window)
 			progress.Show()
 			go func() {
 				err := ui.instances.AddRemoteInstance(entry.Text)
@@ -76,7 +77,7 @@ func (ui *FyneUI) showUpdateInstanceDialog(instanceName string) {
 }
 
 func (ui *FyneUI) startUpdate(instanceName string, path string) {
-	progress := dialog.NewCustom("Updating...", "Cancel", widget.NewProgressBarInfinite(), ui.window)
+	progress := dialog.NewCustom(i18n.T("updating_progress"), i18n.T("cancel"), widget.NewProgressBarInfinite(), ui.window)
 	progress.Show()
 
 	go func() {
