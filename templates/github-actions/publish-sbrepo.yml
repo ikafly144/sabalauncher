@@ -1,0 +1,121 @@
+name: Publish SBRepository to GitHub Pages
+
+on:
+  push:
+    tags:
+      - 'v*' # v1.0.0 のようなタグがプッシュされたときに実行されます
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Modpack Source
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Checkout gh-pages Branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+        continue-on-error: true
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install sbutils
+        # ランチャーのリポジトリからsbutilsをインストールします
+        run: go install github.com/ikafly144/sabalauncher/cmd/sbutils@latest
+
+      - name: Get Version from Tag
+        id: get_version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v} # 'v'プレフィックスを取り除く
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Build SBPack
+        run: |
+          mkdir -p build
+          # sourceディレクトリ（sb.index.jsonとoverridesがある場所）をpackします
+          sbutils pack source build/${{ env.VERSION }}.sbpack
+
+      - name: Generate Repository and Patch
+        run: |
+          # gh-pagesディレクトリがない場合は初期化
+          if [ ! -d "gh-pages" ]; then
+            mkdir gh-pages
+          fi
+
+          cd gh-pages
+          
+          # Git初期設定 (初回Push用)
+          if [ ! -d ".git" ]; then
+            git init
+            git checkout -b gh-pages
+            git remote add origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          fi
+
+          # manifest.jsonが存在しない場合は初期化
+          if [ ! -f manifest.json ]; then
+            sbutils repo init "${{ github.event.repository.name }}"
+          fi
+
+          # 前回の最新バージョンを取得
+          PREV_VERSION=$(jq -r '.latest_patch // empty' manifest.json)
+          
+          # 新しいsbpackをコピー
+          cp ../build/${{ env.VERSION }}.sbpack .
+
+          # GitHub PagesのベースURLを計算
+          BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+
+          # sbpackをマニフェストに追加
+          sbutils repo add "${{ env.VERSION }}" sbpack "${{ env.VERSION }}.sbpack" "$BASE_URL/${{ env.VERSION }}.sbpack" "${{ env.VERSION }}.sbpack"
+
+          # 前回のバージョンが存在すればsbpatch（差分）を生成して追加
+          if [ -n "$PREV_VERSION" ] && [ "$PREV_VERSION" != "null" ] && [ "$PREV_VERSION" != "${{ env.VERSION }}" ]; then
+            if [ -f "${PREV_VERSION}.sbpack" ]; then
+              PATCH_FILE="${PREV_VERSION}-to-${{ env.VERSION }}.sbpatch"
+              sbutils diff "${PREV_VERSION}.sbpack" "${{ env.VERSION }}.sbpack" "$PATCH_FILE"
+              
+              sbutils repo add "${{ env.VERSION }}" sbpatch "$PATCH_FILE" "$BASE_URL/$PATCH_FILE" "$PATCH_FILE"
+            else
+              echo "Previous pack ${PREV_VERSION}.sbpack not found, skipping patch generation."
+            fi
+          fi
+
+          # latest_patchを更新
+          sbutils repo set-latest "${{ env.VERSION }}"
+
+      - name: Commit to gh-pages branch
+        run: |
+          cd gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Deploy version ${{ env.VERSION }}" || echo "No changes to commit"
+          git push origin gh-pages || echo "Failed to push gh-pages"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'gh-pages'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
