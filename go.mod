@@ -10,6 +10,7 @@ require (
 	github.com/Xuanwo/go-locale v1.1.3
 	github.com/bugph0bia/go-logging v1.0.0
 	github.com/google/go-github/v66 v66.0.0
+	github.com/google/go-github/v83 v83.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
@@ -41,7 +42,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-licenses/v2 v2.0.1 // indirect
-	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/licenseclassifier/v2 v2.0.0 // indirect
 	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
 	github.com/hack-pad/go-indexeddb v0.3.2 // indirect
