@@ -16,7 +16,7 @@ func runInit(args []string) {
 
 	name := args[0]
 	version := args[1]
-	
+
 	deps := make(map[string]string)
 	if len(args) > 2 {
 		deps["minecraft"] = args[2]

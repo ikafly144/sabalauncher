@@ -42,6 +42,11 @@ func (m *mockInstanceManager) ImportInstance(packPath string) error {
 	return args.Error(0)
 }
 
+func (m *mockInstanceManager) AddRemoteInstance(manifestURL string) error {
+	args := m.Called(manifestURL)
+	return args.Error(0)
+}
+
 func (m *mockInstanceManager) UpdateInstance(instanceName string, patchPath string) error {
 	args := m.Called(instanceName, patchPath)
 	return args.Error(0)
@@ -268,7 +273,7 @@ func TestStartLogin(t *testing.T) {
 	m.On("DeviceCode").Return("http://example.com", "CODE").Maybe()
 	m.On("LoginURL").Return("http://example.com").Maybe()
 	m.On("WaitLogin", mock.Anything).Return(nil)
-	m.On("GetUserDisplay").Return("TestUser")
+	m.On("GetUserDisplay").Return("TestUser").Maybe()
 
 	mp := new(mockInstanceManager)
 	mp.On("GetInstances").Return([]*resource.Instance{}, nil)

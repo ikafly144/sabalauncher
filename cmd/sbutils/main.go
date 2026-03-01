@@ -18,6 +18,8 @@ func main() {
 		runInit(os.Args[2:])
 	case "add":
 		runAdd(os.Args[2:])
+	case "edit":
+		runEdit(os.Args[2:])
 	case "pack":
 		runPack(os.Args[2:])
 	case "diff":
@@ -39,6 +41,8 @@ func printUsage() {
 	fmt.Println("      Initialize a new sb.index.json workspace")
 	fmt.Println("  add <url>")
 	fmt.Println("      Download a mod from URL, hash it, and add to sb.index.json")
+	fmt.Println("  edit [flags]")
+	fmt.Println("      Edit sb.index.json fields (name/version/dependencies/files)")
 	fmt.Println("  pack <dir> <output.sbpack>")
 	fmt.Println("      Package a directory (containing sb.index.json and overrides/) into an .sbpack")
 	fmt.Println("  diff <old.sbpack> <new.sbpack> <output.sbpatch>")

@@ -17,28 +17,24 @@ import (
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 )
 
-func runAdd(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: sbutils add <url>")
-		os.Exit(1)
-	}
+type downloadedFileMetadata struct {
+	Filename string
+	SHA1     string
+	SHA256   string
+	Size     int64
+}
 
-	downloadURL := args[0]
-	fmt.Printf("Fetching: %s\n", downloadURL)
-
+func fetchFileMetadata(downloadURL string) (downloadedFileMetadata, error) {
 	resp, err := http.Get(downloadURL)
 	if err != nil {
-		fmt.Printf("Failed to download: %v\n", err)
-		os.Exit(1)
+		return downloadedFileMetadata{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Bad status code: %s\n", resp.Status)
-		os.Exit(1)
+		return downloadedFileMetadata{}, fmt.Errorf("bad status code: %s", resp.Status)
 	}
 
-	// Determine filename
 	filename := ""
 	if cd := resp.Header.Get("Content-Disposition"); cd != "" {
 		_, params, err := mime.ParseMediaType(cd)
@@ -56,32 +52,39 @@ func runAdd(args []string) {
 		filename = "unknown.jar"
 	}
 
-	// Create temp file
-	tmpFile, err := os.CreateTemp("", "sbutils-dl-*")
-	if err != nil {
-		fmt.Printf("Failed to create temp file: %v\n", err)
-		os.Exit(1)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	// Calculate hashes while downloading
 	h1 := sha1.New()
 	h256 := sha256.New()
-	w := io.MultiWriter(tmpFile, h1, h256)
-
-	size, err := io.Copy(w, resp.Body)
+	size, err := io.Copy(io.MultiWriter(h1, h256), resp.Body)
 	if err != nil {
-		fmt.Printf("Failed to save and hash file: %v\n", err)
+		return downloadedFileMetadata{}, err
+	}
+
+	return downloadedFileMetadata{
+		Filename: filename,
+		SHA1:     hex.EncodeToString(h1.Sum(nil)),
+		SHA256:   hex.EncodeToString(h256.Sum(nil)),
+		Size:     size,
+	}, nil
+}
+
+func runAdd(args []string) {
+	if len(args) < 1 {
+		fmt.Println("Usage: sbutils add <url>")
 		os.Exit(1)
 	}
 
-	sha1Hash := hex.EncodeToString(h1.Sum(nil))
-	sha256Hash := hex.EncodeToString(h256.Sum(nil))
+	downloadURL := args[0]
+	fmt.Printf("Fetching: %s\n", downloadURL)
 
-	fmt.Printf("Downloaded %s (%d bytes)\n", filename, size)
-	fmt.Printf("SHA1:   %s\n", sha1Hash)
-	fmt.Printf("SHA256: %s\n", sha256Hash)
+	meta, err := fetchFileMetadata(downloadURL)
+	if err != nil {
+		fmt.Printf("Failed to download: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Downloaded %s (%d bytes)\n", meta.Filename, meta.Size)
+	fmt.Printf("SHA1:   %s\n", meta.SHA1)
+	fmt.Printf("SHA256: %s\n", meta.SHA256)
 
 	// Load sb.index.json
 	indexPath := "sb.index.json"
@@ -98,17 +101,17 @@ func runAdd(args []string) {
 	}
 
 	// Check if already exists
-	modPath := filepath.ToSlash(filepath.Join("mods", filename))
+	modPath := filepath.ToSlash(filepath.Join("mods", meta.Filename))
 	exists := false
 	for i, f := range index.Files {
 		if f.Path == modPath {
 			// Update existing
 			index.Files[i].Hashes = map[string]string{
-				"sha1":   sha1Hash,
-				"sha256": sha256Hash,
+				"sha1":   meta.SHA1,
+				"sha256": meta.SHA256,
 			}
 			index.Files[i].Downloads = []string{downloadURL}
-			index.Files[i].FileSize = size
+			index.Files[i].FileSize = meta.Size
 			exists = true
 			fmt.Printf("Updated existing entry for %s\n", modPath)
 			break
@@ -119,11 +122,11 @@ func runAdd(args []string) {
 		index.Files = append(index.Files, resource.SBFile{
 			Path: modPath,
 			Hashes: map[string]string{
-				"sha1":   sha1Hash,
-				"sha256": sha256Hash,
+				"sha1":   meta.SHA1,
+				"sha256": meta.SHA256,
 			},
 			Downloads: []string{downloadURL},
-			FileSize:  size,
+			FileSize:  meta.Size,
 		})
 		fmt.Printf("Added new entry for %s\n", modPath)
 	}

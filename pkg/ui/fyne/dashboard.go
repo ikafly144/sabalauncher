@@ -195,7 +195,7 @@ func (ui *FyneUI) showLaunchOverlay() {
 	topInfo := container.NewVBox(status, progress)
 
 	logEntry := widget.NewMultiLineEntry()
-	logEntry.ReadOnly = true
+	logEntry.Disable()
 
 	go func() {
 		pChan := ui.runner.SubscribeProgress()
@@ -223,7 +223,7 @@ func (ui *FyneUI) showLaunchOverlay() {
 	}()
 
 	content := container.NewBorder(
-		container.NewVBox(ui.createHeader(), container.NewPadded(topInfo)),
+		container.NewVBox(createHeader(), container.NewPadded(topInfo)),
 		container.NewPadded(stopBtn),
 		nil,
 		nil,
