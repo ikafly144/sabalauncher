@@ -16,11 +16,9 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/ikafly144/sabalauncher/secret"
 )
 
-var curseForgeAPIKey = secret.GetSecret("CURSEFORGE_API_KEY")
+var CurseForgeAPIKey string
 
 // ModLoader defines the interface for different mod loaders like Forge, Fabric, etc.
 type ModLoader interface {
@@ -390,7 +388,7 @@ func (c *CurseForgeModInstance) update(profilePath string, oldInstance ModInstan
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("x-api-key", curseForgeAPIKey)
+	req.Header.Set("x-api-key", CurseForgeAPIKey)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := httpClient.Do(req)
@@ -433,7 +431,7 @@ func (c *CurseForgeModInstance) update(profilePath string, oldInstance ModInstan
 	if err != nil {
 		return fmt.Errorf("failed to create download request: %w", err)
 	}
-	downloadRequest.Header.Set("x-api-key", curseForgeAPIKey)
+	downloadRequest.Header.Set("x-api-key", CurseForgeAPIKey)
 	downloadRequest.Header.Set("Accept", "application/json")
 	downloadResponse, err := httpClient.Do(downloadRequest)
 	if err != nil {

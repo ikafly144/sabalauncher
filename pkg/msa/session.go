@@ -13,10 +13,9 @@ import (
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 	"github.com/ikafly144/sabalauncher/pkg/browser"
-	"github.com/ikafly144/sabalauncher/secret"
 )
 
-var msaClientID = secret.GetSecret("MSA_CLIENT_ID")
+var ClientID string
 
 type LoginMethod string
 
@@ -112,7 +111,7 @@ func (c *CacheAccessor) Replace(ctx context.Context, cache cache.Unmarshaler, hi
 }
 
 func NewSession(c *CacheAccessor) (Session, error) {
-	client, err := public.New(msaClientID, public.WithAuthority("https://login.microsoftonline.com/consumers"), public.WithCache(c))
+	client, err := public.New(ClientID, public.WithAuthority("https://login.microsoftonline.com/consumers"), public.WithCache(c))
 	if err != nil {
 		return nil, err
 	}

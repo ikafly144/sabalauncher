@@ -12,8 +12,10 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/bugph0bia/go-logging"
 	"github.com/ikafly144/sabalauncher/pkg/core"
+	"github.com/ikafly144/sabalauncher/pkg/msa"
 	"github.com/ikafly144/sabalauncher/pkg/resource"
 	"github.com/ikafly144/sabalauncher/pkg/ui/fyne"
+	"github.com/ikafly144/sabalauncher/secret"
 )
 
 const devVersion = "0.0.0-indev"
@@ -32,6 +34,12 @@ var (
 	date   = "unknown"
 	branch = "unknown"
 )
+
+func init() {
+	msa.ClientID = secret.GetSecret("MSA_CLIENT_ID")
+	resource.CurseForgeAPIKey = secret.GetSecret("CURSEFORGE_API_KEY")
+	resource.DiscordClientID = secret.GetSecret("DISCORD_CLIENT_ID")
+}
 
 func buildInfo() string {
 	if version == devVersion {
