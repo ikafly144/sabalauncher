@@ -1,5 +1,7 @@
 package main
 
+//go:generate go run github.com/akavel/rsrc@latest -ico assets/launcher_icon.ico -o rsrc_windows_amd64.syso
+
 import (
 	"context"
 	"flag"
@@ -36,23 +38,15 @@ var (
 )
 
 func init() {
-	msa.ClientID = secret.GetSecret("MSA_CLIENT_ID")
-	resource.CurseForgeAPIKey = secret.GetSecret("CURSEFORGE_API_KEY")
-	resource.DiscordClientID = secret.GetSecret("DISCORD_CLIENT_ID")
-}
-
-func buildInfo() string {
-	if version == devVersion {
-		return "unknown"
-	}
-	return fmt.Sprintf("%s-%s-%s", branch, commit, date)
-}
-
-func init() {
 	logging.MaxSizeMB = 8
 	logging.WithStdout = true
 	logging.MaxBackups = 200
 	slog.SetDefault(logging.NewLogger(filepath.Join(resource.DataDir, "log", "latest.log")))
+
+	msa.ClientID = secret.GetSecret("MSA_CLIENT_ID")
+	resource.CurseForgeAPIKey = secret.GetSecret("CURSEFORGE_API_KEY")
+	resource.DiscordClientID = secret.GetSecret("DISCORD_CLIENT_ID")
+
 	if err := resource.Login(); err != nil {
 		slog.Error("failed to login to Discord RPC", "err", err)
 	} else {
