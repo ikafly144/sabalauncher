@@ -6,6 +6,6 @@ import (
 )
 
 var resourceLauncherIcon = &fyne.StaticResource{
-	StaticName:    "launcher_icon.png",
-	StaticContent: assets.LauncherIconPng,
+	StaticName:    "launcher_icon.ico",
+	StaticContent: assets.LauncherIconIco,
 }
