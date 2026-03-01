@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -45,6 +46,159 @@ type SBPatch struct {
 	ToVersion     string   `json:"toVersion"`
 	NewIndex      SBIndex  `json:"newIndex"`
 	RemovedFiles  []string `json:"removedFiles"`
+}
+
+type SBRepository struct {
+	Name        string        `json:"name"`
+	LatestPatch string        `json:"latest_patch"`
+	Patches     []SBRepoPatch `json:"patches"`
+}
+
+type SBRepoPatch struct {
+	ID         string            `json:"id"`
+	Type       string            `json:"type"` // "sbpack", "sbpatch"
+	Hash       map[string]string `json:"hash"`
+	RemotePath string            `json:"remote_path"`
+	LocalPath  string            `json:"local_path,omitempty"`
+}
+
+func FetchRepository(url string) (*SBRepository, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch repository: %s", resp.Status)
+	}
+
+	var repo SBRepository
+	if err := json.NewDecoder(resp.Body).Decode(&repo); err != nil {
+		return nil, err
+	}
+	return &repo, nil
+}
+
+func getRepoPatchLocalPath(p SBRepoPatch) string {
+	if p.LocalPath != "" {
+		return filepath.Join(DataDir, "cache", filepath.FromSlash(p.LocalPath))
+	}
+	// Automatic generation: /hash/filename
+	hash := p.Hash["sha256"]
+	if hash == "" {
+		hash = p.Hash["sha1"]
+	}
+	if hash == "" {
+		hash = "unknown"
+	}
+	filename := path.Base(p.RemotePath)
+	return filepath.Join(DataDir, "cache", hash, filename)
+}
+
+func downloadAndVerifyRepoPatch(p SBRepoPatch) (string, error) {
+	localPath := getRepoPatchLocalPath(p)
+	if verifyHashes(localPath, p.Hash) == nil {
+		return localPath, nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		return "", err
+	}
+
+	if err := downloadWithVerify(p.RemotePath, localPath, p.Hash); err != nil {
+		return "", err
+	}
+	return localPath, nil
+}
+
+func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID) (*Instance, error) {
+	repo, err := FetchRepository(manifestURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// 1. Find initial sbpack. We'll start with the first one or the one matching repo structure.
+	// For simplicity, find the latest sbpack that is <= latest_patch.
+	var initialPatch *SBRepoPatch
+	for i := len(repo.Patches) - 1; i >= 0; i-- {
+		if repo.Patches[i].Type == "sbpack" {
+			initialPatch = &repo.Patches[i]
+			break
+		}
+	}
+
+	if initialPatch == nil {
+		return nil, fmt.Errorf("no base sbpack found in repository")
+	}
+
+	localPackPath, err := downloadAndVerifyRepoPatch(*initialPatch)
+	if err != nil {
+		return nil, err
+	}
+
+	inst, err := ImportSBPack(localPackPath, destDir, uid)
+	if err != nil {
+		return nil, err
+	}
+	inst.Upstream.ManifestURL = manifestURL
+	inst.Upstream.Version = initialPatch.ID
+
+	// 2. Apply patches sequentially up to latest_patch
+	if inst.Upstream.Version != repo.LatestPatch {
+		if err := UpdateInstanceRemote(inst); err != nil {
+			return nil, fmt.Errorf("failed to apply initial patches: %w", err)
+		}
+	}
+
+	return inst, nil
+}
+
+func UpdateInstanceRemote(inst *Instance) error {
+	if inst.Upstream == nil || inst.Upstream.ManifestURL == "" {
+		return fmt.Errorf("instance does not have a remote manifest")
+	}
+
+	repo, err := FetchRepository(inst.Upstream.ManifestURL)
+	if err != nil {
+		return err
+	}
+
+	if inst.Upstream.Version == repo.LatestPatch {
+		slog.Info("Instance is already up to date", "name", inst.Name)
+		return nil
+	}
+
+	// Find the chain of patches from current version to latest
+	applying := false
+	for _, p := range repo.Patches {
+		if !applying {
+			if p.ID == inst.Upstream.Version {
+				applying = true
+				continue
+			}
+			continue
+		}
+
+		// Apply this patch
+		localPath, err := downloadAndVerifyRepoPatch(p)
+		if err != nil {
+			return err
+		}
+
+		if p.Type == "sbpatch" {
+			if err := ApplySBPatch(inst, localPath); err != nil {
+				return err
+			}
+		} else if p.Type == "sbpack" {
+			if err := ApplySBPack(inst, localPath); err != nil {
+				return err
+			}
+		}
+		inst.Upstream.Version = p.ID
+	}
+
+	return nil
 }
 
 // ImportSBPack imports a new instance from an .sbpack ZIP file.

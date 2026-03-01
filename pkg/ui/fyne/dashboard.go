@@ -1,6 +1,8 @@
 package fyne
 
 import (
+	"fmt"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -13,13 +15,9 @@ import (
 func (ui *FyneUI) showMainView() {
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Launcher", ui.makeDashboardView()),
-		container.NewTabItem("Account", ui.makeAccountView()),
+		container.NewTabItem("Settings", ui.makeSettingsView()),
 	)
-	tabs.SetTabLocation(container.TabLocationTop)
-
-	// Border layout ensures tabs fill the remaining space below header
-	content := container.NewBorder(createHeader(), nil, nil, nil, tabs)
-	ui.window.SetContent(content)
+	ui.window.SetContent(tabs)
 }
 
 func (ui *FyneUI) showDashboardView() {
@@ -51,16 +49,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			}
 			p := instances[id]
 			box := obj.(*fyne.Container)
-			// Wait: Instance no longer has IconImage by default. Let's leave a blank or default icon logic here
-			// icon := box.Objects[0].(*canvas.Image)
 			label := box.Objects[1].(*widget.Label)
-
-			// if p.IconImage != nil {
-			// 	icon.Image = p.IconImage
-			// } else {
-			// 	icon.Image = nil
-			// }
-			// icon.Refresh()
 
 			label.SetText(p.Name)
 			if p.Name == ui.selectedInstanceName {
@@ -79,7 +68,10 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	importBtn := widget.NewButton("Import Modpack", func() {
 		ui.showImportModpackDialog()
 	})
-	sidebar := container.NewBorder(nil, container.NewPadded(importBtn), nil, nil, instanceList)
+	registerRemoteBtn := widget.NewButton("Register Remote", func() {
+		ui.showRegisterRemoteModpackDialog()
+	})
+	sidebar := container.NewBorder(nil, container.NewVBox(container.NewPadded(importBtn), container.NewPadded(registerRemoteBtn)), nil, nil, instanceList)
 
 	// Right side: Detail View
 	var currentInstance *resource.Instance
@@ -125,7 +117,22 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		playBtn.Importance = widget.HighImportance
 
 		updateBtn := widget.NewButton("Update", func() {
-			ui.showUpdateInstanceDialog(currentInstance.Name)
+			if currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != "" {
+				ui.showLaunchOverlay()
+				go func() {
+					err := ui.instances.UpdateInstance(currentInstance.Name, "")
+					if err != nil {
+						fyne.Do(func() {
+							dialog.ShowError(err, ui.window)
+						})
+					}
+					fyne.Do(func() {
+						ui.showMainView()
+					})
+				}()
+			} else {
+				ui.showUpdateInstanceDialog(currentInstance.Name)
+			}
 		})
 
 		deleteBtn := widget.NewButton("Delete Instance", func() {
@@ -163,69 +170,60 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	return mainSplit
 }
 
-func (ui *FyneUI) makeAccountView() fyne.CanvasObject {
+func (ui *FyneUI) makeSettingsView() fyne.CanvasObject {
 	logoutBtn := widget.NewButton("Logout", func() {
 		_ = ui.auth.Logout()
 		ui.showAuthView()
 	})
 	logoutBtn.Importance = widget.DangerImportance
 
-	content := container.NewVBox(
-		widget.NewLabelWithStyle("Account Information", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("Logged in as: "+ui.auth.GetUserDisplay()),
-		layout.NewSpacer(),
-		logoutBtn,
+	return container.NewVBox(
+		widget.NewLabelWithStyle("Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewSeparator(),
+		container.NewPadded(logoutBtn),
 	)
-	return container.NewPadded(content)
 }
 
 func (ui *FyneUI) showLaunchOverlay() {
-	taskLabel := widget.NewLabel("Preparing...")
-	taskLabel.Alignment = fyne.TextAlignCenter
-
-	statusLabel := widget.NewLabel("")
-	statusLabel.Alignment = fyne.TextAlignCenter
-
-	progressBar := widget.NewProgressBar()
-
-	logEntry := widget.NewMultiLineEntry()
-	logEntry.Disable()
-	logEntry.SetText("Waiting for logs...\n")
-
+	progress := widget.NewProgressBar()
+	status := widget.NewLabel("Preparing...")
 	stopBtn := widget.NewButton("STOP", func() {
-		_ = ui.runner.Stop()
-		ui.showMainView()
+		ui.runner.Stop()
 	})
 	stopBtn.Importance = widget.DangerImportance
 
-	progressChan := ui.runner.SubscribeProgress()
-	logsChan := ui.runner.SubscribeLogs()
+	topInfo := container.NewVBox(status, progress)
+
+	logEntry := widget.NewMultiLineEntry()
+	logEntry.ReadOnly = true
 
 	go func() {
-		for event := range progressChan {
-			fyne.Do(func() {
-				taskLabel.SetText(event.TaskName)
-				statusLabel.SetText(event.Status)
-				progressBar.SetValue(event.Percentage / 100.0)
-			})
+		pChan := ui.runner.SubscribeProgress()
+		lChan := ui.runner.SubscribeLogs()
+
+		for {
+			select {
+			case p, ok := <-pChan:
+				if !ok {
+					return
+				}
+				fyne.Do(func() {
+					status.SetText(fmt.Sprintf("%s (%s)", p.TaskName, p.Status))
+					progress.SetValue(p.Percentage / 100.0)
+				})
+			case l, ok := <-lChan:
+				if !ok {
+					return
+				}
+				fyne.Do(func() {
+					logEntry.Append(fmt.Sprintf("[%s] %s\n", l.Source, l.Message))
+				})
+			}
 		}
 	}()
 
-	go func() {
-		for entry := range logsChan {
-			fyne.Do(func() {
-				logLine := "[" + string(entry.Level) + "] " + entry.Message + "\n"
-				logEntry.SetText(logEntry.Text + logLine)
-			})
-		}
-	}()
-
-	// Responsive launch overlay layout
-	topInfo := container.NewVBox(taskLabel, progressBar, statusLabel)
-
-	// NewBorder makes the logEntry (center) fill the window between top info and stop button
 	content := container.NewBorder(
-		container.NewVBox(createHeader(), container.NewPadded(topInfo)),
+		container.NewVBox(ui.createHeader(), container.NewPadded(topInfo)),
 		container.NewPadded(stopBtn),
 		nil,
 		nil,

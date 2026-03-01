@@ -64,6 +64,21 @@ func (im *instanceManager) ImportInstance(packPath string) error {
 	return im.saveInstances()
 }
 
+func (im *instanceManager) AddRemoteInstance(manifestURL string) error {
+	uid := uuid.New()
+	destDir := filepath.Join(im.dataDir, "instances", uid.String())
+	inst, err := resource.ImportRemoteSBPack(manifestURL, destDir, uid)
+	if err != nil {
+		return err
+	}
+
+	im.mu.Lock()
+	im.instances = append(im.instances, inst)
+	im.mu.Unlock()
+
+	return im.saveInstances()
+}
+
 func (im *instanceManager) UpdateInstance(instanceName string, path string) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()
@@ -81,7 +96,13 @@ func (im *instanceManager) UpdateInstance(instanceName string, path string) erro
 	}
 
 	var err error
-	if strings.HasSuffix(strings.ToLower(path), ".sbpatch") {
+	if path == "" {
+		// Remote update
+		if targetInst.Upstream == nil || targetInst.Upstream.ManifestURL == "" {
+			return fmt.Errorf("instance does not have a remote manifest, please provide a patch file")
+		}
+		err = resource.UpdateInstanceRemote(targetInst)
+	} else if strings.HasSuffix(strings.ToLower(path), ".sbpatch") {
 		err = resource.ApplySBPatch(targetInst, path)
 	} else if strings.HasSuffix(strings.ToLower(path), ".sbpack") {
 		err = resource.ApplySBPack(targetInst, path)

@@ -15,8 +15,9 @@ var (
 )
 
 type Upstream struct {
-	PackURL string `json:"pack_url"`
-	Version string `json:"version"`
+	PackURL     string `json:"pack_url,omitempty"`
+	ManifestURL string `json:"manifest_url,omitempty"`
+	Version     string `json:"version"`
 }
 
 type Instance struct {

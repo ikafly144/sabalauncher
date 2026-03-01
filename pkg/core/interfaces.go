@@ -54,6 +54,8 @@ type InstanceManager interface {
 	GetInstance(name string) (*resource.Instance, error)
 	// ImportInstance imports a modpack from an .sbpack file.
 	ImportInstance(packPath string) error
+	// AddRemoteInstance registers a remote modpack repository.
+	AddRemoteInstance(manifestURL string) error
 	// UpdateInstance updates an instance using an .sbpatch file.
 	UpdateInstance(instanceName string, patchPath string) error
 }
