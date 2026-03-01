@@ -64,8 +64,8 @@ jobs:
           # Git初期設定 (初回Push用)
           if [ ! -d ".git" ]; then
             git init
-            git checkout -b gh-pages
             git remote add origin https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+            git checkout -B gh-pages
           fi
 
           # manifest.jsonが存在しない場合は初期化
@@ -108,8 +108,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
+          # 現在のHEADをリモートのgh-pagesにプッシュします
           git commit -m "Deploy version ${{ env.VERSION }}" || echo "No changes to commit"
-          git push origin gh-pages || echo "Failed to push gh-pages"
+          git push origin HEAD:gh-pages
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
