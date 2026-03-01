@@ -29,7 +29,7 @@ func init() {
 }
 
 // T translates a key into the current language, supporting fmt.Sprintf format if args are provided.
-func T(key string, args ...interface{}) string {
+func T(key string, args ...any) string {
 	dict, ok := dictionaries[currentLanguage]
 	if !ok {
 		dict = dictionaries["en"] // fallback to English
