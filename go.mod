@@ -11,6 +11,7 @@ require (
 	github.com/bugph0bia/go-logging v1.0.0
 	github.com/google/go-github/v66 v66.0.0
 	github.com/google/go-github/v83 v83.0.0
+	github.com/google/go-github/v84 v84.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
