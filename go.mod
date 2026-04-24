@@ -10,7 +10,7 @@ require (
 	github.com/Xuanwo/go-locale v1.1.3
 	github.com/bugph0bia/go-logging v1.0.0
 	github.com/google/go-github/v66 v66.0.0
-	github.com/google/go-github/v84 v84.0.0
+	github.com/google/go-github/v85 v85.0.0
 	github.com/google/go-github/v85 v85.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
