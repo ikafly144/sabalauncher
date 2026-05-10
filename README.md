@@ -1,6 +1,7 @@
 # SabaLauncher
 
 ![SabaLauncher Logo](assets/launcher_icon.ico)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fikafly144%2Fsabalauncher.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fikafly144%2Fsabalauncher?ref=badge_shield)
 
 ## Minecraftサーバー参加者向けの簡単ランチャー
 
@@ -110,3 +111,7 @@ Copyright (c) 2025 ikafly144
 ---
 
 Made with ❤️ by [ikafly144](https://github.com/ikafly144)
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fikafly144%2Fsabalauncher.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fikafly144%2Fsabalauncher?ref=badge_large)
