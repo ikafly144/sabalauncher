@@ -99,7 +99,7 @@ func (q *QuiltLoader) Install(ctx context.Context, inst *Instance) error {
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with Quilt.
-func (q *QuiltLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
+func (q *QuiltLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error) {
 	dataPath := DataDir
 	metaPath := filepath.Join(dataPath, "versions", q.GameVersion+"-quilt-"+q.LoaderVersion, "quilt-meta.json")
 
@@ -116,7 +116,7 @@ func (q *QuiltLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error
 
 	// 1. Get Vanilla Launch Config as base
 	vanillaLoader := NewVanillaLoader(q.GameVersion)
-	config, err := vanillaLoader.GenerateLaunchConfig(inst)
+	config, err := vanillaLoader.GenerateLaunchConfig(inst, features)
 	if err != nil {
 		return nil, err
 	}

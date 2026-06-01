@@ -23,7 +23,7 @@ var CurseForgeAPIKey string
 // ModLoader defines the interface for different mod loaders like Forge, Fabric, etc.
 type ModLoader interface {
 	Install(ctx context.Context, inst *Instance) error
-	GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error)
+	GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error)
 }
 
 // GetModLoader returns the appropriate ModLoader implementation for the given instance.
@@ -76,7 +76,7 @@ func (v *VanillaLoader) Install(ctx context.Context, inst *Instance) error {
 	return nil
 }
 
-func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
+func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error) {
 	dataPath := DataDir
 
 	clientManifest, err := GetClientManifestRecursive(dataPath, v.Version)
@@ -127,35 +127,14 @@ func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, err
 		}
 	}
 
-	config := &LaunchConfig{
-		MainClass:    clientManifest.MainClass,
-		JVMArguments: jvmArgs,
-		Classpath:    classpath,
-	}
+	gameArgs := EvaluateGameArguments(clientManifest.Arguments.Game, features)
 
-	var gameArgs []string
-	for _, arg := range clientManifest.Arguments.Game {
-		if arg == nil {
-			continue
-		}
-		switch arg := arg.(type) {
-		case GameArgumentString:
-			gameArgs = append(gameArgs, arg.String())
-		case GameArgumentRule:
-			if !slices.ContainsFunc(arg.Rules, func(rule GameArgumentRuleType) bool {
-				if !rule.Action.Allowed() {
-					return false
-				}
-				return false // QuickPlay logic handled differently now
-			}) {
-				continue
-			}
-			for _, a := range arg.Value {
-				gameArgs = append(gameArgs, a)
-			}
-		}
+	config := &LaunchConfig{
+		MainClass:     clientManifest.MainClass,
+		JVMArguments:  jvmArgs,
+		GameArguments: gameArgs,
+		Classpath:     classpath,
 	}
-	config.GameArguments = gameArgs
 
 	return config, nil
 }
@@ -171,7 +150,6 @@ type LaunchConfig struct {
 	JVMArguments  []string
 	GameArguments []string
 	Classpath     []string
-	Demo          bool
 }
 
 type modLoader struct {

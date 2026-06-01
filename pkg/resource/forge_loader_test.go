@@ -26,7 +26,7 @@ func TestForgeLoader_GenerateLaunchConfig(t *testing.T) {
 		Path: t.TempDir(),
 	}
 
-	config, err := loader.GenerateLaunchConfig(inst)
+	config, err := loader.GenerateLaunchConfig(inst, nil)
 	if err != nil && err.Error() == "not implemented" {
 		t.Error("GenerateLaunchConfig method still returns 'not implemented'")
 	}

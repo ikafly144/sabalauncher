@@ -103,7 +103,12 @@ func (r *gameRunner) Launch(instanceName string) error {
 		return fmt.Errorf("failed to get mod loader: %w", err)
 	}
 
-	config, err := loader.GenerateLaunchConfig(inst)
+	features := map[string]bool{
+		"is_demo_user":          false, // Change later if needed
+		"has_custom_resolution": true,
+	}
+
+	config, err := loader.GenerateLaunchConfig(inst, features)
 	if err != nil {
 		return fmt.Errorf("failed to generate launch config: %w", err)
 	}
@@ -182,7 +187,7 @@ func (w *logWriter) Write(p []byte) (n int, err error) {
 
 		line := string(w.buf[:i])
 		w.buf = w.buf[i+1:]
-		
+
 		// Optional: strip carriage return
 		if len(line) > 0 && line[len(line)-1] == '\r' {
 			line = line[:len(line)-1]

@@ -23,7 +23,6 @@ import (
 	"github.com/ikafly144/sabalauncher/v2/pkg/runcmd"
 )
 
-
 type VersionManifest struct {
 	Latest   Latest    `json:"latest"`
 	Versions []Version `json:"versions"`
@@ -115,7 +114,6 @@ func GetLocalClientManifest(dataDir, version string) (*ClientManifest, error) {
 	}
 	return &clientManifest, nil
 }
-
 
 func GetClientManifestRecursive(dataDir, version string) (*ClientManifest, error) {
 	manifest, err := GetLocalClientManifest(dataDir, version)
@@ -740,10 +738,6 @@ func BootGameFromConfig(ctx context.Context, javaPath string, config *LaunchConf
 
 	resolvedJvmArgs := resolveArgs(config.JVMArguments)
 	resolvedGameArgs := resolveArgs(config.GameArguments)
-
-	if config.Demo {
-		resolvedGameArgs = append(resolvedGameArgs, "--demo")
-	}
 
 	var cmds []string
 	cmds = append(cmds, javaPath)

@@ -106,11 +106,14 @@ func TestModLoaders_FullLifecycle(t *testing.T) {
 				t.Fatalf("Failed to get loader: %v", err)
 			}
 
-			config, err := loader.GenerateLaunchConfig(inst)
+			features := map[string]bool{
+				"is_demo_user":          true,
+				"has_custom_resolution": true,
+			}
+			config, err := loader.GenerateLaunchConfig(inst, features)
 			if err != nil {
 				t.Fatalf("Failed to generate launch config: %v", err)
 			}
-			config.Demo = true
 
 			// 3. Boot Game (Actual process execution)
 			// We expect it to fail with ClassNotFoundException if we don't download ALL libraries,

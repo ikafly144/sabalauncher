@@ -100,6 +100,52 @@ func (c ClientManifest) InheritsMerge(other *ClientManifest) (*ClientManifest, e
 	return &n, nil
 }
 
+func EvaluateGameArguments(args []GameArgument, features map[string]bool) []string {
+	var gameArgs []string
+	for _, arg := range args {
+		if arg == nil {
+			continue
+		}
+		switch arg := arg.(type) {
+		case GameArgumentString:
+			gameArgs = append(gameArgs, arg.String())
+		case GameArgumentRule:
+			allow := false
+			hasRules := len(arg.Rules) > 0
+			if !hasRules {
+				allow = true // default allow if no rules
+			}
+
+			for _, rule := range arg.Rules {
+				ruleMatched := true
+				if rule.Features != nil {
+					for featureName, required := range rule.Features {
+						enabled := features[featureName]
+						if enabled != required {
+							ruleMatched = false
+							break
+						}
+					}
+				}
+
+				if ruleMatched {
+					if rule.Action.Allowed() {
+						allow = true
+					} else {
+						allow = false
+					}
+				}
+			}
+
+			if allow {
+				for _, a := range arg.Value {
+					gameArgs = append(gameArgs, a)
+				}
+			}
+		}
+	}
+	return gameArgs
+}
 func (l Library) BaseName() string {
 	parts := strings.Split(l.Name, ":")
 	if len(parts) >= 2 {
@@ -228,17 +274,8 @@ func (g GameArgumentRule) MarshalJSON() ([]byte, error) {
 func (g GameArgumentRule) gameArgument() {}
 
 type GameArgumentRuleType struct {
-	Action   RuleAction                   `json:"action"`
-	Features GameArgumentRuleTypeFeatures `json:"features"`
-}
-
-type GameArgumentRuleTypeFeatures struct {
-	IsDemoUser              bool `json:"is_demo_user"`
-	HasCustomResolution     bool `json:"has_custom_resolution"`
-	HasQuickPlaysSupport    bool `json:"has_quick_plays_support"`
-	IsQuickPlaySingleplayer bool `json:"is_quick_play_singleplayer"`
-	IsQuickPlayMultiplayer  bool `json:"is_quick_play_multiplayer"`
-	IsQuickPlayRealms       bool `json:"is_quick_play_realms"`
+	Action   RuleAction      `json:"action"`
+	Features map[string]bool `json:"features"`
 }
 
 type GameArgumentUnmarshal struct {

@@ -200,7 +200,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 			},
 		},
 	}
-	
+
 	v11Patch := SBPatch{
 		FormatVersion: 1,
 		FromVersion:   "1.0.0",
@@ -252,7 +252,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 			v1IdxB, _ := json.Marshal(v1Idx)
 			createMockZip(t, v1Temp, map[string][]byte{"sb.index.json": v1IdxB})
 			v1Hash, _ := os.ReadFile(v1Temp)
-			
+
 			v11Temp := filepath.Join(t.TempDir(), "v11_hash.sbpatch")
 			v11P := v11Patch
 			v11P.NewIndex.Files[0].Downloads = []string{fmt.Sprintf("http://%s/mod2.jar", r.Host)}
@@ -292,7 +292,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 
 	destDir := filepath.Join(t.TempDir(), "remote-instance")
 	uid := uuid.New()
-	
+
 	inst, err := ImportRemoteSBPack(server.URL+"/repo/manifest.json", destDir, uid)
 	if err != nil {
 		t.Fatalf("ImportRemoteSBPack failed: %v", err)
@@ -301,7 +301,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 	if inst.Upstream.Version != "1.1.0" {
 		t.Errorf("expected version 1.1.0, got %s", inst.Upstream.Version)
 	}
-	
+
 	if _, err := os.Stat(filepath.Join(destDir, "mods/mod2.jar")); err != nil {
 		t.Errorf("mod2.jar missing: %v", err)
 	}

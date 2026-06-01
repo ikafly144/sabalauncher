@@ -283,7 +283,7 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 	)
 
 	ui.window.SetContent(content)
-	
+
 	return func() {
 		cancel()
 	}

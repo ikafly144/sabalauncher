@@ -66,7 +66,7 @@ func TestNeoForgeLoader_GenerateLaunchConfig(t *testing.T) {
 		Path: filepath.Join(tempDir, "profiles", "test"),
 	}
 
-	config, err := loader.GenerateLaunchConfig(inst)
+	config, err := loader.GenerateLaunchConfig(inst, nil)
 	if err != nil {
 		t.Fatalf("Failed to generate launch config: %v", err)
 	}

@@ -127,12 +127,12 @@ func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 	defer metaFile.Close()
 
 	return json.NewEncoder(metaFile).Encode(meta)
-	}
+}
 
-	// GenerateLaunchConfig produces the configuration required to launch the game with Fabric.
-	func (f *FabricLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
-		dataPath := DataDir
-		metaPath := filepath.Join(dataPath, "versions", f.GameVersion+"-fabric-"+f.LoaderVersion, "fabric-meta.json")
+// GenerateLaunchConfig produces the configuration required to launch the game with Fabric.
+func (f *FabricLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error) {
+	dataPath := DataDir
+	metaPath := filepath.Join(dataPath, "versions", f.GameVersion+"-fabric-"+f.LoaderVersion, "fabric-meta.json")
 	file, err := os.Open(metaPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open fabric meta: %w", err)
@@ -146,7 +146,7 @@ func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 
 	// 1. Get Vanilla Launch Config as base
 	vanillaLoader := NewVanillaLoader(f.GameVersion)
-	config, err := vanillaLoader.GenerateLaunchConfig(inst)
+	config, err := vanillaLoader.GenerateLaunchConfig(inst, features)
 	if err != nil {
 		return nil, err
 	}

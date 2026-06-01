@@ -27,7 +27,6 @@ func NewForgeLoader(vanillaVersion, forgeVersion string) *ForgeLoader {
 func (f *ForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing Forge", "vanillaVersion", f.VanillaVersion, "forgeVersion", f.ForgeVersion)
 
-
 	// This logic is currently spread across ForgeManifestLoader and SetupState.
 	// For the refactor, we'll implement it here or call existing helpers.
 	// We need dataPath here. We might need to add it to the Install signature or use a global.
@@ -71,7 +70,7 @@ func (f *ForgeLoader) Install(ctx context.Context, inst *Instance) error {
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with Forge.
-func (f *ForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
+func (f *ForgeLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error) {
 	dataPath := DataDir
 	forgeDir := f.VanillaVersion + "-forge-" + f.ForgeVersion
 
@@ -117,20 +116,7 @@ func (f *ForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error
 		}
 	}
 
-	var gameArgs []string
-	for _, arg := range manifest.Arguments.Game {
-		if arg == nil {
-			continue
-		}
-		switch arg := arg.(type) {
-		case GameArgumentString:
-			gameArgs = append(gameArgs, arg.String())
-		case GameArgumentRule:
-			for _, a := range arg.Value {
-				gameArgs = append(gameArgs, a)
-			}
-		}
-	}
+	gameArgs := EvaluateGameArguments(manifest.Arguments.Game, features)
 
 	config := &LaunchConfig{
 		MainClass:     manifest.MainClass,

@@ -26,7 +26,7 @@ type Instance struct {
 	Versions []InstanceVersion `json:"versions"`
 	Mods     []Mod             `json:"mods"`
 	Upstream *Upstream         `json:"upstream,omitempty"`
-	
+
 	// Internal runtime fields
 	Path string `json:"-"`
 }

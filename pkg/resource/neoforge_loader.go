@@ -89,7 +89,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with NeoForge.
-func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
+func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error) {
 	dataPath := DataDir
 	neoforgeDir := "neoforge-" + n.NeoForgeVersion
 
@@ -135,20 +135,7 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, er
 		}
 	}
 
-	var gameArgs []string
-	for _, arg := range manifest.Arguments.Game {
-		if arg == nil {
-			continue
-		}
-		switch arg := arg.(type) {
-		case GameArgumentString:
-			gameArgs = append(gameArgs, arg.String())
-		case GameArgumentRule:
-			for _, a := range arg.Value {
-				gameArgs = append(gameArgs, a)
-			}
-		}
-	}
+	gameArgs := EvaluateGameArguments(manifest.Arguments.Game, features)
 
 	config := &LaunchConfig{
 		MainClass:     manifest.MainClass,

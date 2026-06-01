@@ -67,4 +67,5 @@ func TestQuiltLoader_GenerateLaunchConfig(t *testing.T) {
 	}
 	if inst.Path == "" {
 		t.Errorf("Instance path is empty")
-	}}
+	}
+}
