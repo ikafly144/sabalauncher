@@ -66,7 +66,7 @@ type FabricLibraryInfo struct {
 func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing Fabric", "gameVersion", f.GameVersion, "loaderVersion", f.LoaderVersion)
 
-	url := fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s", f.GameVersion, f.LoaderVersion)
+	url := fmt.Sprintf("%s/%s/%s", FabricMetaURL, f.GameVersion, f.LoaderVersion)
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("failed to fetch fabric meta: %w", err)
@@ -88,8 +88,8 @@ func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 	// Add libraries to download worker
 	libs := append(meta.LauncherMeta.Libraries.Common, meta.LauncherMeta.Libraries.Client...)
 	// Add loader and intermediary
-	libs = append(libs, FabricLibraryInfo{Name: meta.Loader.Maven, URL: "https://maven.fabricmc.net/"})
-	libs = append(libs, FabricLibraryInfo{Name: meta.Intermediary.Maven, URL: "https://maven.fabricmc.net/"})
+	libs = append(libs, FabricLibraryInfo{Name: meta.Loader.Maven, URL: FabricMavenURL})
+	libs = append(libs, FabricLibraryInfo{Name: meta.Intermediary.Maven, URL: FabricMavenURL})
 
 	for _, lib := range libs {
 		libPath := mavenToPath(lib.Name, "/")

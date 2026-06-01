@@ -2,13 +2,11 @@ package resource
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 )
 
 // ForgeLoader implements the ModLoader interface for the Forge mod loader.
@@ -77,23 +75,15 @@ func (f *ForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error
 	dataPath := DataDir
 	forgeDir := f.VanillaVersion + "-forge-" + f.ForgeVersion
 
-	// 1. Load Forge Manifest
-	manifestPath := filepath.Join(dataPath, "versions", forgeDir, forgeDir+".json")
-	file, err := os.Open(manifestPath)
+	// 1. Load Forge Manifest recursively (handles inheritance from vanilla)
+	manifest, err := GetClientManifestRecursive(dataPath, forgeDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open forge manifest: %w", err)
-	}
-	defer file.Close()
-
-	var manifest ClientManifest
-	if err := json.NewDecoder(file).Decode(&manifest); err != nil {
-		return nil, fmt.Errorf("failed to decode forge manifest: %w", err)
+		return nil, fmt.Errorf("failed to load forge manifest: %w", err)
 	}
 
 	// 2. Generate Classpath
 	var classpath []string
 	classpath = append(classpath, filepath.Join(dataPath, "versions", manifest.ID, manifest.ID+".jar"))
-	classpathSeparator := string(os.PathListSeparator)
 	for _, library := range manifest.Libraries {
 		if library.Downloads.Classifiers != nil {
 			for _, classifier := range library.Downloads.Classifiers {
@@ -105,80 +95,37 @@ func (f *ForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error
 		}
 	}
 
-	// 3. Resolve Arguments
-	cmdMap := map[string]string{
-		"natives_directory":   filepath.Join(dataPath, "bin", manifest.ID),
-		"launcher_name":       "SabaLauncher",
-		"launcher_version":    "1.0",
-		"classpath":           strings.Join(classpath, classpathSeparator),
-		"library_directory":   filepath.Join(dataPath, "libraries"),
-		"classpath_separator": classpathSeparator,
-	}
-
 	var jvmArgs []string
-	memory := uint64(2048) // Default memory, can be adapted later if Instance adds memory settings
+	memory := uint64(2048) // Default memory
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
-	skipNext := false
 	for _, arg := range manifest.Arguments.Jvm {
-		if skipNext {
-			skipNext = false
-			continue
-		}
 		if arg == nil {
 			continue
 		}
 		switch arg := arg.(type) {
 		case JvmArgumentString:
-			val := arg.String()
-			if val == "-cp" {
-				skipNext = true
-				continue
-			}
-			if strings.Contains(val, "${classpath}") {
-				continue
-			}
-			for before, after := range cmdMap {
-				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
-			}
-			jvmArgs = append(jvmArgs, val)
+			jvmArgs = append(jvmArgs, arg.String())
 		case JvmArgumentRule:
 			if !slices.ContainsFunc(arg.Rules, func(rule JvmArgumentRuleType) bool {
 				return rule.Action.Allowed() != rule.OS.Matched()
 			}) {
 				continue
 			}
-			for _, a := range arg.Value {
-				if a == "-cp" {
-					continue
-				}
-				if strings.Contains(a, "${classpath}") {
-					continue
-				}
-				for before, after := range cmdMap {
-					a = strings.ReplaceAll(a, fmt.Sprintf("${%s}", before), after)
-				}
-				jvmArgs = append(jvmArgs, a)
-			}
+			jvmArgs = append(jvmArgs, arg.Value...)
 		}
 	}
 
-	// Forge specific game arguments are usually in manifest.Arguments.Game
 	var gameArgs []string
-	// Note: tokens and player info will be handled by GameRunner/BootGameFromConfig
-
 	for _, arg := range manifest.Arguments.Game {
 		if arg == nil {
 			continue
 		}
 		switch arg := arg.(type) {
 		case GameArgumentString:
-			// We skip placeholders that are handled dynamically during boot
-			val := arg.String()
-			gameArgs = append(gameArgs, val)
+			gameArgs = append(gameArgs, arg.String())
 		case GameArgumentRule:
-			// TODO: Handle rules if necessary
 			for _, a := range arg.Value {
 				gameArgs = append(gameArgs, a)
 			}

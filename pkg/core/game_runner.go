@@ -123,7 +123,12 @@ func (r *gameRunner) Launch(instanceName string) error {
 		return fmt.Errorf("failed to get minecraft account: %w", err)
 	}
 
-	if err := resource.BootGameFromConfig(ctx, javaPath, config, manifest, inst, mcAccount, stdout, stderr); err != nil {
+	profile, err := mcAccount.GetMinecraftProfile()
+	if err != nil {
+		return fmt.Errorf("failed to get minecraft profile: %w", err)
+	}
+
+	if err := resource.BootGameFromConfig(ctx, javaPath, config, manifest, inst, profile, mcAccount.AccessToken, stdout, stderr); err != nil {
 		return fmt.Errorf("boot failed: %w", err)
 	}
 

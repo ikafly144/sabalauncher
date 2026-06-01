@@ -89,7 +89,7 @@ type MinecraftAccountAuthResult struct {
 
 func (m *MinecraftAccountAuthResult) GetMinecraftProfile() (*MinecraftProfile, error) {
 	httpClient := http.DefaultClient
-	req, err := http.NewRequest(http.MethodGet, "https://api.minecraftservices.com/minecraft/profile", nil)
+	req, err := http.NewRequest(http.MethodGet, MinecraftProfileURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -164,14 +164,14 @@ func NewMinecraftAccount(s Session) (*MinecraftAccount, error) {
 			SiteName:   "user.auth.xboxlive.com",
 			RpsTicket:  fmt.Sprintf("d=%s", auth),
 		},
-		RelyingParty: "http://auth.xboxlive.com",
+		RelyingParty: XboxLiveAuthRP,
 		TokenType:    "JWT",
 	}
 	body1, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-	req1, err := http.NewRequest(http.MethodPost, "https://user.auth.xboxlive.com/user/authenticate", bytes.NewReader(body1))
+	req1, err := http.NewRequest(http.MethodPost, XboxLiveAuthenticateURL, bytes.NewReader(body1))
 	if err != nil {
 		return nil, err
 	}
@@ -224,14 +224,14 @@ func (m *MinecraftAccount) GetMinecraftAccount() (*MinecraftAccountAuthResult, e
 			SandboxId:  "RETAIL",
 			UserTokens: []string{m.XBLToken},
 		},
-		RelyingParty: "rp://api.minecraftservices.com/",
+		RelyingParty: MinecraftServicesRP,
 		TokenType:    "JWT",
 	}
 	body2, err := json.Marshal(xstsReq)
 	if err != nil {
 		return nil, err
 	}
-	req2, err := http.NewRequest(http.MethodPost, "https://xsts.auth.xboxlive.com/xsts/authorize", bytes.NewReader(body2))
+	req2, err := http.NewRequest(http.MethodPost, XSTSAuthorizeURL, bytes.NewReader(body2))
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (m *MinecraftAccount) GetMinecraftAccount() (*MinecraftAccountAuthResult, e
 	if err != nil {
 		return nil, err
 	}
-	req1, err := http.NewRequest(http.MethodPost, "https://api.minecraftservices.com/authentication/login_with_xbox", bytes.NewReader(body))
+	req1, err := http.NewRequest(http.MethodPost, MinecraftLoginWithXboxURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

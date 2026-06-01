@@ -3,7 +3,7 @@ package resource
 import (
 	"encoding/json"
 	"errors"
-	"time"
+	"strings"
 
 	"github.com/ikafly144/sabalauncher/v2/pkg/osinfo"
 )
@@ -20,8 +20,8 @@ type ClientManifest struct {
 	Logging                Logging     `json:"logging"`
 	MainClass              string      `json:"mainClass"`
 	MinimumLauncherVersion int         `json:"minimumLauncherVersion"`
-	ReleaseTime            time.Time   `json:"releaseTime"`
-	Time                   time.Time   `json:"time"`
+	ReleaseTime            string      `json:"releaseTime"`
+	Time                   string      `json:"time"`
 	Type                   string      `json:"type"`
 	InheritsFrom           string      `json:"inheritsFrom,omitempty"`
 }
@@ -62,13 +62,58 @@ func (c ClientManifest) InheritsMerge(other *ClientManifest) (*ClientManifest, e
 	n.Arguments.Game = append(n.Arguments.Game, other.Arguments.Game...)
 	n.Arguments.Jvm = append(n.Arguments.Jvm, c.Arguments.Jvm...)
 	n.Arguments.Jvm = append(n.Arguments.Jvm, other.Arguments.Jvm...)
-	n.Libraries = append(n.Libraries, c.Libraries...)
-	n.Libraries = append(n.Libraries, other.Libraries...)
+
+	// Deduplicate libraries: child manifest takes precedence
+	libsMap := make(map[string]Library)
+	for _, lib := range c.Libraries {
+		name := lib.BaseName()
+		libsMap[name] = lib
+	}
+	for _, lib := range other.Libraries {
+		name := lib.BaseName()
+		libsMap[name] = lib
+	}
+
+	// Preserve order if possible (not strictly required but good practice)
+	// For simplicity, we just collect values from map.
+	// Actually, order matters in classpath.
+	var finalLibs []Library
+	seen := make(map[string]bool)
+	// Add parent libs that are not overridden
+	for _, lib := range c.Libraries {
+		name := lib.BaseName()
+		if _, ok := other.LibrariesMap()[name]; !ok {
+			finalLibs = append(finalLibs, lib)
+			seen[name] = true
+		}
+	}
+	// Add all child libs
+	for _, lib := range other.Libraries {
+		finalLibs = append(finalLibs, lib)
+	}
+	n.Libraries = finalLibs
+
 	n.MainClass = other.MainClass
 	n.ID = other.ID
 	n.Type = other.Type
 	n.InheritsFrom = other.InheritsFrom
 	return &n, nil
+}
+
+func (l Library) BaseName() string {
+	parts := strings.Split(l.Name, ":")
+	if len(parts) >= 2 {
+		return parts[0] + ":" + parts[1]
+	}
+	return l.Name
+}
+
+func (c ClientManifest) LibrariesMap() map[string]Library {
+	m := make(map[string]Library)
+	for _, lib := range c.Libraries {
+		m[lib.BaseName()] = lib
+	}
+	return m
 }
 
 type Arguments struct {

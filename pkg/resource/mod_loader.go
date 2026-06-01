@@ -79,18 +79,21 @@ func (v *VanillaLoader) Install(ctx context.Context, inst *Instance) error {
 func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
 	dataPath := DataDir
 
-	ver, err := GetVersion(v.Version)
+	clientManifest, err := GetClientManifestRecursive(dataPath, v.Version)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get version: %w", err)
-	}
-	clientManifest, err := GetClientManifest(ver)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get client manifest: %w", err)
+		slog.Warn("Recursive manifest load failed, falling back to network", "version", v.Version)
+		ver, err := GetVersion(v.Version)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get version: %w", err)
+		}
+		clientManifest, err = GetClientManifest(ver)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get client manifest: %w", err)
+		}
 	}
 
 	var classpath []string
 	classpath = append(classpath, filepath.Join(dataPath, "versions", clientManifest.ID, clientManifest.ID+".jar"))
-	classpathSeparator := string(os.PathListSeparator)
 	for _, library := range clientManifest.Libraries {
 		if library.Downloads.Classifiers != nil {
 			for _, classifier := range library.Downloads.Classifiers {
@@ -102,61 +105,25 @@ func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, err
 		}
 	}
 
-	cmdMap := map[string]string{
-		"natives_directory":   filepath.Join(dataPath, "bin", clientManifest.ID),
-		"launcher_name":       "SabaLauncher",
-		"launcher_version":    "1.0",
-		"classpath":           strings.Join(classpath, classpathSeparator),
-		"library_directory":   filepath.Join(dataPath, "libraries"),
-		"classpath_separator": classpathSeparator,
-	}
-
 	var jvmArgs []string
-	memory := uint64(2048) // Default memory, can be adapted later if Instance adds memory settings
+	memory := uint64(2048) // Default memory
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
-	skipNext := false
 	for _, arg := range clientManifest.Arguments.Jvm {
-		if skipNext {
-			skipNext = false
-			continue
-		}
 		if arg == nil {
 			continue
 		}
 		switch arg := arg.(type) {
 		case JvmArgumentString:
-			val := arg.String()
-			if val == "-cp" {
-				skipNext = true
-				continue
-			}
-			if strings.Contains(val, "${classpath}") {
-				continue
-			}
-			for before, after := range cmdMap {
-				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
-			}
-			jvmArgs = append(jvmArgs, val)
+			jvmArgs = append(jvmArgs, arg.String())
 		case JvmArgumentRule:
 			if !slices.ContainsFunc(arg.Rules, func(rule JvmArgumentRuleType) bool {
 				return rule.Action.Allowed() != rule.OS.Matched()
 			}) {
 				continue
 			}
-			for _, a := range arg.Value {
-				if a == "-cp" {
-					continue
-				}
-				if strings.Contains(a, "${classpath}") {
-					continue
-				}
-				for before, after := range cmdMap {
-					a = strings.ReplaceAll(a, fmt.Sprintf("${%s}", before), after)
-				}
-				jvmArgs = append(jvmArgs, a)
-			}
+			jvmArgs = append(jvmArgs, arg.Value...)
 		}
 	}
 
@@ -204,6 +171,7 @@ type LaunchConfig struct {
 	JVMArguments  []string
 	GameArguments []string
 	Classpath     []string
+	Demo          bool
 }
 
 type modLoader struct {
@@ -333,7 +301,6 @@ func (m *ModInstanceUnmarshal) UnmarshalJSON(data []byte) error {
 }
 
 const (
-	CurseForgeBaseURL     = "https://api.curseforge.com"
 	CurseForgeModFilePath = "/v1/mods/{modId}/files/{fileId}"
 )
 
@@ -525,7 +492,6 @@ type CurseForgeModFileResponseData struct {
 }
 
 const (
-	ModrinthBaseURL     = "https://api.modrinth.com/v2"
 	ModrinthModFilePath = "/project/{projectId}/version/{versionId}"
 )
 

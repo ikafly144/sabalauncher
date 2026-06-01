@@ -111,7 +111,7 @@ type CurseForgeSource struct {
 
 func (c *CurseForgeSource) Type() string { return "curseforge" }
 func (c *CurseForgeSource) URL() string {
-	return fmt.Sprintf("https://www.curseforge.com/projects/%d", c.ProjectID)
+	return fmt.Sprintf("%s/%d", CurseForgeWebURL, c.ProjectID)
 }
 func (c *CurseForgeSource) FileURL() string {
 	return "" // Needs API resolution
@@ -124,7 +124,7 @@ type ModrinthSource struct {
 
 func (m *ModrinthSource) Type() string { return "modrinth" }
 func (m *ModrinthSource) URL() string {
-	return fmt.Sprintf("https://modrinth.com/project/%s", m.ProjectID)
+	return fmt.Sprintf("%s/%s", ModrinthWebURL, m.ProjectID)
 }
 func (m *ModrinthSource) FileURL() string {
 	return "" // Needs API resolution

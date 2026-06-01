@@ -2,7 +2,6 @@ package resource
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -11,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/ikafly144/sabalauncher/v2/pkg/runcmd"
 )
@@ -33,7 +31,7 @@ func NewNeoForgeLoader(vanillaVersion, neoforgeVersion string) *NeoForgeLoader {
 // Install handles the downloading and execution of the NeoForge installer.
 func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	dataPath := DataDir
-	neoforgeDir := n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
+	neoforgeDir := "neoforge-" + n.NeoForgeVersion
 
 	// Check if already installed
 	manifestPath := filepath.Join(dataPath, "versions", neoforgeDir, neoforgeDir+".json")
@@ -45,7 +43,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing NeoForge", "vanilla", n.VanillaVersion, "neoforge", n.NeoForgeVersion)
 
 	// 1. Download Installer
-	installerURL := fmt.Sprintf("https://maven.neoforged.net/releases/net/neoforged/neoforge/%s/neoforge-%s-installer.jar", n.NeoForgeVersion, n.NeoForgeVersion)
+	installerURL := fmt.Sprintf("%s/%s/neoforge-%s-installer.jar", NeoForgeMavenURL, n.NeoForgeVersion, n.NeoForgeVersion)
 	tmpFile, err := os.CreateTemp("", "neoforge-installer-*.jar")
 	if err != nil {
 		return err
@@ -93,25 +91,17 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 // GenerateLaunchConfig produces the configuration required to launch the game with NeoForge.
 func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, error) {
 	dataPath := DataDir
-	neoforgeDir := n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
+	neoforgeDir := "neoforge-" + n.NeoForgeVersion
 
-	// 1. Load NeoForge Manifest
-	manifestPath := filepath.Join(dataPath, "versions", neoforgeDir, neoforgeDir+".json")
-	file, err := os.Open(manifestPath)
+	// 1. Load NeoForge Manifest recursively (handles inheritance from vanilla)
+	manifest, err := GetClientManifestRecursive(dataPath, neoforgeDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open neoforge manifest: %w", err)
-	}
-	defer file.Close()
-
-	var manifest ClientManifest
-	if err := json.NewDecoder(file).Decode(&manifest); err != nil {
-		return nil, fmt.Errorf("failed to decode neoforge manifest: %w", err)
+		return nil, fmt.Errorf("failed to load neoforge manifest: %w", err)
 	}
 
 	// 2. Generate Classpath
 	var classpath []string
 	classpath = append(classpath, filepath.Join(dataPath, "versions", manifest.ID, manifest.ID+".jar"))
-	classpathSeparator := string(os.PathListSeparator)
 	for _, library := range manifest.Libraries {
 		if library.Downloads.Classifiers != nil {
 			for _, classifier := range library.Downloads.Classifiers {
@@ -123,62 +113,25 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance) (*LaunchConfig, er
 		}
 	}
 
-	// 3. Resolve Arguments
-	cmdMap := map[string]string{
-		"natives_directory":   filepath.Join(dataPath, "bin", manifest.ID),
-		"launcher_name":       "SabaLauncher",
-		"launcher_version":    "1.0",
-		"classpath":           strings.Join(classpath, classpathSeparator),
-		"library_directory":   filepath.Join(dataPath, "libraries"),
-		"classpath_separator": classpathSeparator,
-	}
-
 	var jvmArgs []string
 	memory := uint64(2048) // Fixed default memory
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
-	skipNext := false
 	for _, arg := range manifest.Arguments.Jvm {
-		if skipNext {
-			skipNext = false
-			continue
-		}
 		if arg == nil {
 			continue
 		}
 		switch arg := arg.(type) {
 		case JvmArgumentString:
-			val := arg.String()
-			if val == "-cp" {
-				skipNext = true
-				continue
-			}
-			if strings.Contains(val, "${classpath}") {
-				continue
-			}
-			for before, after := range cmdMap {
-				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
-			}
-			jvmArgs = append(jvmArgs, val)
+			jvmArgs = append(jvmArgs, arg.String())
 		case JvmArgumentRule:
 			if !slices.ContainsFunc(arg.Rules, func(rule JvmArgumentRuleType) bool {
 				return rule.Action.Allowed() != rule.OS.Matched()
 			}) {
 				continue
 			}
-			for _, a := range arg.Value {
-				if a == "-cp" {
-					continue
-				}
-				if strings.Contains(a, "${classpath}") {
-					continue
-				}
-				for before, after := range cmdMap {
-					a = strings.ReplaceAll(a, fmt.Sprintf("${%s}", before), after)
-				}
-				jvmArgs = append(jvmArgs, a)
-			}
+			jvmArgs = append(jvmArgs, arg.Value...)
 		}
 	}
 

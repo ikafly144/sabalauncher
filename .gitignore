@@ -16,3 +16,4 @@ __*
 
 secret/local/*.json
 test/
+*.log

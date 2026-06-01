@@ -23,9 +23,6 @@ import (
 	"github.com/ikafly144/sabalauncher/v2/pkg/runcmd"
 )
 
-const (
-	ManifestEndpoint = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
-)
 
 type VersionManifest struct {
 	Latest   Latest    `json:"latest"`
@@ -55,7 +52,7 @@ type Version struct {
 }
 
 func GetManifest() (*VersionManifest, error) {
-	resp, err := http.Get(ManifestEndpoint)
+	resp, err := http.Get(MojangVersionManifestURL)
 	if err != nil {
 		return nil, err
 	}
@@ -119,9 +116,23 @@ func GetLocalClientManifest(dataDir, version string) (*ClientManifest, error) {
 	return &clientManifest, nil
 }
 
-const (
-	AssetResourceURL = "https://resources.download.minecraft.net/"
-)
+
+func GetClientManifestRecursive(dataDir, version string) (*ClientManifest, error) {
+	manifest, err := GetLocalClientManifest(dataDir, version)
+	if err != nil {
+		return nil, err
+	}
+
+	if manifest.InheritsFrom != "" {
+		parent, err := GetClientManifestRecursive(dataDir, manifest.InheritsFrom)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get parent manifest %s: %w", manifest.InheritsFrom, err)
+		}
+		return parent.InheritsMerge(manifest)
+	}
+
+	return manifest, nil
+}
 
 type Asset struct {
 	Hash string `json:"hash"`
@@ -318,7 +329,7 @@ func DownloadAssets(clientManifest *ClientManifest, dataDir string) (*DownloadWo
 }
 
 func assetDownloadWorker(asset Asset, path string) error {
-	resp, err := http.Get(AssetResourceURL + asset.Hash[:2] + "/" + asset.Hash)
+	resp, err := http.Get(MojangAssetResourceURL + asset.Hash[:2] + "/" + asset.Hash)
 	if err != nil {
 		return err
 	}
@@ -626,12 +637,12 @@ func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instanc
 		"assets_index_name":     clientManifest.AssetIndex.ID,
 		"auth_uuid":             mcProfile.UUID.String(),
 		"auth_access_token":     account.AccessToken,
-		"clientid":              "launcher",
+		"clientid":              LauncherName,
 		"auth_xuid":             mcProfile.UUID.String(),
 		"user_type":             "msa",
 		"version_type":          clientManifest.Type,
-		"resolution_width":      "1280",
-		"resolution_height":     "720",
+		"resolution_width":      DefaultResolutionWidth,
+		"resolution_height":     DefaultResolutionHeight,
 		"quickPlayPath":         "",
 		"quickPlayMultiplayer":  "",
 		"quickPlayRealms":       "",
@@ -674,56 +685,80 @@ func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instanc
 		Classpath:     []string{classpath}, // BootGameFromConfig handles classpath joining if needed, but here we provide the full string for now
 	}
 
-	return BootGameFromConfig(ctx, javaPath, config, clientManifest, inst, account, stdout, stderr)
-}
-
-// BootGameFromConfig launches the game using the provided LaunchConfig.
-func BootGameFromConfig(ctx context.Context, javaPath string, config *LaunchConfig, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, stdout, stderr io.Writer) error {
-	slog.Info("Booting game from config", "mainClass", config.MainClass)
-
-	mcProfile, err := account.GetMinecraftProfile()
+	profile, err := account.GetMinecraftProfile()
 	if err != nil {
 		return err
 	}
 
-	var gameArgsMap = map[string]string{
+	return BootGameFromConfig(ctx, javaPath, config, clientManifest, inst, profile, account.AccessToken, stdout, stderr)
+}
+
+// BootGameFromConfig launches the game using the provided LaunchConfig.
+func BootGameFromConfig(ctx context.Context, javaPath string, config *LaunchConfig, clientManifest *ClientManifest, inst *Instance, mcProfile *msa.MinecraftProfile, accessToken string, stdout, stderr io.Writer) error {
+	slog.Info("Booting game from config", "mainClass", config.MainClass)
+
+	classpathSeparator := string(os.PathListSeparator)
+	joinedClasspath := strings.Join(config.Classpath, classpathSeparator)
+
+	var placeholders = map[string]string{
 		"auth_player_name":      mcProfile.Username,
 		"version_name":          clientManifest.ID,
 		"game_directory":        inst.Path,
 		"assets_root":           filepath.Join(DataDir, "assets"),
 		"assets_index_name":     clientManifest.AssetIndex.ID,
 		"auth_uuid":             mcProfile.UUID.String(),
-		"auth_access_token":     account.AccessToken,
-		"clientid":              "launcher",
+		"auth_access_token":     accessToken,
+		"clientid":              LauncherName,
 		"auth_xuid":             mcProfile.UUID.String(),
 		"user_type":             "msa",
 		"version_type":          clientManifest.Type,
-		"resolution_width":      "1280",
-		"resolution_height":     "720",
+		"resolution_width":      DefaultResolutionWidth,
+		"resolution_height":     DefaultResolutionHeight,
 		"quickPlayPath":         "",
 		"quickPlayMultiplayer":  "", // TODO: Address ServerAddress later
 		"quickPlayRealms":       "",
 		"quickPlaySingleplayer": "",
+		"natives_directory":     filepath.Join(DataDir, "bin", clientManifest.ID),
+		"launcher_name":         LauncherName,
+		"launcher_version":      LauncherVersion,
+		"classpath":             joinedClasspath,
+		"library_directory":     filepath.Join(DataDir, "libraries"),
+		"classpath_separator":   classpathSeparator,
 	}
 
-	var resolvedGameArgs []string
-	for _, arg := range config.GameArguments {
-		val := arg
-		for before, after := range gameArgsMap {
-			val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
+	resolveArgs := func(args []string) []string {
+		var resolved []string
+		for _, arg := range args {
+			val := arg
+			for before, after := range placeholders {
+				val = strings.ReplaceAll(val, fmt.Sprintf("${%s}", before), after)
+			}
+			resolved = append(resolved, val)
 		}
-		resolvedGameArgs = append(resolvedGameArgs, val)
+		return resolved
+	}
+
+	resolvedJvmArgs := resolveArgs(config.JVMArguments)
+	resolvedGameArgs := resolveArgs(config.GameArguments)
+
+	if config.Demo {
+		resolvedGameArgs = append(resolvedGameArgs, "--demo")
 	}
 
 	var cmds []string
 	cmds = append(cmds, javaPath)
-	cmds = append(cmds, config.JVMArguments...)
+	cmds = append(cmds, resolvedJvmArgs...)
 
-	// Ensure classpath is handled. LaunchConfig.Classpath is a list of JARs.
-	// Minecraft expects -cp <joined_classpath>
-	if len(config.Classpath) > 0 {
-		cp := strings.Join(config.Classpath, string(os.PathListSeparator))
-		cmds = append(cmds, "-cp", cp)
+	// If -cp was not in JVM arguments, add it
+	hasCp := false
+	for _, arg := range resolvedJvmArgs {
+		if arg == "-cp" || arg == "-classpath" || arg == "--class-path" {
+			hasCp = true
+			break
+		}
+	}
+	if !hasCp && len(config.Classpath) > 0 {
+		cmds = append(cmds, "-cp", joinedClasspath)
 	}
 
 	cmds = append(cmds, config.MainClass)

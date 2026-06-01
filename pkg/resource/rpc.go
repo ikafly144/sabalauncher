@@ -46,8 +46,8 @@ func mapActivity(inst Instance, mcProfile *msa.MinecraftProfile) client.Activity
 		},
 		Buttons: []*client.Button{
 			{
-				Label: "SabaLauncher",
-				Url:   "https://github.com/ikafly144/sabalauncher",
+				Label: LauncherName,
+				Url:   ProjectGithubURL,
 			},
 		},
 	}

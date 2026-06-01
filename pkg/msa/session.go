@@ -111,7 +111,7 @@ func (c *CacheAccessor) Replace(ctx context.Context, cache cache.Unmarshaler, hi
 }
 
 func NewSession(c *CacheAccessor) (Session, error) {
-	client, err := public.New(ClientID, public.WithAuthority("https://login.microsoftonline.com/consumers"), public.WithCache(c))
+	client, err := public.New(ClientID, public.WithAuthority(MicrosoftAuthorityURL), public.WithCache(c))
 	if err != nil {
 		return nil, err
 	}

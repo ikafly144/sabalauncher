@@ -91,7 +91,7 @@ func (ui *FyneUI) createLoggingInView() fyne.CanvasObject {
 			container.NewHBox(
 				widget.NewLabel(i18n.T("device_code_step2", code)),
 				widget.NewButton(i18n.T("copy_code_btn"), func() {
-					ui.window.Clipboard().SetContent(code)
+					fyne.CurrentApp().Clipboard().SetContent(code)
 				}),
 			),
 			widget.NewButton(i18n.T("open_browser_btn"), func() {

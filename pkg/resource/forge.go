@@ -8,12 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/ikafly144/sabalauncher/v2/pkg/runcmd"
 )
-
-const forgeDownloadURL = "https://maven.minecraftforge.net/net/minecraftforge/forge/${version}/forge-${version}-installer.jar"
 
 func DownloadForge(versionName, forgeDirName, dataPath string) (*DownloadWorker, string, error) {
 	var worker DownloadWorker
@@ -25,8 +22,7 @@ func DownloadForge(versionName, forgeDirName, dataPath string) (*DownloadWorker,
 	worker.addTask(func() error {
 		defer tmpFile.Close()
 		httpClient := &http.Client{}
-		url := forgeDownloadURL
-		url = strings.ReplaceAll(url, "${version}", versionName)
+		url := fmt.Sprintf("%s/%s/forge-%s-installer.jar", ForgeMavenURL, versionName, versionName)
 		resp, err := httpClient.Get(url)
 		if err != nil {
 			return err

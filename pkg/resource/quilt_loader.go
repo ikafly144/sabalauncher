@@ -40,7 +40,7 @@ type QuiltLibraryInfo struct {
 func (q *QuiltLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing Quilt", "gameVersion", q.GameVersion, "loaderVersion", q.LoaderVersion)
 
-	url := fmt.Sprintf("https://meta.quiltmc.org/v3/versions/loader/%s/%s/profile/json", q.GameVersion, q.LoaderVersion)
+	url := fmt.Sprintf("%s/%s/%s/profile/json", QuiltMetaURL, q.GameVersion, q.LoaderVersion)
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("failed to fetch quilt meta: %w", err)

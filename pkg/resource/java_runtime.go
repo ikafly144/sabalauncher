@@ -14,8 +14,6 @@ import (
 	"github.com/ulikunitz/xz/lzma"
 )
 
-const DEFAULT_RUNTIME_ALL_URL = "https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"
-
 type JavaRuntimes struct {
 	Linux      JavaRuntimeTargets `json:"linux"`
 	LinuxI386  JavaRuntimeTargets `json:"linux-i386"`
@@ -153,8 +151,8 @@ func (JLinkEntry) anyEntry() {}
 
 func installJavaRuntime(target string, dataDir string, worker *DownloadWorker) error {
 	slog.Info("installJavaRuntime", "target", target, "dataDir", dataDir)
-	slog.Info("all.json", "url", DEFAULT_RUNTIME_ALL_URL)
-	resp, err := http.Get(DEFAULT_RUNTIME_ALL_URL)
+	slog.Info("all.json", "url", JavaRuntimeMetaURL)
+	resp, err := http.Get(JavaRuntimeMetaURL)
 	if err != nil {
 		return err
 	}
