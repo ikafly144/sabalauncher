@@ -162,12 +162,40 @@ func (r *gameRunner) SubscribeLogs() <-chan LogEntry {
 type logWriter struct {
 	source string
 	ch     chan<- LogEntry
+	buf    []byte
 }
 
 func (w *logWriter) Write(p []byte) (n int, err error) {
-	w.ch <- LogEntry{
-		Source:  w.source,
-		Message: string(p),
+	w.buf = append(w.buf, p...)
+	for {
+		// Find newline
+		i := -1
+		for j, b := range w.buf {
+			if b == '\n' {
+				i = j
+				break
+			}
+		}
+		if i == -1 {
+			break
+		}
+
+		line := string(w.buf[:i])
+		w.buf = w.buf[i+1:]
+		
+		// Optional: strip carriage return
+		if len(line) > 0 && line[len(line)-1] == '\r' {
+			line = line[:len(line)-1]
+		}
+
+		select {
+		case w.ch <- LogEntry{
+			Source:  w.source,
+			Message: line,
+		}:
+		default:
+			// Drop log if channel is full to prevent blocking the game
+		}
 	}
 	return len(p), nil
 }

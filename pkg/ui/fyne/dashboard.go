@@ -1,7 +1,10 @@
 package fyne
 
 import (
+	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -108,12 +111,13 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		isRemote := currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != ""
 
 		playBtn := widget.NewButton(i18n.T("play_btn"), func() {
-			ui.showLaunchOverlay()
+			closeOverlay := ui.showLaunchOverlay()
 			go func() {
 				if isRemote {
 					// Force update before launch
 					if err := ui.instances.UpdateInstance(currentInstance.Name, ""); err != nil {
 						fyne.Do(func() {
+							closeOverlay()
 							dialog.ShowError(fmt.Errorf("failed to update before play: %w", err), ui.window)
 							ui.showMainView()
 						})
@@ -129,6 +133,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 				}
 				_ = ui.discord.ClearActivity()
 				fyne.Do(func() {
+					closeOverlay()
 					ui.showMainView()
 				})
 			}()
@@ -217,7 +222,7 @@ func (ui *FyneUI) makeSettingsView() fyne.CanvasObject {
 	)
 }
 
-func (ui *FyneUI) showLaunchOverlay() {
+func (ui *FyneUI) showLaunchOverlay() func() {
 	progress := widget.NewProgressBar()
 	status := widget.NewLabel(i18n.T("preparing"))
 	stopBtn := widget.NewButton(i18n.T("stop_btn"), func() {
@@ -230,15 +235,23 @@ func (ui *FyneUI) showLaunchOverlay() {
 	logEntry := widget.NewMultiLineEntry()
 	logEntry.Disable()
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	go func() {
 		pChan := ui.runner.SubscribeProgress()
 		lChan := ui.runner.SubscribeLogs()
 
+		logBuffer := []string{}
+		ticker := time.NewTicker(200 * time.Millisecond)
+		defer ticker.Stop()
+
 		for {
 			select {
+			case <-ctx.Done():
+				return
 			case p, ok := <-pChan:
 				if !ok {
-					return
+					continue
 				}
 				fyne.Do(func() {
 					status.SetText(fmt.Sprintf("%s (%s)", p.TaskName, p.Status))
@@ -246,11 +259,17 @@ func (ui *FyneUI) showLaunchOverlay() {
 				})
 			case l, ok := <-lChan:
 				if !ok {
-					return
+					continue
 				}
-				fyne.Do(func() {
-					logEntry.Append(fmt.Sprintf("[%s] %s\n", l.Source, l.Message))
-				})
+				logBuffer = append(logBuffer, fmt.Sprintf("[%s] %s\n", l.Source, l.Message))
+			case <-ticker.C:
+				if len(logBuffer) > 0 {
+					textToAppend := strings.Join(logBuffer, "")
+					logBuffer = []string{}
+					fyne.Do(func() {
+						logEntry.Append(textToAppend)
+					})
+				}
 			}
 		}
 	}()
@@ -264,4 +283,8 @@ func (ui *FyneUI) showLaunchOverlay() {
 	)
 
 	ui.window.SetContent(content)
+	
+	return func() {
+		cancel()
+	}
 }
