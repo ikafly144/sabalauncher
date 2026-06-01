@@ -95,14 +95,28 @@ func (s *SetupState) Progress() float32 {
 	if s.currentStep != nil {
 		totalProgress += s.currentStep.Progress()
 	}
-	return totalProgress / float32(s.StepCount)
+	p := totalProgress / float32(s.StepCount)
+	if p < 0.0 {
+		return 0.0
+	}
+	if p > 1.0 {
+		return 1.0
+	}
+	return p
 }
 
 func (s *SetupState) CurrentProgress() float32 {
 	if s.currentStep == nil {
 		return 0.0 // No step is currently being processed
 	}
-	return s.currentStep.Progress()
+	p := s.currentStep.Progress()
+	if p < 0.0 {
+		return 0.0
+	}
+	if p > 1.0 {
+		return 1.0
+	}
+	return p
 }
 
 type Step interface {
@@ -148,7 +162,7 @@ func (j *JavaSetupStep) Do(ctx *SetupContext) error {
 }
 
 func (j *JavaSetupStep) Progress() float32 {
-	if j.worker == nil {
+	if j.worker == nil || j.total == 0 {
 		return 0.0
 	}
 	return 1 - float32(j.worker.Remain())/float32(j.total)
@@ -184,7 +198,7 @@ func (c *ClientDownloadStep) Do(ctx *SetupContext) error {
 }
 
 func (c *ClientDownloadStep) Progress() float32 {
-	if c.worker == nil {
+	if c.worker == nil || c.total == 0 {
 		return 0.0
 	}
 	return 1 - float32(c.worker.Remain())/float32(c.total)
@@ -220,7 +234,7 @@ func (a *AssetsDownloadStep) Do(ctx *SetupContext) error {
 }
 
 func (a *AssetsDownloadStep) Progress() float32 {
-	if a.worker == nil {
+	if a.worker == nil || a.total == 0 {
 		return 0.0
 	}
 	return 1 - float32(a.worker.Remain())/float32(a.total)
@@ -256,7 +270,7 @@ func (l *LibraryDownloadStep) Do(ctx *SetupContext) error {
 }
 
 func (l *LibraryDownloadStep) Progress() float32 {
-	if l.worker == nil {
+	if l.worker == nil || l.total == 0 {
 		return 0.0
 	}
 	return 1 - float32(l.worker.Remain())/float32(l.total)
@@ -315,10 +329,10 @@ func (f *ForgeDownloadStep) Do(ctx *SetupContext) error {
 }
 
 func (f *ForgeDownloadStep) Progress() float32 {
-	if f.worker == nil {
+	if f.worker == nil || f.total == 0 {
 		return 0.0
 	}
-	return float32(f.worker.Remain()) / float32(f.total)
+	return 1 - float32(f.worker.Remain())/float32(f.total)
 }
 
 type ForgeInstallStep struct {
@@ -422,7 +436,7 @@ func (m *ModDownloadStep) Do(ctx *SetupContext) error {
 }
 
 func (m *ModDownloadStep) Progress() float32 {
-	if m.worker == nil {
+	if m.worker == nil || m.total == 0 {
 		return 0.0
 	}
 	return 1 - float32(m.worker.Remain())/float32(m.total)
