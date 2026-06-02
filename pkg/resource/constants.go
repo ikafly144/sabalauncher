@@ -1,22 +1,5 @@
 package resource
 
-import (
-	"runtime/debug"
-)
-
-var (
-	LauncherName    = "SabaLauncher"
-	LauncherVersion = "v0.0.0-dev"
-)
-
-func init() {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		if info.Main.Version != "" && info.Main.Version != "(devel)" {
-			LauncherVersion = info.Main.Version
-		}
-	}
-}
-
 const (
 	// URLs
 	FabricMetaURL            = "https://meta.fabricmc.net/v2/versions/loader"
@@ -29,7 +12,6 @@ const (
 	QuiltMetaURL             = "https://meta.quiltmc.org/v3/versions/loader"
 	MojangVersionManifestURL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 	MojangAssetResourceURL   = "https://resources.download.minecraft.net/"
-	ProjectGithubURL         = "https://github.com/ikafly144/sabalauncher"
 	CurseForgeWebURL         = "https://www.curseforge.com/projects"
 	ModrinthWebURL           = "https://modrinth.com/project"
 

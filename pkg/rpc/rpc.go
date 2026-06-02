@@ -1,12 +1,14 @@
-package resource
+package rpc
 
 import (
 	_ "embed"
 	"time"
 
 	"github.com/hugolgst/rich-go/client"
+	"github.com/ikafly144/sabalauncher/v2/pkg/buildinfo"
 	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 	"github.com/ikafly144/sabalauncher/v2/secret"
 )
 
@@ -20,7 +22,7 @@ func Logout() {
 	client.Logout()
 }
 
-func SetActivity(inst *Instance, mcProfile *msa.MinecraftProfile) (*client.Activity, error) {
+func SetActivity(inst *resource.Instance, mcProfile *msa.MinecraftProfile) (*client.Activity, error) {
 	activity := mapActivity(*inst, mcProfile)
 	if err := client.SetActivity(activity); err != nil {
 		return nil, err
@@ -33,7 +35,7 @@ func ClearActivity() error {
 	return Login()
 }
 
-func mapActivity(inst Instance, mcProfile *msa.MinecraftProfile) client.Activity {
+func mapActivity(inst resource.Instance, mcProfile *msa.MinecraftProfile) client.Activity {
 	t := time.Now()
 	// Removed unused version variable since it's not being formatting locally
 	return client.Activity{
@@ -46,8 +48,8 @@ func mapActivity(inst Instance, mcProfile *msa.MinecraftProfile) client.Activity
 		},
 		Buttons: []*client.Button{
 			{
-				Label: LauncherName,
-				Url:   ProjectGithubURL,
+				Label: buildinfo.LauncherName,
+				Url:   buildinfo.ProjectGithubURL,
 			},
 		},
 	}

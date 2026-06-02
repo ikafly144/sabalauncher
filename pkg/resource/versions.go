@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ikafly144/sabalauncher/v2/pkg/buildinfo"
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
 	"github.com/ikafly144/sabalauncher/v2/pkg/osinfo"
 	"github.com/ikafly144/sabalauncher/v2/pkg/runcmd"
@@ -558,7 +559,7 @@ var (
 	}
 )
 
-func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, dataDir string, stdout, stderr io.Writer) error {
+func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, dataDir string, stdout, stderr io.Writer, beforeHook func(), afterHook func()) error {
 	if clientManifest == nil {
 		return errors.New("client manifest is nil")
 	}
@@ -636,7 +637,7 @@ func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instanc
 		"assets_index_name":     clientManifest.AssetIndex.ID,
 		"auth_uuid":             mcProfile.UUID.String(),
 		"auth_access_token":     account.AccessToken,
-		"clientid":              LauncherName,
+		"clientid":              buildinfo.LauncherName,
 		"auth_xuid":             mcProfile.UUID.String(),
 		"user_type":             "msa",
 		"version_type":          clientManifest.Type,
@@ -707,7 +708,7 @@ func BootGameFromConfig(ctx context.Context, javaPath string, config *LaunchConf
 		"assets_index_name":     clientManifest.AssetIndex.ID,
 		"auth_uuid":             mcProfile.UUID.String(),
 		"auth_access_token":     accessToken,
-		"clientid":              LauncherName,
+		"clientid":              buildinfo.LauncherName,
 		"auth_xuid":             mcProfile.UUID.String(),
 		"user_type":             "msa",
 		"version_type":          clientManifest.Type,
@@ -718,8 +719,8 @@ func BootGameFromConfig(ctx context.Context, javaPath string, config *LaunchConf
 		"quickPlayRealms":       "",
 		"quickPlaySingleplayer": "",
 		"natives_directory":     filepath.Join(DataDir, "bin", clientManifest.ID),
-		"launcher_name":         LauncherName,
-		"launcher_version":      LauncherVersion,
+		"launcher_name":         buildinfo.LauncherName,
+		"launcher_version":      buildinfo.LauncherVersion,
 		"classpath":             joinedClasspath,
 		"library_directory":     filepath.Join(DataDir, "libraries"),
 		"classpath_separator":   classpathSeparator,
@@ -767,20 +768,9 @@ func BootGameFromConfig(ctx context.Context, javaPath string, config *LaunchConf
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()
 	cmd.Dir = inst.Path
 
-	activity, err := SetActivity(inst, mcProfile)
-	if err != nil {
-		slog.Error("Failed to set activity", "error", err)
-	}
-
 	if err := cmd.Run(); err != nil {
 		slog.Error("Failed to run game command", "error", err)
 		return err
-	}
-
-	if activity != nil {
-		if err := ClearActivity(); err != nil {
-			slog.Error("Failed to end activity", "error", err)
-		}
 	}
 
 	return nil

@@ -1,4 +1,4 @@
-package resource
+package resource_test
 
 import (
 	"archive/zip"
@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 	"github.com/kr/binarydist"
 )
 
@@ -69,14 +70,14 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	destDir := filepath.Join(tempDir, "instance")
 
 	// 2. Create .sbpack
-	index := SBIndex{
-		FormatVersion: 1,
+	index := resource.SBIndex{
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Test Pack",
 		Version:       "1.0.0",
 		Dependencies: map[string]string{
 			"minecraft": "1.20.1",
 		},
-		Files: []SBFile{
+		Files: []resource.SBFile{
 			{
 				Path:      "mods/mod1.jar",
 				Hashes:    map[string]string{"sha256": calculateSHA256(mod1Content)},
@@ -94,7 +95,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 
 	// 3. Test Import
 	testUID := uuid.New()
-	inst, err := ImportSBPack(packPath, destDir, testUID)
+	inst, err := resource.ImportSBPack(packPath, destDir, testUID)
 	if err != nil {
 		t.Fatalf("ImportSBPack failed: %v", err)
 	}
@@ -122,14 +123,14 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	}
 
 	// 4. Create .sbpatch
-	patchIndex := SBIndex{
-		FormatVersion: 1,
+	patchIndex := resource.SBIndex{
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Test Pack",
 		Version:       "1.1.0",
 		Dependencies: map[string]string{
 			"minecraft": "1.20.2",
 		},
-		Files: []SBFile{
+		Files: []resource.SBFile{
 			{
 				Path:      "mods/mod2.jar",
 				Hashes:    map[string]string{"sha256": calculateSHA256(mod2Content)},
@@ -139,8 +140,8 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 		},
 	}
 
-	patch := SBPatch{
-		FormatVersion: 1,
+	patch := resource.SBPatch{
+		FormatVersion: resource.SBPackFormatVersion,
 		FromVersion:   "1.0.0",
 		ToVersion:     "1.1.0",
 		NewIndex:      patchIndex,
@@ -154,7 +155,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	})
 
 	// 5. Test Apply
-	if err := ApplySBPatch(inst, patchPath); err != nil {
+	if err := resource.ApplySBPatch(inst, patchPath); err != nil {
 		t.Fatalf("ApplySBPatch failed: %v", err)
 	}
 
@@ -193,8 +194,8 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	// 1. Create base instance
 	v1Content := []byte("original content for binary patching test")
 	v1Data := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03}
-	v1Index := SBIndex{
-		FormatVersion: 1,
+	v1Index := resource.SBIndex{
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Binary Patch Test",
 		Version:       "1.0.0",
 	}
@@ -204,9 +205,9 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(destDir, "config/test.txt"), v1Content, 0644)
 	_ = os.WriteFile(filepath.Join(destDir, "data.bin"), v1Data, 0644)
 
-	inst := &Instance{
+	inst := &resource.Instance{
 		Path: destDir,
-		Upstream: &Upstream{
+		Upstream: &resource.Upstream{
 			Version: "1.0.0",
 		},
 	}
@@ -228,12 +229,12 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	patchTxt := genPatch(v1Content, v2Content)
 	patchBin := genPatch(v1Data, v2Data)
 
-	patch := SBPatch{
-		FormatVersion: SBPatchFormatVersion,
+	patch := resource.SBPatch{
+		FormatVersion: resource.SBPatchFormatVersion,
 		FromVersion:   "1.0.0",
 		ToVersion:     "2.0.0",
-		NewIndex: SBIndex{
-			FormatVersion: 1,
+		NewIndex: resource.SBIndex{
+			FormatVersion: resource.SBPackFormatVersion,
 			Version:       "2.0.0",
 		},
 	}
@@ -248,7 +249,7 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	})
 
 	// 3. Apply patch
-	if err := ApplySBPatch(inst, patchPath); err != nil {
+	if err := resource.ApplySBPatch(inst, patchPath); err != nil {
 		t.Fatalf("ApplySBPatch failed: %v", err)
 	}
 
@@ -272,12 +273,12 @@ func TestImportRemoteSBPack(t *testing.T) {
 	mod2Content := []byte("mod2_content")
 
 	// Pre-calculate ZIP contents so we can pre-calculate hashes for the manifest
-	v1Index := SBIndex{
-		FormatVersion: 1,
+	v1Index := resource.SBIndex{
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Remote Pack",
 		Version:       "1.0.0",
 		Dependencies:  map[string]string{"minecraft": "1.20.1"},
-		Files: []SBFile{
+		Files: []resource.SBFile{
 			{
 				Path:      "mods/mod1.jar",
 				Hashes:    map[string]string{"sha256": calculateSHA256(mod1Content)},
@@ -287,16 +288,16 @@ func TestImportRemoteSBPack(t *testing.T) {
 		},
 	}
 
-	v11Patch := SBPatch{
-		FormatVersion: 1,
+	v11Patch := resource.SBPatch{
+		FormatVersion: resource.SBPatchFormatVersion,
 		FromVersion:   "1.0.0",
 		ToVersion:     "1.1.0",
-		NewIndex: SBIndex{
-			FormatVersion: 1,
+		NewIndex: resource.SBIndex{
+			FormatVersion: resource.SBPackFormatVersion,
 			Name:          "Remote Pack",
 			Version:       "1.1.0",
 			Dependencies:  map[string]string{"minecraft": "1.20.1"},
-			Files: []SBFile{
+			Files: []resource.SBFile{
 				{
 					Path:      "mods/mod2.jar",
 					Hashes:    map[string]string{"sha256": calculateSHA256(mod2Content)},
@@ -346,10 +347,10 @@ func TestImportRemoteSBPack(t *testing.T) {
 			createMockZip(t, v11Temp, map[string][]byte{"sb.patch.json": v11IdxB})
 			v11Hash, _ := os.ReadFile(v11Temp)
 
-			repo := SBRepository{
+			repo := resource.SBRepository{
 				Name:        "Remote Pack",
 				LatestPatch: "1.1.0",
-				Patches: []SBRepoPatch{
+				Patches: []resource.SBRepoPatch{
 					{
 						ID:         "1.0.0",
 						Type:       "sbpack",
@@ -372,14 +373,14 @@ func TestImportRemoteSBPack(t *testing.T) {
 	defer server.Close()
 
 	// Update DataDir for caching
-	oldDataDir := DataDir
-	DataDir = t.TempDir()
-	defer func() { DataDir = oldDataDir }()
+	oldDataDir := resource.DataDir
+	resource.DataDir = t.TempDir()
+	defer func() { resource.DataDir = oldDataDir }()
 
 	destDir := filepath.Join(t.TempDir(), "remote-instance")
 	uid := uuid.New()
 
-	inst, err := ImportRemoteSBPack(server.URL+"/repo/manifest.json", destDir, uid)
+	inst, err := resource.ImportRemoteSBPack(server.URL+"/repo/manifest.json", destDir, uid)
 	if err != nil {
 		t.Fatalf("ImportRemoteSBPack failed: %v", err)
 	}

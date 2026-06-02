@@ -1,8 +1,6 @@
 package core
 
-import (
-	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
-)
+import "github.com/ikafly144/sabalauncher/v2/pkg/rpc"
 
 type discordManager struct {
 	auth      Authenticator
@@ -27,11 +25,11 @@ func (d *discordManager) SetActivity(instanceName string) error {
 		return err
 	}
 
-	_, err = resource.SetActivity(inst, mcProfile)
+	_, err = rpc.SetActivity(inst, mcProfile)
 	return err
 }
 
 func (d *discordManager) ClearActivity() error {
-	resource.Logout()
-	return resource.Login()
+	rpc.Logout()
+	return rpc.Login()
 }

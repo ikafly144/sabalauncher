@@ -55,7 +55,7 @@ func readSBIndex(t *testing.T, path string) resource.SBIndex {
 func TestExecuteEdit_UpdatesFields(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
-		FormatVersion: 1,
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Old Name",
 		Version:       "1.0.0",
 		Dependencies: map[string]string{
@@ -107,7 +107,7 @@ func TestExecuteEdit_UpdatesFields(t *testing.T) {
 func TestExecuteEdit_PrintDoesNotWriteFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
-		FormatVersion: 1,
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
 		Version:       "1.0.0",
 		Dependencies: map[string]string{
@@ -133,7 +133,7 @@ func TestExecuteEdit_PrintDoesNotWriteFile(t *testing.T) {
 func TestExecuteEdit_InvalidRequire(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
-		FormatVersion: 1,
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
 		Version:       "1.0.0",
 		Dependencies:  map[string]string{},
@@ -161,7 +161,7 @@ func TestExecuteEdit_FileUpsertAndDrop(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
-		FormatVersion: 1,
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
 		Version:       "1.0.0",
 		Dependencies:  map[string]string{},
@@ -239,7 +239,7 @@ func TestExecuteEdit_FileUpsertAndDrop(t *testing.T) {
 func TestExecuteEdit_FileRequiresPathAndURL(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
-		FormatVersion: 1,
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
 		Version:       "1.0.0",
 		Dependencies:  map[string]string{},

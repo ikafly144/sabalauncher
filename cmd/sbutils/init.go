@@ -26,7 +26,7 @@ func runInit(args []string) {
 	}
 
 	index := resource.SBIndex{
-		FormatVersion: 1,
+		FormatVersion: resource.SBPackFormatVersion,
 		Name:          name,
 		Version:       version,
 		Dependencies:  deps,

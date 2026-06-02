@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	SBPackFormatVersion  = 1
 	SBPatchFormatVersion = 2
 )
 
