@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
+	"github.com/kr/binarydist"
 )
 
 func runPatch(args []string) {
@@ -73,6 +74,59 @@ func runPatch(args []string) {
 			}
 			return nil
 		})
+	}
+
+	// Apply patches from patch to base
+	if patch.FormatVersion >= resource.SBPatchFormatVersion {
+		patchPatches := filepath.Join(patchDir, "patches")
+		if _, err := os.Stat(patchPatches); err == nil {
+			filepath.Walk(patchPatches, func(path string, info os.FileInfo, err error) error {
+				if !info.IsDir() {
+					rel, _ := filepath.Rel(patchPatches, path)
+					targetPath := filepath.Join(baseDir, "overrides", rel)
+
+					if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+						return err
+					}
+
+					oldFile, err := os.Open(targetPath)
+					if err != nil {
+						fmt.Printf("Warning: failed to open base file %s for patching: %v\n", rel, err)
+						return nil
+					}
+					patchFile, err := os.Open(path)
+					if err != nil {
+						oldFile.Close()
+						fmt.Printf("Warning: failed to open patch file %s: %v\n", rel, err)
+						return nil
+					}
+
+					tempFile, err := os.CreateTemp("", "sbpatch-*")
+					if err != nil {
+						oldFile.Close()
+						patchFile.Close()
+						return err
+					}
+
+					if err := binarydist.Patch(oldFile, tempFile, patchFile); err != nil {
+						oldFile.Close()
+						patchFile.Close()
+						tempFile.Close()
+						os.Remove(tempFile.Name())
+						fmt.Printf("Warning: failed to apply patch to %s: %v\n", rel, err)
+						return nil
+					}
+
+					oldFile.Close()
+					patchFile.Close()
+					tempFile.Close()
+
+					os.Remove(targetPath)
+					os.Rename(tempFile.Name(), targetPath)
+				}
+				return nil
+			})
+		}
 	}
 
 	// Write new index

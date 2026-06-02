@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kr/binarydist"
 )
 
 func createMockZip(t *testing.T, path string, files map[string][]byte) {
@@ -178,6 +179,88 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	}
 	if content, err := os.ReadFile(filepath.Join(destDir, "config/m2.txt")); err != nil || string(content) != "config2" {
 		t.Errorf("config/m2.txt missing or content mismatch: %v", err)
+	}
+}
+
+func TestSBPatchBinaryPatch(t *testing.T) {
+	tempDir := t.TempDir()
+	destDir := filepath.Join(tempDir, "instance")
+	os.MkdirAll(destDir, 0755)
+
+	// 1. Create base instance
+	v1Content := []byte("original content for binary patching test")
+	v1Data := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03}
+	v1Index := SBIndex{
+		FormatVersion: 1,
+		Name:          "Binary Patch Test",
+		Version:       "1.0.0",
+	}
+	v1IndexBytes, _ := json.Marshal(v1Index)
+	os.WriteFile(filepath.Join(destDir, "sb.index.json"), v1IndexBytes, 0644)
+	os.MkdirAll(filepath.Join(destDir, "config"), 0755)
+	os.WriteFile(filepath.Join(destDir, "config/test.txt"), v1Content, 0644)
+	os.WriteFile(filepath.Join(destDir, "data.bin"), v1Data, 0644)
+
+	inst := &Instance{
+		Path: destDir,
+		Upstream: &Upstream{
+			Version: "1.0.0",
+		},
+	}
+
+	// 2. Create binary patch
+	v2Content := []byte("modified content for binary patching test! Extra data here.")
+	v2Data := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0x09, 0x02, 0x03} // Changed one byte
+
+	// Helper to generate bsdiff patch in memory
+	genPatch := func(old, new []byte) []byte {
+		var buf bytes.Buffer
+		err := binarydist.Diff(bytes.NewReader(old), bytes.NewReader(new), &buf)
+		if err != nil {
+			t.Fatalf("failed to generate binary diff: %v", err)
+		}
+		return buf.Bytes()
+	}
+
+	patchTxt := genPatch(v1Content, v2Content)
+	patchBin := genPatch(v1Data, v2Data)
+
+	patch := SBPatch{
+		FormatVersion: SBPatchFormatVersion,
+		FromVersion:   "1.0.0",
+		ToVersion:     "2.0.0",
+		NewIndex: SBIndex{
+			FormatVersion: 1,
+			Version:       "2.0.0",
+		},
+	}
+	patchBytes, _ := json.Marshal(patch)
+
+	patchPath := filepath.Join(tempDir, "test.sbpatch")
+	createMockZip(t, patchPath, map[string][]byte{
+		"sb.patch.json":           patchBytes,
+		"patches/config/test.txt": patchTxt,
+		"patches/data.bin":        patchBin,
+		"overrides/new.txt":       []byte("freshly added"),
+	})
+
+	// 3. Apply patch
+	if err := ApplySBPatch(inst, patchPath); err != nil {
+		t.Fatalf("ApplySBPatch failed: %v", err)
+	}
+
+	// 4. Verify results
+	if got, _ := os.ReadFile(filepath.Join(destDir, "config/test.txt")); !bytes.Equal(got, v2Content) {
+		t.Errorf("text file patch mismatch\nexp: %q\ngot: %q", v2Content, got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(destDir, "data.bin")); !bytes.Equal(got, v2Data) {
+		t.Errorf("binary file patch mismatch\nexp: %v\ngot: %v", v2Data, got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(destDir, "new.txt")); string(got) != "freshly added" {
+		t.Errorf("new file content mismatch: %q", got)
+	}
+	if inst.Upstream.Version != "2.0.0" {
+		t.Errorf("expected version 2.0.0, got %s", inst.Upstream.Version)
 	}
 }
 

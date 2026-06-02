@@ -17,6 +17,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kr/binarydist"
+)
+
+const (
+	SBPatchFormatVersion = 2
 )
 
 type SBIndex struct {
@@ -547,7 +552,7 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 		os.Remove(targetPath) // Ignore if not exist
 	}
 
-	// 2. Unzip overrides from patch
+	// 2. Unzip overrides and apply patches
 	for _, f := range reader.File {
 		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
 			relPath := after
@@ -581,6 +586,61 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 			rc.Close()
 			if err != nil {
 				return err
+			}
+		}
+
+		if patch.FormatVersion >= SBPatchFormatVersion {
+			if after, ok := strings.CutPrefix(f.Name, "patches/"); ok {
+				relPath := after
+				if relPath == "" || f.FileInfo().IsDir() {
+					continue
+				}
+
+				targetPath := filepath.Join(inst.Path, relPath)
+
+				// Ensure parent directory exists
+				if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+					return err
+				}
+
+				oldFile, err := os.Open(targetPath)
+				if err != nil {
+					return fmt.Errorf("failed to open old file for patching %s: %w", relPath, err)
+				}
+
+				patchFile, err := f.Open()
+				if err != nil {
+					oldFile.Close()
+					return err
+				}
+
+				tempFile, err := os.CreateTemp("", "sbpatch-*")
+				if err != nil {
+					oldFile.Close()
+					patchFile.Close()
+					return err
+				}
+
+				if err := binarydist.Patch(oldFile, tempFile, patchFile); err != nil {
+					oldFile.Close()
+					patchFile.Close()
+					tempFile.Close()
+					os.Remove(tempFile.Name())
+					return fmt.Errorf("failed to apply binary patch to %s: %w", relPath, err)
+				}
+
+				oldFile.Close()
+				patchFile.Close()
+				tempFile.Close()
+
+				// Replace old file with patched version
+				if err := os.Remove(targetPath); err != nil {
+					os.Remove(tempFile.Name())
+					return err
+				}
+				if err := os.Rename(tempFile.Name(), targetPath); err != nil {
+					return err
+				}
 			}
 		}
 	}

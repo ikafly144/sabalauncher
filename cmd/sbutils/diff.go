@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
+	"github.com/kr/binarydist"
 )
 
 func runDiff(args []string) {
@@ -66,7 +67,8 @@ func runDiff(args []string) {
 	}
 
 	// Check overrides diff
-	changedOverrides := []string{} // paths relative to overrides/
+	addedOverrides := []string{}
+	patchedOverrides := []string{}
 	oldOverrides := make(map[string]string)
 
 	oldOverridesDir := filepath.Join(oldDir, "overrides")
@@ -90,8 +92,10 @@ func runDiff(args []string) {
 				rel = filepath.ToSlash(rel)
 				hash, _ := hashFile(path)
 
-				if oldHash, ok := oldOverrides[rel]; !ok || oldHash != hash {
-					changedOverrides = append(changedOverrides, rel)
+				if oldHash, ok := oldOverrides[rel]; !ok {
+					addedOverrides = append(addedOverrides, rel)
+				} else if oldHash != hash {
+					patchedOverrides = append(patchedOverrides, rel)
 				}
 				delete(oldOverrides, rel)
 			}
@@ -106,7 +110,7 @@ func runDiff(args []string) {
 
 	// Create patch JSON
 	patch := resource.SBPatch{
-		FormatVersion: 1,
+		FormatVersion: resource.SBPatchFormatVersion,
 		FromVersion:   oldIndex.Version,
 		ToVersion:     newIndex.Version,
 		NewIndex:      newIndex,
@@ -130,11 +134,45 @@ func runDiff(args []string) {
 	writer, _ := w.CreateHeader(header)
 	writer.Write(patchBytes)
 
-	// Add changed overrides
-	for _, rel := range changedOverrides {
+	// Add added overrides
+	for _, rel := range addedOverrides {
 		srcPath := filepath.Join(newOverridesDir, filepath.FromSlash(rel))
 		zipPath := filepath.ToSlash(filepath.Join("overrides", rel))
 		addFileToZip(w, srcPath, zipPath)
+	}
+
+	// Add patched overrides
+	for _, rel := range patchedOverrides {
+		oldFilePath := filepath.Join(oldOverridesDir, filepath.FromSlash(rel))
+		newFilePath := filepath.Join(newOverridesDir, filepath.FromSlash(rel))
+
+		oldFile, err := os.Open(oldFilePath)
+		if err != nil {
+			fmt.Printf("Failed to open old file %s: %v\n", rel, err)
+			continue
+		}
+		newFile, err := os.Open(newFilePath)
+		if err != nil {
+			oldFile.Close()
+			fmt.Printf("Failed to open new file %s: %v\n", rel, err)
+			continue
+		}
+
+		zipPath := filepath.ToSlash(filepath.Join("patches", rel))
+		writer, err := w.Create(zipPath)
+		if err != nil {
+			oldFile.Close()
+			newFile.Close()
+			fmt.Printf("Failed to create zip entry for patch %s: %v\n", rel, err)
+			continue
+		}
+
+		if err := binarydist.Diff(oldFile, newFile, writer); err != nil {
+			fmt.Printf("Failed to create binary patch for %s: %v\n", rel, err)
+		}
+
+		oldFile.Close()
+		newFile.Close()
 	}
 
 	fmt.Printf("Successfully created patch %s\n", outPatch)
