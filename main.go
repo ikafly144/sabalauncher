@@ -16,6 +16,7 @@ import (
 	"github.com/ikafly144/sabalauncher/v2/pkg/core"
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
+	"github.com/ikafly144/sabalauncher/v2/pkg/rpc"
 	"github.com/ikafly144/sabalauncher/v2/pkg/ui/fyne"
 	"github.com/ikafly144/sabalauncher/v2/secret"
 )
@@ -50,9 +51,8 @@ func init() {
 
 	msa.ClientID = secret.GetSecret("MSA_CLIENT_ID")
 	resource.CurseForgeAPIKey = secret.GetSecret("CURSEFORGE_API_KEY")
-	resource.DiscordClientID = secret.GetSecret("DISCORD_CLIENT_ID")
 
-	if err := resource.Login(); err != nil {
+	if err := rpc.Login(); err != nil {
 		slog.Error("failed to login to Discord RPC", "err", err)
 	} else {
 		slog.Info("Discord RPC logged in")
@@ -87,5 +87,5 @@ func main() {
 	ui.Run()
 
 	// Cleanup
-	resource.Logout()
+	rpc.Logout()
 }
