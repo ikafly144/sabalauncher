@@ -2,6 +2,7 @@ package resource
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -20,6 +21,28 @@ type NeoForgeLoader struct {
 	NeoForgeVersion string
 }
 
+var ErrNeoForgeManifestNotFound = errors.New("neoforge manifest not found")
+
+func (n *NeoForgeLoader) findManifestID(dataPath string) (string, error) {
+	preferred := n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
+	preferredPath := filepath.Join(dataPath, "versions", preferred, preferred+".json")
+	if _, err := os.Stat(preferredPath); err == nil {
+		return preferred, nil
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
+
+	fallback := "neoforge-" + n.NeoForgeVersion
+	fallbackPath := filepath.Join(dataPath, "versions", fallback, fallback+".json")
+	if _, err := os.Stat(fallbackPath); err == nil {
+		return fallback, nil
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
+
+	return "", fmt.Errorf("%w: tried %s and %s", ErrNeoForgeManifestNotFound, preferred, fallback)
+}
+
 // NewNeoForgeLoader creates a new NeoForgeLoader instance.
 func NewNeoForgeLoader(vanillaVersion, neoforgeVersion string) *NeoForgeLoader {
 	return &NeoForgeLoader{
@@ -31,13 +54,11 @@ func NewNeoForgeLoader(vanillaVersion, neoforgeVersion string) *NeoForgeLoader {
 // Install handles the downloading and execution of the NeoForge installer.
 func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	dataPath := DataDir
-	neoforgeDir := "neoforge-" + n.NeoForgeVersion
-
-	// Check if already installed
-	manifestPath := filepath.Join(dataPath, "versions", neoforgeDir, neoforgeDir+".json")
-	if _, err := os.Stat(manifestPath); err == nil {
-		slog.Info("NeoForge is already installed", "version", n.NeoForgeVersion)
+	if manifestID, err := n.findManifestID(dataPath); err == nil {
+		slog.Info("NeoForge is already installed", "version", n.NeoForgeVersion, "id", manifestID)
 		return nil
+	} else if !errors.Is(err, ErrNeoForgeManifestNotFound) {
+		return err
 	}
 
 	slog.Info("Installing NeoForge", "vanilla", n.VanillaVersion, "neoforge", n.NeoForgeVersion)
@@ -91,7 +112,10 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 // GenerateLaunchConfig produces the configuration required to launch the game with NeoForge.
 func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error) {
 	dataPath := DataDir
-	neoforgeDir := "neoforge-" + n.NeoForgeVersion
+	neoforgeDir, err := n.findManifestID(dataPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to locate neoforge manifest: %w", err)
+	}
 
 	// 1. Load NeoForge Manifest recursively (handles inheritance from vanilla)
 	manifest, err := GetClientManifestRecursive(dataPath, neoforgeDir)
