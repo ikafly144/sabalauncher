@@ -42,7 +42,7 @@ func TestNeoForgeLoader_GenerateLaunchConfig(t *testing.T) {
 
 	neoforgeDir := "1.20.1-neoforge-47.1.0"
 	versionDir := filepath.Join(tempDir, "versions", neoforgeDir)
-	os.MkdirAll(versionDir, 0755)
+	_ = os.MkdirAll(versionDir, 0755)
 
 	// Create mock manifest
 	manifest := ClientManifest{
@@ -59,7 +59,7 @@ func TestNeoForgeLoader_GenerateLaunchConfig(t *testing.T) {
 		},
 	}
 	manifestBytes, _ := json.Marshal(manifest)
-	os.WriteFile(filepath.Join(versionDir, neoforgeDir+".json"), manifestBytes, 0644)
+	_ = os.WriteFile(filepath.Join(versionDir, neoforgeDir+".json"), manifestBytes, 0644)
 
 	loader := NewNeoForgeLoader("1.20.1", "47.1.0")
 	inst := &Instance{

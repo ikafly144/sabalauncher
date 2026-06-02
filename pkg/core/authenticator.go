@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
 )
 
 type msaAuthenticator struct {
-	client    public.Client
 	session   msa.Session
 	status    AuthStatus
 	user      string

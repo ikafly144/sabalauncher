@@ -47,7 +47,7 @@ func (f *ForgeLoader) Install(ctx context.Context, inst *Instance) error {
 
 	// 2. Download Forge Installer if not present
 	forgeDir := f.VanillaVersion + "-forge-" + f.ForgeVersion
-	installerPath := filepath.Join(os.TempDir(), forgeDir+"-installer.jar")
+	var installerPath string
 
 	if _, err := os.Stat(filepath.Join(dataPath, "versions", forgeDir, forgeDir+".json")); os.IsNotExist(err) {
 		worker, path, err := DownloadForge(f.VanillaVersion+"-"+f.ForgeVersion, forgeDir, dataPath)

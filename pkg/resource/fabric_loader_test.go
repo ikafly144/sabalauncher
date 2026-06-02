@@ -53,7 +53,7 @@ func TestFabricLoader_GenerateLaunchConfig(t *testing.T) {
 
 	// Create mock meta
 	versionDir := filepath.Join(tempDir, "versions", "1.20.1-fabric-0.15.11")
-	os.MkdirAll(versionDir, 0755)
+	_ = os.MkdirAll(versionDir, 0755)
 
 	meta := FabricMetaResponse{}
 	meta.LauncherMeta.MainClass.Client = "net.fabricmc.loader.impl.launch.knot.KnotClient"

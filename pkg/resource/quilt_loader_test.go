@@ -48,13 +48,13 @@ func TestQuiltLoader_GenerateLaunchConfig(t *testing.T) {
 	defer func() { DataDir = oldDataDir }()
 
 	versionDir := filepath.Join(tempDir, "versions", "1.20.1-quilt-0.23.1")
-	os.MkdirAll(versionDir, 0755)
+	_ = os.MkdirAll(versionDir, 0755)
 
 	meta := QuiltLauncherMeta{}
 	meta.MainClass = "org.quiltmc.loader.impl.launch.knot.KnotClient"
 
 	metaFile, _ := os.Create(filepath.Join(versionDir, "quilt-meta.json"))
-	json.NewEncoder(metaFile).Encode(meta)
+	_ = json.NewEncoder(metaFile).Encode(meta)
 	metaFile.Close()
 
 	loader := NewQuiltLoader("1.20.1", "0.23.1")

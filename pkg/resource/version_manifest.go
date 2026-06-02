@@ -88,9 +88,7 @@ func (c ClientManifest) InheritsMerge(other *ClientManifest) (*ClientManifest, e
 		}
 	}
 	// Add all child libs
-	for _, lib := range other.Libraries {
-		finalLibs = append(finalLibs, lib)
-	}
+	finalLibs = append(finalLibs, other.Libraries...)
 	n.Libraries = finalLibs
 
 	n.MainClass = other.MainClass

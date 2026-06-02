@@ -192,11 +192,12 @@ func UpdateInstanceRemote(inst *Instance) error {
 			return err
 		}
 
-		if p.Type == "sbpatch" {
+		switch p.Type {
+		case "sbpatch":
 			if err := ApplySBPatch(inst, localPath); err != nil {
 				return err
 			}
-		} else if p.Type == "sbpack" {
+		case "sbpack":
 			if err := ApplySBPack(inst, localPath); err != nil {
 				return err
 			}
@@ -280,7 +281,9 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, er
 
 			destPath := filepath.Join(destDir, relPath)
 			if f.FileInfo().IsDir() {
-				os.MkdirAll(destPath, 0755)
+				if err := os.MkdirAll(destPath, 0755); err != nil {
+					return nil, err
+				}
 				continue
 			}
 
@@ -352,7 +355,9 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, er
 
 	// Save index to instance dir for future updates
 	indexBytes, _ := json.MarshalIndent(index, "", "  ")
-	os.WriteFile(filepath.Join(destDir, "sb.index.json"), indexBytes, 0644)
+	if err := os.WriteFile(filepath.Join(destDir, "sb.index.json"), indexBytes, 0644); err != nil {
+		return nil, fmt.Errorf("failed to save index: %w", err)
+	}
 
 	return inst, nil
 }
@@ -391,7 +396,7 @@ func ApplySBPack(inst *Instance, packPath string) error {
 	var oldIndex SBIndex
 	oldIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
 	if err == nil {
-		json.Unmarshal(oldIndexBytes, &oldIndex)
+		_ = json.Unmarshal(oldIndexBytes, &oldIndex)
 	}
 
 	removedFiles := []string{}
@@ -410,7 +415,7 @@ func ApplySBPack(inst *Instance, packPath string) error {
 
 	// Perform update (similar to patch)
 	for _, removed := range removedFiles {
-		os.Remove(filepath.Join(inst.Path, removed))
+		_ = os.Remove(filepath.Join(inst.Path, removed))
 	}
 
 	// Unzip overrides from new pack
@@ -494,7 +499,9 @@ func ApplySBPack(inst *Instance, packPath string) error {
 
 	// Save new index
 	newIndexBytes, _ := json.MarshalIndent(newIndex, "", "  ")
-	os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644)
+	if err := os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644); err != nil {
+		return fmt.Errorf("failed to save new index: %w", err)
+	}
 
 	return nil
 }
@@ -549,7 +556,7 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 	// 1. Delete removed files
 	for _, removed := range patch.RemovedFiles {
 		targetPath := filepath.Join(inst.Path, removed)
-		os.Remove(targetPath) // Ignore if not exist
+		_ = os.Remove(targetPath) // Ignore if not exist
 	}
 
 	// 2. Unzip overrides and apply patches
@@ -562,7 +569,9 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 
 			destPath := filepath.Join(inst.Path, relPath)
 			if f.FileInfo().IsDir() {
-				os.MkdirAll(destPath, 0755)
+				if err := os.MkdirAll(destPath, 0755); err != nil {
+					return err
+				}
 				continue
 			}
 
@@ -625,7 +634,7 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 					oldFile.Close()
 					patchFile.Close()
 					tempFile.Close()
-					os.Remove(tempFile.Name())
+					_ = os.Remove(tempFile.Name())
 					return fmt.Errorf("failed to apply binary patch to %s: %w", relPath, err)
 				}
 
@@ -635,7 +644,7 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 
 				// Replace old file with patched version
 				if err := os.Remove(targetPath); err != nil {
-					os.Remove(tempFile.Name())
+					_ = os.Remove(tempFile.Name())
 					return err
 				}
 				if err := os.Rename(tempFile.Name(), targetPath); err != nil {
@@ -703,7 +712,9 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 
 	// Save new index
 	newIndexBytes, _ := json.MarshalIndent(patch.NewIndex, "", "  ")
-	os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644)
+	if err := os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644); err != nil {
+		return fmt.Errorf("failed to save new index: %w", err)
+	}
 
 	return nil
 }
@@ -740,7 +751,9 @@ func verifyHashes(path string, hashes map[string]string) error {
 	defer f.Close()
 
 	for algo, expectedHash := range hashes {
-		f.Seek(0, 0)
+		if _, err := f.Seek(0, 0); err != nil {
+			return err
+		}
 		var actualHash string
 
 		switch strings.ToLower(algo) {

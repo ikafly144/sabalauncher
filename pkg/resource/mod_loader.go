@@ -358,7 +358,7 @@ func (c *CurseForgeModInstance) update(profilePath string, oldInstance ModInstan
 
 	if oldInstance != nil && oldInstance.getCurrentModFileName() != nil && oldInstance.(*CurseForgeModInstance).CurrentFileId != modFile.Data.ID {
 		slog.Info("removing old mod file", "fileName", *oldInstance.getCurrentModFileName())
-		os.Remove(filepath.Join(profilePath, "mods", *oldInstance.getCurrentModFileName()))
+		_ = os.Remove(filepath.Join(profilePath, "mods", *oldInstance.getCurrentModFileName()))
 	}
 	if oldInstance != nil && modFile.Data.ID == oldInstance.(*CurseForgeModInstance).CurrentFileId {
 		if _, err := os.Stat(filepath.Join(profilePath, "mods", modFile.Data.FileName)); os.IsExist(err) || err == nil {
@@ -547,7 +547,7 @@ func (m *ModrinthModInstance) update(profilePath string, oldLoader ModInstance) 
 
 	if oldLoader != nil && oldLoader.getCurrentModFileName() != nil && oldLoader.(*ModrinthModInstance).VersionId != modFile.ID {
 		slog.Info("removing old mod file", "fileName", *oldLoader.getCurrentModFileName())
-		os.Remove(filepath.Join(profilePath, "mods", *oldLoader.getCurrentModFileName()))
+		_ = os.Remove(filepath.Join(profilePath, "mods", *oldLoader.getCurrentModFileName()))
 	}
 	if oldLoader != nil && modFile.ID == oldLoader.(*ModrinthModInstance).VersionId {
 		if f, err := os.OpenFile(filepath.Join(profilePath, "mods", modFile.Files[0].FileName), os.O_RDONLY, 0644); err == nil {
@@ -563,7 +563,7 @@ func (m *ModrinthModInstance) update(profilePath string, oldLoader ModInstance) 
 				return nil
 			} else {
 				slog.Info("mod file hash mismatch, removing old file", "versionId", m.CurrentVersionId, "fileName", modFile.Files[0].FileName)
-				os.Remove(filepath.Join(profilePath, "mods", modFile.Files[0].FileName))
+				_ = os.Remove(filepath.Join(profilePath, "mods", modFile.Files[0].FileName))
 			}
 		} else {
 			slog.Info("mod file not found, downloading", "versionId", m.CurrentVersionId, "fileName", modFile.Files[0].FileName)

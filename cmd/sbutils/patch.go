@@ -42,8 +42,15 @@ func runPatch(args []string) {
 	}
 
 	var baseIndex resource.SBIndex
-	baseBytes, _ := os.ReadFile(filepath.Join(baseDir, "sb.index.json"))
-	json.Unmarshal(baseBytes, &baseIndex)
+	baseBytes, err := os.ReadFile(filepath.Join(baseDir, "sb.index.json"))
+	if err != nil {
+		fmt.Printf("Failed to read base index: %v\n", err)
+		os.Exit(1)
+	}
+	if err := json.Unmarshal(baseBytes, &baseIndex); err != nil {
+		fmt.Printf("Failed to parse base index: %v\n", err)
+		os.Exit(1)
+	}
 
 	var patch resource.SBPatch
 	patchBytes, _ := os.ReadFile(filepath.Join(patchDir, "sb.patch.json"))
@@ -59,28 +66,39 @@ func runPatch(args []string) {
 
 	// Remove files
 	for _, f := range patch.RemovedFiles {
-		os.Remove(filepath.Join(baseDir, filepath.FromSlash(f)))
+		_ = os.Remove(filepath.Join(baseDir, filepath.FromSlash(f)))
 	}
 
 	// Copy overrides from patch to base
 	patchOverrides := filepath.Join(patchDir, "overrides")
 	if _, err := os.Stat(patchOverrides); err == nil {
-		filepath.Walk(patchOverrides, func(path string, info os.FileInfo, err error) error {
+		if err := filepath.Walk(patchOverrides, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 			if !info.IsDir() {
 				rel, _ := filepath.Rel(patchOverrides, path)
 				destPath := filepath.Join(baseDir, "overrides", rel)
-				os.MkdirAll(filepath.Dir(destPath), 0755)
-				copyFile(path, destPath)
+				if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+					return err
+				}
+				return copyFile(path, destPath)
 			}
 			return nil
-		})
+		}); err != nil {
+			fmt.Printf("Failed to copy overrides: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	// Apply patches from patch to base
 	if patch.FormatVersion >= resource.SBPatchFormatVersion {
 		patchPatches := filepath.Join(patchDir, "patches")
 		if _, err := os.Stat(patchPatches); err == nil {
-			filepath.Walk(patchPatches, func(path string, info os.FileInfo, err error) error {
+			if err := filepath.Walk(patchPatches, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
 				if !info.IsDir() {
 					rel, _ := filepath.Rel(patchPatches, path)
 					targetPath := filepath.Join(baseDir, "overrides", rel)
@@ -112,7 +130,7 @@ func runPatch(args []string) {
 						oldFile.Close()
 						patchFile.Close()
 						tempFile.Close()
-						os.Remove(tempFile.Name())
+						_ = os.Remove(tempFile.Name())
 						fmt.Printf("Warning: failed to apply patch to %s: %v\n", rel, err)
 						return nil
 					}
@@ -121,17 +139,25 @@ func runPatch(args []string) {
 					patchFile.Close()
 					tempFile.Close()
 
-					os.Remove(targetPath)
-					os.Rename(tempFile.Name(), targetPath)
+					_ = os.Remove(targetPath)
+					if err := os.Rename(tempFile.Name(), targetPath); err != nil {
+						fmt.Printf("Warning: failed to rename patched file %s: %v\n", rel, err)
+					}
 				}
 				return nil
-			})
+			}); err != nil {
+				fmt.Printf("Failed to apply patches: %v\n", err)
+				os.Exit(1)
+			}
 		}
 	}
 
 	// Write new index
 	newIndexBytes, _ := json.MarshalIndent(patch.NewIndex, "", "  ")
-	os.WriteFile(filepath.Join(baseDir, "sb.index.json"), newIndexBytes, 0644)
+	if err := os.WriteFile(filepath.Join(baseDir, "sb.index.json"), newIndexBytes, 0644); err != nil {
+		fmt.Printf("Failed to write new index: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Create output pack
 	outFile, err := os.Create(outPack)
@@ -145,19 +171,26 @@ func runPatch(args []string) {
 	defer w.Close()
 
 	// Add new sb.index.json
-	addFileToZip(w, filepath.Join(baseDir, "sb.index.json"), "sb.index.json")
+	if err := addFileToZip(w, filepath.Join(baseDir, "sb.index.json"), "sb.index.json"); err != nil {
+		fmt.Printf("Failed to add index to pack: %v\n", err)
+	}
 
 	// Add updated overrides
 	baseOverrides := filepath.Join(baseDir, "overrides")
 	if _, err := os.Stat(baseOverrides); err == nil {
-		filepath.Walk(baseOverrides, func(path string, info os.FileInfo, err error) error {
+		if err := filepath.Walk(baseOverrides, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 			if !info.IsDir() {
 				rel, _ := filepath.Rel(baseDir, path)
 				rel = filepath.ToSlash(rel)
-				addFileToZip(w, path, rel)
+				return addFileToZip(w, path, rel)
 			}
 			return nil
-		})
+		}); err != nil {
+			fmt.Printf("Failed to walk base overrides: %v\n", err)
+		}
 	}
 
 	fmt.Printf("Successfully patched to %s\n", outPack)

@@ -570,22 +570,23 @@ func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instanc
 		return err
 	}
 
-	classpath := filepath.Join(dataDir, "versions", clientManifest.ID, clientManifest.ID+".jar")
+	var classpath strings.Builder
+	classpath.WriteString(filepath.Join(dataDir, "versions", clientManifest.ID, clientManifest.ID+".jar"))
 	classpathSeparator := string(os.PathListSeparator)
 	for _, library := range clientManifest.Libraries {
 		if library.Downloads.Classifiers != nil {
 			for _, classifier := range library.Downloads.Classifiers {
-				classpath += classpathSeparator + filepath.Join(dataDir, "libraries", classifier.Path)
+				classpath.WriteString(classpathSeparator + filepath.Join(dataDir, "libraries", classifier.Path))
 			}
 		}
-		classpath += classpathSeparator + filepath.Join(dataDir, "libraries", library.Downloads.Artifact.Path)
+		classpath.WriteString(classpathSeparator + filepath.Join(dataDir, "libraries", library.Downloads.Artifact.Path))
 	}
 
 	cmdMap := map[string]string{
 		"natives_directory":   filepath.Join(dataDir, "bin", clientManifest.ID),
 		"launcher_name":       "SabaLauncher",
 		"launcher_version":    "1.0",
-		"classpath":           classpath,
+		"classpath":           classpath.String(),
 		"library_directory":   filepath.Join(dataDir, "libraries"),
 		"classpath_separator": classpathSeparator,
 	}
@@ -680,7 +681,7 @@ func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instanc
 		MainClass:     clientManifest.MainClass,
 		JVMArguments:  jvmArgs,
 		GameArguments: gameArgs,
-		Classpath:     []string{classpath}, // BootGameFromConfig handles classpath joining if needed, but here we provide the full string for now
+		Classpath:     []string{classpath.String()}, // BootGameFromConfig handles classpath joining if needed, but here we provide the full string for now
 	}
 
 	profile, err := account.GetMinecraftProfile()

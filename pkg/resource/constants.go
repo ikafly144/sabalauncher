@@ -11,11 +11,6 @@ var (
 
 func init() {
 	if info, ok := debug.ReadBuildInfo(); ok {
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" {
-				// Optional: handle VCS info
-			}
-		}
 		if info.Main.Version != "" && info.Main.Version != "(devel)" {
 			LauncherVersion = info.Main.Version
 		}

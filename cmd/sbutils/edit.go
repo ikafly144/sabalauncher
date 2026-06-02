@@ -177,7 +177,7 @@ func parseRequireSpec(spec string) (string, string, error) {
 		return "", "", fmt.Errorf("require cannot be empty")
 	}
 
-	parts := []string{}
+	var parts []string
 	if strings.Contains(spec, "=") {
 		parts = strings.SplitN(spec, "=", 2)
 	} else if strings.Contains(spec, "@") {

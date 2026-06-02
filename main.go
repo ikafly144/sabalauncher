@@ -23,6 +23,11 @@ import (
 const devVersion = "0.0.0-indev"
 
 var (
+	_              = appName
+	_              = currentVersion
+	_              = commit
+	_              = date
+	_              = branch
 	appName        = "SabaLauncher"
 	version        = devVersion
 	currentVersion = func() *semver.Version {

@@ -11,8 +11,8 @@ import (
 func TestRepoCommands(t *testing.T) {
 	tempDir := t.TempDir()
 	oldWd, _ := os.Getwd()
-	os.Chdir(tempDir)
-	defer os.Chdir(oldWd)
+	_ = os.Chdir(tempDir)
+	defer func() { _ = os.Chdir(oldWd) }()
 
 	// Test Init
 	runRepoInit([]string{"TestRepo"})
@@ -23,7 +23,7 @@ func TestRepoCommands(t *testing.T) {
 
 	manifestBytes, _ := os.ReadFile("manifest.json")
 	var repo resource.SBRepository
-	json.Unmarshal(manifestBytes, &repo)
+	_ = json.Unmarshal(manifestBytes, &repo)
 
 	if repo.Name != "TestRepo" {
 		t.Errorf("expected name 'TestRepo', got '%s'", repo.Name)
@@ -34,12 +34,12 @@ func TestRepoCommands(t *testing.T) {
 
 	// Test Add
 	testFilePath := "test_file.sbpack"
-	os.WriteFile(testFilePath, []byte("dummy data"), 0644)
+	_ = os.WriteFile(testFilePath, []byte("dummy data"), 0644)
 
 	runRepoAdd([]string{"1.0.0", "sbpack", testFilePath, "http://example.com/v1.sbpack", "local_v1.sbpack"})
 
 	manifestBytes, _ = os.ReadFile("manifest.json")
-	json.Unmarshal(manifestBytes, &repo)
+	_ = json.Unmarshal(manifestBytes, &repo)
 
 	if len(repo.Patches) != 1 {
 		t.Fatalf("expected 1 patch, got %d", len(repo.Patches))
@@ -57,7 +57,7 @@ func TestRepoCommands(t *testing.T) {
 	runRepoSetLatest([]string{"1.0.0"})
 
 	manifestBytes, _ = os.ReadFile("manifest.json")
-	json.Unmarshal(manifestBytes, &repo)
+	_ = json.Unmarshal(manifestBytes, &repo)
 
 	if repo.LatestPatch != "1.0.0" {
 		t.Errorf("expected latest_patch '1.0.0', got '%s'", repo.LatestPatch)

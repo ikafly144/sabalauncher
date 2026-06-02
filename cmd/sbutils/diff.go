@@ -45,10 +45,24 @@ func runDiff(args []string) {
 	}
 
 	var oldIndex, newIndex resource.SBIndex
-	oldBytes, _ := os.ReadFile(filepath.Join(oldDir, "sb.index.json"))
-	newBytes, _ := os.ReadFile(filepath.Join(newDir, "sb.index.json"))
-	json.Unmarshal(oldBytes, &oldIndex)
-	json.Unmarshal(newBytes, &newIndex)
+	oldBytes, err := os.ReadFile(filepath.Join(oldDir, "sb.index.json"))
+	if err != nil {
+		fmt.Printf("Failed to read old index: %v\n", err)
+		os.Exit(1)
+	}
+	newBytes, err := os.ReadFile(filepath.Join(newDir, "sb.index.json"))
+	if err != nil {
+		fmt.Printf("Failed to read new index: %v\n", err)
+		os.Exit(1)
+	}
+	if err := json.Unmarshal(oldBytes, &oldIndex); err != nil {
+		fmt.Printf("Failed to parse old index: %v\n", err)
+		os.Exit(1)
+	}
+	if err := json.Unmarshal(newBytes, &newIndex); err != nil {
+		fmt.Printf("Failed to parse new index: %v\n", err)
+		os.Exit(1)
+	}
 
 	removedFiles := []string{}
 
@@ -73,7 +87,10 @@ func runDiff(args []string) {
 
 	oldOverridesDir := filepath.Join(oldDir, "overrides")
 	if _, err := os.Stat(oldOverridesDir); err == nil {
-		filepath.Walk(oldOverridesDir, func(path string, info os.FileInfo, err error) error {
+		if err := filepath.Walk(oldOverridesDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 			if !info.IsDir() {
 				rel, _ := filepath.Rel(oldOverridesDir, path)
 				rel = filepath.ToSlash(rel)
@@ -81,12 +98,18 @@ func runDiff(args []string) {
 				oldOverrides[rel] = hash
 			}
 			return nil
-		})
+		}); err != nil {
+			fmt.Printf("Failed to walk old overrides: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	newOverridesDir := filepath.Join(newDir, "overrides")
 	if _, err := os.Stat(newOverridesDir); err == nil {
-		filepath.Walk(newOverridesDir, func(path string, info os.FileInfo, err error) error {
+		if err := filepath.Walk(newOverridesDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 			if !info.IsDir() {
 				rel, _ := filepath.Rel(newOverridesDir, path)
 				rel = filepath.ToSlash(rel)
@@ -100,7 +123,10 @@ func runDiff(args []string) {
 				delete(oldOverrides, rel)
 			}
 			return nil
-		})
+		}); err != nil {
+			fmt.Printf("Failed to walk new overrides: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	// Any remaining in oldOverrides are removed
@@ -131,14 +157,23 @@ func runDiff(args []string) {
 	// Add sb.patch.json
 	patchBytes, _ := json.MarshalIndent(patch, "", "  ")
 	header := &zip.FileHeader{Name: "sb.patch.json", Method: zip.Deflate}
-	writer, _ := w.CreateHeader(header)
-	writer.Write(patchBytes)
+	writer, err := w.CreateHeader(header)
+	if err != nil {
+		fmt.Printf("Failed to create sb.patch.json header: %v\n", err)
+		os.Exit(1)
+	}
+	if _, err := writer.Write(patchBytes); err != nil {
+		fmt.Printf("Failed to write sb.patch.json: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Add added overrides
 	for _, rel := range addedOverrides {
 		srcPath := filepath.Join(newOverridesDir, filepath.FromSlash(rel))
 		zipPath := filepath.ToSlash(filepath.Join("overrides", rel))
-		addFileToZip(w, srcPath, zipPath)
+		if err := addFileToZip(w, srcPath, zipPath); err != nil {
+			fmt.Printf("Failed to add override %s: %v\n", rel, err)
+		}
 	}
 
 	// Add patched overrides
@@ -191,7 +226,9 @@ func extractZip(src, dest string) error {
 			return fmt.Errorf("illegal file path: %s", fpath)
 		}
 		if f.FileInfo().IsDir() {
-			os.MkdirAll(fpath, os.ModePerm)
+			if err := os.MkdirAll(fpath, os.ModePerm); err != nil {
+				return err
+			}
 			continue
 		}
 		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {

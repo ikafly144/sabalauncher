@@ -3,6 +3,7 @@ package fyne
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -226,7 +227,9 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 	progress := widget.NewProgressBar()
 	status := widget.NewLabel(i18n.T("preparing"))
 	stopBtn := widget.NewButton(i18n.T("stop_btn"), func() {
-		ui.runner.Stop()
+		if err := ui.runner.Stop(); err != nil {
+			slog.Error("failed to stop game runner", "err", err)
+		}
 	})
 	stopBtn.Importance = widget.DangerImportance
 

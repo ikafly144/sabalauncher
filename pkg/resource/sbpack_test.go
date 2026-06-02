@@ -52,11 +52,12 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	mod2Content := []byte("mod2_content")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/mod1.jar" {
-			w.Write(mod1Content)
-		} else if r.URL.Path == "/mod2.jar" {
-			w.Write(mod2Content)
-		} else {
+		switch r.URL.Path {
+		case "/mod1.jar":
+			_, _ = w.Write(mod1Content)
+		case "/mod2.jar":
+			_, _ = w.Write(mod2Content)
+		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
@@ -174,10 +175,12 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(destDir, "config/m1.txt")); !os.IsNotExist(err) {
 		t.Errorf("config/m1.txt should have been removed")
 	}
-	if content, err := os.ReadFile(filepath.Join(destDir, "mods/mod2.jar")); err != nil || string(content) != "mod2_content" {
+	content, err := os.ReadFile(filepath.Join(destDir, "mods/mod2.jar"))
+	if err != nil || string(content) != "mod2_content" {
 		t.Errorf("mod2.jar missing or content mismatch: %v", err)
 	}
-	if content, err := os.ReadFile(filepath.Join(destDir, "config/m2.txt")); err != nil || string(content) != "config2" {
+	content, err = os.ReadFile(filepath.Join(destDir, "config/m2.txt"))
+	if err != nil || string(content) != "config2" {
 		t.Errorf("config/m2.txt missing or content mismatch: %v", err)
 	}
 }
@@ -185,7 +188,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 func TestSBPatchBinaryPatch(t *testing.T) {
 	tempDir := t.TempDir()
 	destDir := filepath.Join(tempDir, "instance")
-	os.MkdirAll(destDir, 0755)
+	_ = os.MkdirAll(destDir, 0755)
 
 	// 1. Create base instance
 	v1Content := []byte("original content for binary patching test")
@@ -196,10 +199,10 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 		Version:       "1.0.0",
 	}
 	v1IndexBytes, _ := json.Marshal(v1Index)
-	os.WriteFile(filepath.Join(destDir, "sb.index.json"), v1IndexBytes, 0644)
-	os.MkdirAll(filepath.Join(destDir, "config"), 0755)
-	os.WriteFile(filepath.Join(destDir, "config/test.txt"), v1Content, 0644)
-	os.WriteFile(filepath.Join(destDir, "data.bin"), v1Data, 0644)
+	_ = os.WriteFile(filepath.Join(destDir, "sb.index.json"), v1IndexBytes, 0644)
+	_ = os.MkdirAll(filepath.Join(destDir, "config"), 0755)
+	_ = os.WriteFile(filepath.Join(destDir, "config/test.txt"), v1Content, 0644)
+	_ = os.WriteFile(filepath.Join(destDir, "data.bin"), v1Data, 0644)
 
 	inst := &Instance{
 		Path: destDir,
@@ -314,7 +317,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 			idxB, _ := json.Marshal(idx)
 			createMockZip(t, tempZip, map[string][]byte{"sb.index.json": idxB})
 			packB, _ := os.ReadFile(tempZip)
-			w.Write(packB)
+			_, _ = w.Write(packB)
 		case "/repo/v1.1.sbpatch":
 			tempZip := filepath.Join(t.TempDir(), "v1.1.sbpatch")
 			patch := v11Patch
@@ -322,11 +325,11 @@ func TestImportRemoteSBPack(t *testing.T) {
 			idxB, _ := json.Marshal(patch)
 			createMockZip(t, tempZip, map[string][]byte{"sb.patch.json": idxB})
 			patchB, _ := os.ReadFile(tempZip)
-			w.Write(patchB)
+			_, _ = w.Write(patchB)
 		case "/mod1.jar":
-			w.Write(mod1Content)
+			_, _ = w.Write(mod1Content)
 		case "/mod2.jar":
-			w.Write(mod2Content)
+			_, _ = w.Write(mod2Content)
 		case "/repo/manifest.json":
 			// Calculate real hashes for the ZIPs we would serve
 			v1Temp := filepath.Join(t.TempDir(), "v1_hash.sbpack")
@@ -361,7 +364,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 					},
 				},
 			}
-			json.NewEncoder(w).Encode(repo)
+			_ = json.NewEncoder(w).Encode(repo)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
