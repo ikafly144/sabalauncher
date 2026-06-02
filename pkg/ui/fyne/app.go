@@ -14,12 +14,13 @@ type FyneUI struct {
 	instances core.InstanceManager
 	runner    core.GameRunner
 	discord   core.DiscordManager
+	config    *core.LauncherConfig
 
 	version              string
 	selectedInstanceName string
 }
 
-func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManager, runner core.GameRunner, discord core.DiscordManager, version string) *FyneUI {
+func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManager, runner core.GameRunner, discord core.DiscordManager, config *core.LauncherConfig, version string) *FyneUI {
 	a.SetIcon(resourceLauncherIcon)
 	w := a.NewWindow(i18n.T("app_title"))
 	w.Resize(fyne.NewSize(800, 600))
@@ -32,6 +33,7 @@ func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManag
 		instances: instances,
 		runner:    runner,
 		discord:   discord,
+		config:    config,
 		version:   version,
 	}
 }

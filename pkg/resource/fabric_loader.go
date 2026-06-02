@@ -130,7 +130,7 @@ func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with Fabric.
-func (f *FabricLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error) {
+func (f *FabricLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool, memory uint64) (*LaunchConfig, error) {
 	dataPath := DataDir
 	metaPath := filepath.Join(dataPath, "versions", f.GameVersion+"-fabric-"+f.LoaderVersion, "fabric-meta.json")
 	file, err := os.Open(metaPath)
@@ -146,7 +146,7 @@ func (f *FabricLoader) GenerateLaunchConfig(inst *Instance, features map[string]
 
 	// 1. Get Vanilla Launch Config as base
 	vanillaLoader := NewVanillaLoader(f.GameVersion)
-	config, err := vanillaLoader.GenerateLaunchConfig(inst, features)
+	config, err := vanillaLoader.GenerateLaunchConfig(inst, features, memory)
 	if err != nil {
 		return nil, err
 	}

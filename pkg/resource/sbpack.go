@@ -121,7 +121,7 @@ func downloadAndVerifyRepoPatch(p SBRepoPatch) (string, error) {
 func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID) (*Instance, error) {
 	repo, err := FetchRepository(manifestURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch repository manifest: %w", err)
 	}
 
 	// 1. Find initial sbpack. We'll start with the first one or the one matching repo structure.
@@ -140,12 +140,12 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID) (*Ins
 
 	localPackPath, err := downloadAndVerifyRepoPatch(*initialPatch)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to download and verify initial patch: %w", err)
 	}
 
 	inst, err := ImportSBPack(localPackPath, destDir, uid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to import initial sbpack: %w", err)
 	}
 	inst.Upstream.ManifestURL = manifestURL
 	inst.Upstream.Version = initialPatch.ID
@@ -211,7 +211,7 @@ func UpdateInstanceRemote(inst *Instance) error {
 		return fmt.Errorf("current version '%s' not found in repository manifest", inst.Upstream.Version)
 	}
 
-	if appliedCount == 0 && inst.Upstream.Version != repo.LatestPatch {
+	if appliedCount == 0 && repo.LatestPatch != "" && inst.Upstream.Version != repo.LatestPatch {
 		return fmt.Errorf("failed to find update path from '%s' to '%s'", inst.Upstream.Version, repo.LatestPatch)
 	}
 

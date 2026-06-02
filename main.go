@@ -73,7 +73,12 @@ func main() {
 		log.Fatalf("failed to initialize instance manager: %v", err)
 	}
 
-	runner := core.NewGameRunner(auth, instances, resource.DataDir)
+	config, err := core.LoadConfig(resource.DataDir)
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	runner := core.NewGameRunner(auth, instances, resource.DataDir, config)
 	discord := core.NewDiscordManager(auth, instances)
 
 	// Try to resume session
@@ -81,7 +86,7 @@ func main() {
 
 	// Initialize Fyne App
 	a := app.NewWithID("net.sabafly.sabalauncher")
-	ui := fyne.NewFyneUI(a, auth, instances, runner, discord, version)
+	ui := fyne.NewFyneUI(a, auth, instances, runner, discord, config, version)
 
 	// Run UI
 	ui.Run()

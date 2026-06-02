@@ -38,6 +38,8 @@ var dictEN = map[string]string{
 	"select_instance_prompt":        "Select an instance to see details",
 	"settings_title":                "Settings",
 	"account_section_title":         "Account",
+	"launcher_section_title":        "Launcher Settings",
+	"max_memory_label":              "Max Memory (MB)",
 	"username_label":                "Username: %s",
 	"uuid_label":                    "UUID: %s",
 

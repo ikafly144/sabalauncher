@@ -23,7 +23,7 @@ var CurseForgeAPIKey string
 // ModLoader defines the interface for different mod loaders like Forge, Fabric, etc.
 type ModLoader interface {
 	Install(ctx context.Context, inst *Instance) error
-	GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error)
+	GenerateLaunchConfig(inst *Instance, features map[string]bool, memory uint64) (*LaunchConfig, error)
 }
 
 // GetModLoader returns the appropriate ModLoader implementation for the given instance.
@@ -76,7 +76,7 @@ func (v *VanillaLoader) Install(ctx context.Context, inst *Instance) error {
 	return nil
 }
 
-func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error) {
+func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool, memory uint64) (*LaunchConfig, error) {
 	dataPath := DataDir
 
 	clientManifest, err := GetClientManifestRecursive(dataPath, v.Version)
@@ -106,7 +106,6 @@ func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance, features map[string
 	}
 
 	var jvmArgs []string
-	memory := uint64(2048) // Default memory
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 

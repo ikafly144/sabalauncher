@@ -42,7 +42,7 @@ func TestGameRunner_LaunchFlow(t *testing.T) {
 			auth := &mockAuth{}
 			im := &mockInstanceManager{inst: inst}
 
-			runner := NewGameRunner(auth, im, "data-dir")
+			runner := NewGameRunner(auth, im, "data-dir", DefaultConfig())
 
 			if runner == nil {
 				t.Fatal("Failed to create GameRunner")

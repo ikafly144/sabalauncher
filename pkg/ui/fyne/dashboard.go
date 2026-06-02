@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -213,11 +214,30 @@ func (ui *FyneUI) makeSettingsView() fyne.CanvasObject {
 	})
 	logoutBtn.Importance = widget.DangerImportance
 
+	// Launcher section
+	memoryEntry := widget.NewEntry()
+	memoryEntry.SetText(strconv.FormatUint(ui.config.MaxMemory, 10))
+	memoryEntry.OnChanged = func(s string) {
+		val, err := strconv.ParseUint(s, 10, 64)
+		if err == nil {
+			ui.config.MaxMemory = val
+			_ = ui.config.Save(resource.DataDir)
+		}
+	}
+
+	launcherSettings := container.NewVBox(
+		widget.NewLabel(i18n.T("max_memory_label")),
+		memoryEntry,
+	)
+
 	return container.NewVBox(
 		widget.NewLabelWithStyle(i18n.T("settings_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle(i18n.T("account_section_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		container.NewPadded(accountInfo),
+		widget.NewSeparator(),
+		widget.NewLabelWithStyle(i18n.T("launcher_section_title"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		container.NewPadded(launcherSettings),
 		layout.NewSpacer(),
 		container.NewPadded(logoutBtn),
 	)

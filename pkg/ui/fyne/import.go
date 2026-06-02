@@ -49,7 +49,7 @@ func (ui *FyneUI) showRegisterRemoteModpackDialog() {
 			progress.Show()
 			go func() {
 				err := ui.instances.AddRemoteInstance(entry.Text)
-				progress.Hide()
+				fyne.Do(progress.Hide)
 				if err != nil {
 					dialog.ShowError(err, ui.window)
 				} else {

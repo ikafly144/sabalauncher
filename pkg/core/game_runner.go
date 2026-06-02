@@ -15,6 +15,7 @@ type gameRunner struct {
 	auth      Authenticator
 	instances InstanceManager
 	dataPath  string
+	config    *LauncherConfig
 
 	progressChan chan ProgressEvent
 	logsChan     chan LogEntry
@@ -24,11 +25,12 @@ type gameRunner struct {
 	mu      sync.RWMutex
 }
 
-func NewGameRunner(auth Authenticator, instances InstanceManager, dataDir string) GameRunner {
+func NewGameRunner(auth Authenticator, instances InstanceManager, dataDir string, config *LauncherConfig) GameRunner {
 	return &gameRunner{
 		auth:         auth,
 		instances:    instances,
 		dataPath:     dataDir,
+		config:       config,
 		progressChan: make(chan ProgressEvent, 100),
 		logsChan:     make(chan LogEntry, 1000),
 	}
@@ -108,7 +110,7 @@ func (r *gameRunner) Launch(instanceName string) error {
 		"has_custom_resolution": true,
 	}
 
-	config, err := loader.GenerateLaunchConfig(inst, features)
+	config, err := loader.GenerateLaunchConfig(inst, features, r.config.MaxMemory)
 	if err != nil {
 		return fmt.Errorf("failed to generate launch config: %w", err)
 	}

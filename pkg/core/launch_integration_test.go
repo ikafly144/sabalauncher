@@ -110,7 +110,7 @@ func TestModLoaders_FullLifecycle(t *testing.T) {
 				"is_demo_user":          true,
 				"has_custom_resolution": true,
 			}
-			config, err := loader.GenerateLaunchConfig(inst, features)
+			config, err := loader.GenerateLaunchConfig(inst, features, 2048)
 			if err != nil {
 				t.Fatalf("Failed to generate launch config: %v", err)
 			}

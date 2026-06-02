@@ -38,6 +38,8 @@ var dictJA = map[string]string{
 	"select_instance_prompt":        "インスタンスを選択して詳細を表示",
 	"settings_title":                "設定",
 	"account_section_title":         "アカウント",
+	"launcher_section_title":        "ランチャー設定",
+	"max_memory_label":              "最大割り当てメモリ (MB)",
 	"username_label":                "ユーザー名: %s",
 	"uuid_label":                    "UUID: %s",
 

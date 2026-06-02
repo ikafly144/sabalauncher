@@ -559,7 +559,7 @@ var (
 	}
 )
 
-func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, dataDir string, stdout, stderr io.Writer, beforeHook func(), afterHook func()) error {
+func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instance, account *msa.MinecraftAccountAuthResult, dataDir string, memory uint64, stdout, stderr io.Writer, beforeHook func(), afterHook func()) error {
 	if clientManifest == nil {
 		return errors.New("client manifest is nil")
 	}
@@ -593,7 +593,6 @@ func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instanc
 	}
 
 	var jvmArgs []string
-	memory := uint64(2048) // Fixed for now
 	jvmArgs = append(jvmArgs, "-Xmx"+strconv.FormatUint(memory, 10)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 

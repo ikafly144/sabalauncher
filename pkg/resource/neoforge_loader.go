@@ -110,7 +110,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with NeoForge.
-func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool) (*LaunchConfig, error) {
+func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool, memory uint64) (*LaunchConfig, error) {
 	dataPath := DataDir
 	neoforgeDir, err := n.findManifestID(dataPath)
 	if err != nil {
@@ -138,7 +138,6 @@ func (n *NeoForgeLoader) GenerateLaunchConfig(inst *Instance, features map[strin
 	}
 
 	var jvmArgs []string
-	memory := uint64(2048) // Fixed default memory
 	jvmArgs = append(jvmArgs, "-Xmx"+fmt.Sprintf("%d", memory)+"M")
 	jvmArgs = append(jvmArgs, defaultJvmArgs...)
 
