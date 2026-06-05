@@ -577,8 +577,8 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 
 	// 1. Delete removed files
 	for _, removed := range patch.RemovedFiles {
-		// TODO: Sanitize path: overrides/ in zip is extracted to instance root
-		cleanPath := strings.TrimPrefix(removed, "overrides/")
+		// Sanitize path: overrides/ in zip is extracted to instance root
+		cleanPath := strings.TrimPrefix(removed, "overrides/") // TODO: remove this hack by standardizing patch format to not include "overrides/" prefix
 		targetPath := filepath.Join(inst.Path, cleanPath)
 		if err := os.Remove(targetPath); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to remove file %s: %w", targetPath, err)
