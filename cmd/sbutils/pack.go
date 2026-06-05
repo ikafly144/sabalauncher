@@ -2,10 +2,14 @@ package main
 
 import (
 	"archive/zip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/google/uuid"
+	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 func runPack(args []string) {
@@ -24,6 +28,33 @@ func runPack(args []string) {
 		os.Exit(1)
 	}
 
+	// Read index and update ID
+	indexBytes, err := os.ReadFile(indexPath)
+	if err != nil {
+		fmt.Printf("Failed to read index: %v\n", err)
+		os.Exit(1)
+	}
+
+	var index resource.SBIndex
+	if err := json.Unmarshal(indexBytes, &index); err != nil {
+		fmt.Printf("Failed to parse index: %v\n", err)
+		os.Exit(1)
+	}
+
+	newID, err := uuid.NewV7()
+	if err != nil {
+		fmt.Printf("Failed to generate new ID: %v\n", err)
+		os.Exit(1)
+	}
+	index.ID = newID
+
+	// Write updated index back to source
+	updatedIndexBytes, _ := json.MarshalIndent(index, "", "  ")
+	if err := os.WriteFile(indexPath, updatedIndexBytes, 0644); err != nil {
+		fmt.Printf("Failed to update index file: %v\n", err)
+		os.Exit(1)
+	}
+
 	outFile, err := os.Create(outPath)
 	if err != nil {
 		fmt.Printf("Failed to create output file: %v\n", err)
@@ -34,7 +65,7 @@ func runPack(args []string) {
 	w := zip.NewWriter(outFile)
 	defer w.Close()
 
-	// Add sb.index.json
+	// Add sb.index.json (re-read from updated file)
 	if err := addFileToZip(w, indexPath, "sb.index.json"); err != nil {
 		fmt.Printf("Failed to add sb.index.json to zip: %v\n", err)
 		os.Exit(1)
@@ -65,7 +96,7 @@ func runPack(args []string) {
 		}
 	}
 
-	fmt.Printf("Successfully packed to %s\n", outPath)
+	fmt.Printf("Successfully packed (ID: %s) to %s\n", newID, outPath)
 }
 
 func addFileToZip(w *zip.Writer, srcPath string, zipPath string) error {
