@@ -59,8 +59,8 @@ func runPatch(args []string) {
 		os.Exit(1)
 	}
 
-	if baseIndex.Version != patch.FromVersion {
-		fmt.Printf("Version mismatch: base is %s, patch expects %s\n", baseIndex.Version, patch.FromVersion)
+	if baseIndex.ID != patch.BaseID {
+		fmt.Printf("Version mismatch: base is %s, patch expects %s\n", baseIndex.ID, patch.BaseID)
 		os.Exit(1)
 	}
 
@@ -153,7 +153,7 @@ func runPatch(args []string) {
 	}
 
 	// Write new index
-	newIndexBytes, _ := json.MarshalIndent(patch.NewIndex, "", "  ")
+	newIndexBytes, _ := json.MarshalIndent(patch.Index, "", "  ")
 	if err := os.WriteFile(filepath.Join(baseDir, "sb.index.json"), newIndexBytes, 0644); err != nil {
 		fmt.Printf("Failed to write new index: %v\n", err)
 		os.Exit(1)

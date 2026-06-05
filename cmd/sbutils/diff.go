@@ -137,9 +137,8 @@ func runDiff(args []string) {
 	// Create patch JSON
 	patch := resource.SBPatch{
 		FormatVersion: resource.SBPatchFormatVersion,
-		FromVersion:   oldIndex.Version,
-		ToVersion:     newIndex.Version,
-		NewIndex:      newIndex,
+		BaseID:        oldIndex.ID,
+		Index:         newIndex,
 		RemovedFiles:  removedFiles,
 	}
 

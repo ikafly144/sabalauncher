@@ -5,30 +5,36 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
 func runInit(args []string) {
-	if len(args) < 2 {
-		fmt.Println("Usage: sbutils init <name> <version> [minecraft_version] [loader_id] [loader_version]")
+	if len(args) < 1 {
+		fmt.Println("Usage: sbutils init <name> [minecraft_version] [loader_id] [loader_version]")
 		os.Exit(1)
 	}
 
 	name := args[0]
-	version := args[1]
 
 	deps := make(map[string]string)
-	if len(args) > 2 {
-		deps["minecraft"] = args[2]
+	if len(args) > 1 {
+		deps["minecraft"] = args[1]
 	}
-	if len(args) > 4 {
-		deps[args[3]] = args[4]
+	if len(args) > 3 {
+		deps[args[2]] = args[3]
+	}
+
+	newID, err := uuid.NewV7()
+	if err != nil {
+		fmt.Printf("Failed to generate UUID: %v\n", err)
+		os.Exit(1)
 	}
 
 	index := resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          name,
-		Version:       version,
+		ID:            newID,
 		Dependencies:  deps,
 		Files:         []resource.SBFile{},
 	}

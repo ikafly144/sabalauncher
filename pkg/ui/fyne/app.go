@@ -22,7 +22,7 @@ type FyneUI struct {
 
 func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManager, runner core.GameRunner, discord core.DiscordManager, config *core.LauncherConfig, version string) *FyneUI {
 	a.SetIcon(resourceLauncherIcon)
-	w := a.NewWindow(i18n.T("app_title"))
+	w := a.NewWindow(i18n.T("app_title") + " " + version)
 	w.Resize(fyne.NewSize(800, 600))
 	w.SetFixedSize(false)
 

@@ -21,14 +21,16 @@ import (
 )
 
 const (
-	SBPackFormatVersion  = 1
-	SBPatchFormatVersion = 2
+	SBPackFormatVersion  = 2
+	SBPatchFormatVersion = 3
 )
+
+//TODO: rename SBIndex to SBPackIndex
 
 type SBIndex struct {
 	FormatVersion int               `json:"formatVersion"`
 	Name          string            `json:"name"`
-	Version       string            `json:"version"`
+	ID            uuid.UUID         `json:"id"`
 	Dependencies  map[string]string `json:"dependencies"`
 	Files         []SBFile          `json:"files"`
 }
@@ -41,17 +43,24 @@ type SBFile struct {
 	Env       *SBEnvironment    `json:"env,omitempty"`
 }
 
+type SBEnvSide string
+
+const (
+	SBEnvRequired    SBEnvSide = "required"
+	SBEnvOptional    SBEnvSide = "optional"
+	SBEnvUnsupported SBEnvSide = "unsupported"
+)
+
 type SBEnvironment struct {
-	Client string `json:"client"` // "required", "optional", "unsupported"
-	Server string `json:"server"`
+	Client SBEnvSide `json:"client"`
+	Server SBEnvSide `json:"server"`
 }
 
 type SBPatch struct {
-	FormatVersion int      `json:"formatVersion"`
-	FromVersion   string   `json:"fromVersion"`
-	ToVersion     string   `json:"toVersion"`
-	NewIndex      SBIndex  `json:"newIndex"`
-	RemovedFiles  []string `json:"removedFiles"`
+	FormatVersion int       `json:"formatVersion"`
+	BaseID        uuid.UUID `json:"baseID"`
+	Index         SBIndex   `json:"index"`
+	RemovedFiles  []string  `json:"removedFiles"`
 }
 
 type SBRepository struct {
@@ -250,6 +259,10 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, er
 		return nil, fmt.Errorf("sb.index.json not found in pack")
 	}
 
+	if index.FormatVersion < SBPackFormatVersion {
+		return nil, fmt.Errorf("unsupported sbpack format version: %d (requires %d)", index.FormatVersion, SBPackFormatVersion)
+	}
+
 	inst := &Instance{
 		Name:     index.Name,
 		UID:      uid,
@@ -257,7 +270,7 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, er
 		Mods:     []Mod{},
 		Path:     destDir,
 		Upstream: &Upstream{
-			Version: index.Version,
+			Version: index.ID.String(),
 		},
 	}
 
@@ -315,7 +328,7 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, er
 	// Download and verify files
 	for _, fileInfo := range index.Files {
 		// Only download if client is not unsupported
-		if fileInfo.Env != nil && fileInfo.Env.Client == "unsupported" {
+		if fileInfo.Env != nil && fileInfo.Env.Client == SBEnvUnsupported {
 			continue
 		}
 
@@ -393,6 +406,10 @@ func ApplySBPack(inst *Instance, packPath string) error {
 		return fmt.Errorf("sb.index.json not found in pack")
 	}
 
+	if newIndex.FormatVersion < SBPackFormatVersion {
+		return fmt.Errorf("unsupported sbpack format version: %d (requires %d)", newIndex.FormatVersion, SBPackFormatVersion)
+	}
+
 	// Load old index to find removed files
 	var oldIndex SBIndex
 	oldIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
@@ -457,7 +474,7 @@ func ApplySBPack(inst *Instance, packPath string) error {
 	// Download/Verify files
 	newMods := []Mod{}
 	for _, fileInfo := range newIndex.Files {
-		if fileInfo.Env != nil && fileInfo.Env.Client == "unsupported" {
+		if fileInfo.Env != nil && fileInfo.Env.Client == SBEnvUnsupported {
 			continue
 		}
 		destPath := filepath.Join(inst.Path, fileInfo.Path)
@@ -490,7 +507,7 @@ func ApplySBPack(inst *Instance, packPath string) error {
 	}
 
 	if inst.Upstream != nil {
-		inst.Upstream.Version = newIndex.Version
+		inst.Upstream.Version = newIndex.ID.String()
 	}
 	inst.Versions = make([]InstanceVersion, 0, len(newIndex.Dependencies))
 	for id, ver := range newIndex.Dependencies {
@@ -539,6 +556,10 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 		return fmt.Errorf("sb.patch.json not found in patch")
 	}
 
+	if patch.FormatVersion < SBPatchFormatVersion {
+		return fmt.Errorf("unsupported sbpatch format version: %d (requires %d)", patch.FormatVersion, SBPatchFormatVersion)
+	}
+
 	// Load current index from disk to check modpack version
 	var currentIndex SBIndex
 	currentIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
@@ -549,9 +570,9 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 		return fmt.Errorf("failed to parse current index: %w", err)
 	}
 
-	if currentIndex.Version != patch.FromVersion {
+	if currentIndex.ID != patch.BaseID {
 		return fmt.Errorf("version mismatch: instance modpack is at %s, patch requires %s",
-			currentIndex.Version, patch.FromVersion)
+			currentIndex.ID, patch.BaseID)
 	}
 
 	// 1. Delete removed files
@@ -657,8 +678,8 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 
 	// 3. Download/Verify new index files
 	newMods := []Mod{}
-	for _, fileInfo := range patch.NewIndex.Files {
-		if fileInfo.Env != nil && fileInfo.Env.Client == "unsupported" {
+	for _, fileInfo := range patch.Index.Files {
+		if fileInfo.Env != nil && fileInfo.Env.Client == SBEnvUnsupported {
 			continue
 		}
 
@@ -700,10 +721,10 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 
 	// Update instance state
 	if inst.Upstream != nil {
-		inst.Upstream.Version = patch.ToVersion
+		inst.Upstream.Version = patch.Index.ID.String()
 	}
-	inst.Versions = make([]InstanceVersion, 0, len(patch.NewIndex.Dependencies))
-	for id, ver := range patch.NewIndex.Dependencies {
+	inst.Versions = make([]InstanceVersion, 0, len(patch.Index.Dependencies))
+	for id, ver := range patch.Index.Dependencies {
 		inst.Versions = append(inst.Versions, InstanceVersion{
 			ID:      id,
 			Version: ver,
@@ -712,13 +733,14 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 	inst.Mods = newMods
 
 	// Save new index
-	newIndexBytes, _ := json.MarshalIndent(patch.NewIndex, "", "  ")
+	newIndexBytes, _ := json.MarshalIndent(patch.Index, "", "  ")
 	if err := os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644); err != nil {
 		return fmt.Errorf("failed to save new index: %w", err)
 	}
 
 	return nil
 }
+
 
 func downloadWithVerify(url, dest string, hashes map[string]string) error {
 	resp, err := http.Get(url)

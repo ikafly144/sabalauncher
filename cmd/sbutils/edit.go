@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
@@ -45,8 +46,8 @@ func printEditUsage() {
 	fmt.Println("      Target sb.index.json path (default: sb.index.json)")
 	fmt.Println("  -name <name>")
 	fmt.Println("      Set pack name")
-	fmt.Println("  -version <version>")
-	fmt.Println("      Set pack version")
+	fmt.Println("  -id <uuid>")
+	fmt.Println("      Set pack ID (UUID)")
 	fmt.Println("  -require <id=version>")
 	fmt.Println("      Set dependency (repeatable, also supports id@version)")
 	fmt.Println("  -droprequire <id>")
@@ -70,7 +71,7 @@ func executeEdit(args []string, out io.Writer) error {
 
 	indexPath := "sb.index.json"
 	name := ""
-	version := ""
+	idStr := ""
 	printOnly := false
 	var requireSpecs stringListFlag
 	var dropRequires stringListFlag
@@ -79,7 +80,7 @@ func executeEdit(args []string, out io.Writer) error {
 	fs.StringVar(&indexPath, "indexfile", "sb.index.json", "target sb.index.json file")
 	fs.StringVar(&indexPath, "index", "sb.index.json", "target sb.index.json file")
 	fs.StringVar(&name, "name", "", "set pack name")
-	fs.StringVar(&version, "version", "", "set pack version")
+	fs.StringVar(&idStr, "id", "", "set pack ID (UUID)")
 	fs.Var(&requireSpecs, "require", "set dependency id=version (repeatable)")
 	fs.Var(&dropRequires, "droprequire", "remove dependency id (repeatable)")
 	fs.Var(&dropFiles, "dropfile", "remove files entry by path (repeatable)")
@@ -92,7 +93,7 @@ func executeEdit(args []string, out io.Writer) error {
 		return fmt.Errorf("unexpected positional arguments: %s", strings.Join(fs.Args(), " "))
 	}
 
-	if name == "" && version == "" && len(requireSpecs) == 0 && len(dropRequires) == 0 &&
+	if name == "" && idStr == "" && len(requireSpecs) == 0 && len(dropRequires) == 0 &&
 		len(fileEdits) == 0 && len(dropFiles) == 0 {
 		return fmt.Errorf("no edit flags provided")
 	}
@@ -114,8 +115,12 @@ func executeEdit(args []string, out io.Writer) error {
 	if name != "" {
 		index.Name = name
 	}
-	if version != "" {
-		index.Version = version
+	if idStr != "" {
+		newID, err := uuid.Parse(idStr)
+		if err != nil {
+			return fmt.Errorf("invalid UUID provided for -id: %w", err)
+		}
+		index.ID = newID
 	}
 
 	for _, spec := range requireSpecs {

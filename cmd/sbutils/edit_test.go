@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
@@ -53,11 +54,13 @@ func readSBIndex(t *testing.T, path string) resource.SBIndex {
 }
 
 func TestExecuteEdit_UpdatesFields(t *testing.T) {
+	v1ID, _ := uuid.NewV7()
+	v2ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Old Name",
-		Version:       "1.0.0",
+		ID:            v1ID,
 		Dependencies: map[string]string{
 			"minecraft":     "1.20.1",
 			"fabric-loader": "0.15.0",
@@ -71,7 +74,7 @@ func TestExecuteEdit_UpdatesFields(t *testing.T) {
 	err := executeEdit([]string{
 		"-indexfile", path,
 		"-name", "New Name",
-		"-version", "2.0.0",
+		"-id", v2ID.String(),
 		"-require", "minecraft=1.21.0",
 		"-require", "quilt-loader@0.26.0",
 		"-droprequire", "fabric-loader",
@@ -84,8 +87,8 @@ func TestExecuteEdit_UpdatesFields(t *testing.T) {
 	if updated.Name != "New Name" {
 		t.Fatalf("expected Name=New Name, got %s", updated.Name)
 	}
-	if updated.Version != "2.0.0" {
-		t.Fatalf("expected Version=2.0.0, got %s", updated.Version)
+	if updated.ID.String() != v2ID.String() {
+		t.Fatalf("expected ID=%s, got %s", v2ID.String(), updated.ID.String())
 	}
 	if updated.Dependencies["minecraft"] != "1.21.0" {
 		t.Fatalf("expected minecraft=1.21.0, got %s", updated.Dependencies["minecraft"])
@@ -105,37 +108,40 @@ func TestExecuteEdit_UpdatesFields(t *testing.T) {
 }
 
 func TestExecuteEdit_PrintDoesNotWriteFile(t *testing.T) {
+	v1ID, _ := uuid.NewV7()
+	v2ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
-		Version:       "1.0.0",
+		ID:            v1ID,
 		Dependencies: map[string]string{
 			"minecraft": "1.20.1",
 		},
 	})
 
 	var out bytes.Buffer
-	err := executeEdit([]string{"-indexfile", path, "-version", "3.0.0", "-print"}, &out)
+	err := executeEdit([]string{"-indexfile", path, "-id", v2ID.String(), "-print"}, &out)
 	if err != nil {
 		t.Fatalf("executeEdit failed: %v", err)
 	}
 
 	current := readSBIndex(t, path)
-	if current.Version != "1.0.0" {
-		t.Fatalf("expected file to remain unchanged, got version %s", current.Version)
+	if current.ID.String() != v1ID.String() {
+		t.Fatalf("expected file to remain unchanged, got ID %s", current.ID.String())
 	}
-	if !strings.Contains(out.String(), `"version": "3.0.0"`) {
-		t.Fatalf("print output should include updated version, got %s", out.String())
+	if !strings.Contains(out.String(), `"id": "`+v2ID.String()+`"`) {
+		t.Fatalf("print output should include updated id, got %s", out.String())
 	}
 }
 
 func TestExecuteEdit_InvalidRequire(t *testing.T) {
+	v1ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
-		Version:       "1.0.0",
+		ID:            v1ID,
 		Dependencies:  map[string]string{},
 	})
 
@@ -159,11 +165,12 @@ func TestExecuteEdit_FileUpsertAndDrop(t *testing.T) {
 	}))
 	defer server.Close()
 
+	v1ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
-		Version:       "1.0.0",
+		ID:            v1ID,
 		Dependencies:  map[string]string{},
 		Files: []resource.SBFile{
 			{
@@ -172,8 +179,8 @@ func TestExecuteEdit_FileUpsertAndDrop(t *testing.T) {
 				Downloads: []string{"https://example.com/old.jar"},
 				FileSize:  1,
 				Env: &resource.SBEnvironment{
-					Client: "required",
-					Server: "optional",
+					Client: resource.SBEnvRequired,
+					Server: resource.SBEnvOptional,
 				},
 			},
 			{
@@ -224,7 +231,7 @@ func TestExecuteEdit_FileUpsertAndDrop(t *testing.T) {
 	if len(updatedSample.Downloads) != 1 || updatedSample.Downloads[0] != server.URL+"/mod.jar" {
 		t.Fatalf("sample downloads mismatch: %+v", updatedSample.Downloads)
 	}
-	if updatedSample.Env == nil || updatedSample.Env.Client != "required" || updatedSample.Env.Server != "optional" {
+	if updatedSample.Env == nil || updatedSample.Env.Client != resource.SBEnvRequired || updatedSample.Env.Server != resource.SBEnvOptional {
 		t.Fatalf("sample env should be preserved, got %+v", updatedSample.Env)
 	}
 
@@ -237,11 +244,12 @@ func TestExecuteEdit_FileUpsertAndDrop(t *testing.T) {
 }
 
 func TestExecuteEdit_FileRequiresPathAndURL(t *testing.T) {
+	v1ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
 	writeSBIndex(t, path, resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
-		Version:       "1.0.0",
+		ID:            v1ID,
 		Dependencies:  map[string]string{},
 	})
 

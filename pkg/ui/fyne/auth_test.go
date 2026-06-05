@@ -147,6 +147,7 @@ func TestShowAuthView_LoggedOut_Login(t *testing.T) {
 		auth:      m,
 		instances: mp,
 		discord:   new(mockDiscordManager),
+		config:    core.DefaultConfig(),
 	}
 
 	view := ui.createLoggedOutView()
@@ -174,6 +175,7 @@ func TestShowAuthView_LoggedIn_Buttons(t *testing.T) {
 		auth:      m,
 		instances: new(mockInstanceManager),
 		discord:   new(mockDiscordManager),
+		config:    core.DefaultConfig(),
 	}
 	ui.instances.(*mockInstanceManager).On("GetInstances").Return([]*resource.Instance{}, nil)
 
@@ -207,6 +209,7 @@ func TestShowAuthView_Error_Retry(t *testing.T) {
 		auth:      m,
 		instances: mp,
 		discord:   new(mockDiscordManager),
+		config:    core.DefaultConfig(),
 	}
 
 	view := ui.createErrorView()
@@ -233,6 +236,7 @@ func TestShowAuthView_LoggedIn_Logout(t *testing.T) {
 		window:  w,
 		auth:    m,
 		discord: new(mockDiscordManager),
+		config:  core.DefaultConfig(),
 	}
 
 	ui.showAuthView()
@@ -257,6 +261,7 @@ func TestShowAuthView_Error(t *testing.T) {
 		window:  w,
 		auth:    m,
 		discord: new(mockDiscordManager),
+		config:  core.DefaultConfig(),
 	}
 
 	ui.showAuthView()
@@ -288,6 +293,7 @@ func TestStartLogin(t *testing.T) {
 		auth:      m,
 		instances: mp,
 		discord:   new(mockDiscordManager),
+		config:    core.DefaultConfig(),
 	}
 
 	ui.startLogin(msa.LoginMethodBrowser)
@@ -309,6 +315,7 @@ func TestStartLogin_Fail(t *testing.T) {
 		window:  w,
 		auth:    m,
 		discord: new(mockDiscordManager),
+		config:  core.DefaultConfig(),
 	}
 
 	ui.startLogin(msa.LoginMethodBrowser)
@@ -333,6 +340,7 @@ func TestStartLogin_WaitFail(t *testing.T) {
 		window:  w,
 		auth:    m,
 		discord: new(mockDiscordManager),
+		config:  core.DefaultConfig(),
 	}
 
 	ui.startLogin(msa.LoginMethodBrowser)

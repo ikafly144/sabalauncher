@@ -15,19 +15,9 @@ type mockGameRunner struct {
 	mock.Mock
 }
 
-func (m *mockGameRunner) Launch(profileName string) error {
-	args := m.Called(profileName)
+func (m *mockGameRunner) Launch(instanceName string) error {
+	args := m.Called(instanceName)
 	return args.Error(0)
-}
-
-func (m *mockGameRunner) Stop() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *mockGameRunner) IsRunning() bool {
-	args := m.Called()
-	return args.Bool(0)
 }
 
 func (m *mockGameRunner) SubscribeProgress() <-chan core.ProgressEvent {
@@ -40,13 +30,23 @@ func (m *mockGameRunner) SubscribeLogs() <-chan core.LogEntry {
 	return args.Get(0).(<-chan core.LogEntry)
 }
 
+func (m *mockGameRunner) IsRunning() bool {
+	args := m.Called()
+	return args.Bool(0)
+}
+
+func (m *mockGameRunner) Stop() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func TestShowDashboardView(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
 
 	mp := new(mockInstanceManager)
 	mp.On("GetInstances").Return([]*resource.Instance{
-		{Name: "test"},
+		{Name: "Instance 1", Versions: []resource.InstanceVersion{{ID: "minecraft", Version: "1.20.1"}}},
 	}, nil)
 
 	mr := new(mockGameRunner)
@@ -62,6 +62,7 @@ func TestShowDashboardView(t *testing.T) {
 		runner:    mr,
 		auth:      ma,
 		discord:   new(mockDiscordManager),
+		config:    core.DefaultConfig(),
 	}
 
 	ui.showDashboardView()
@@ -86,6 +87,7 @@ func TestShowLaunchOverlay(t *testing.T) {
 		window:  w,
 		runner:  mr,
 		discord: new(mockDiscordManager),
+		config:  core.DefaultConfig(),
 	}
 
 	ui.showLaunchOverlay()

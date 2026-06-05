@@ -69,11 +69,14 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	patchPath := filepath.Join(tempDir, "test.sbpatch")
 	destDir := filepath.Join(tempDir, "instance")
 
+	v1ID, _ := uuid.NewV7()
+	v2ID, _ := uuid.NewV7()
+
 	// 2. Create .sbpack
 	index := resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Test Pack",
-		Version:       "1.0.0",
+		ID:            v1ID,
 		Dependencies: map[string]string{
 			"minecraft": "1.20.1",
 		},
@@ -107,8 +110,8 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	if inst.Name != "Test Pack" {
 		t.Errorf("expected instance name 'Test Pack', got %s", inst.Name)
 	}
-	if inst.Upstream.Version != "1.0.0" {
-		t.Errorf("expected version '1.0.0', got %s", inst.Upstream.Version)
+	if inst.Upstream.Version != v1ID.String() {
+		t.Errorf("expected version '%s', got %s", v1ID.String(), inst.Upstream.Version)
 	}
 	if len(inst.Mods) != 1 {
 		t.Errorf("expected 1 mod, got %d", len(inst.Mods))
@@ -126,7 +129,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	patchIndex := resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Test Pack",
-		Version:       "1.1.0",
+		ID:            v2ID,
 		Dependencies: map[string]string{
 			"minecraft": "1.20.2",
 		},
@@ -141,10 +144,9 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	}
 
 	patch := resource.SBPatch{
-		FormatVersion: resource.SBPackFormatVersion,
-		FromVersion:   "1.0.0",
-		ToVersion:     "1.1.0",
-		NewIndex:      patchIndex,
+		FormatVersion: resource.SBPatchFormatVersion,
+		BaseID:        v1ID,
+		Index:         patchIndex,
 		RemovedFiles:  []string{"mods/mod1.jar", "config/m1.txt"},
 	}
 	patchBytes, _ := json.Marshal(patch)
@@ -159,8 +161,8 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 		t.Fatalf("ApplySBPatch failed: %v", err)
 	}
 
-	if inst.Upstream.Version != "1.1.0" {
-		t.Errorf("expected version '1.1.0', got %s", inst.Upstream.Version)
+	if inst.Upstream.Version != v2ID.String() {
+		t.Errorf("expected version '%s', got %s", v2ID.String(), inst.Upstream.Version)
 	}
 	if len(inst.Mods) != 1 || inst.Mods[0].Name != "mod2.jar" {
 		t.Errorf("expected 1 mod (mod2.jar), got %v", inst.Mods)
@@ -191,13 +193,16 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	destDir := filepath.Join(tempDir, "instance")
 	_ = os.MkdirAll(destDir, 0755)
 
+	v1ID, _ := uuid.NewV7()
+	v2ID, _ := uuid.NewV7()
+
 	// 1. Create base instance
 	v1Content := []byte("original content for binary patching test")
 	v1Data := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03}
 	v1Index := resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Binary Patch Test",
-		Version:       "1.0.0",
+		ID:            v1ID,
 	}
 	v1IndexBytes, _ := json.Marshal(v1Index)
 	_ = os.WriteFile(filepath.Join(destDir, "sb.index.json"), v1IndexBytes, 0644)
@@ -208,7 +213,7 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	inst := &resource.Instance{
 		Path: destDir,
 		Upstream: &resource.Upstream{
-			Version: "1.0.0",
+			Version: v1ID.String(),
 		},
 	}
 
@@ -231,11 +236,10 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 
 	patch := resource.SBPatch{
 		FormatVersion: resource.SBPatchFormatVersion,
-		FromVersion:   "1.0.0",
-		ToVersion:     "2.0.0",
-		NewIndex: resource.SBIndex{
+		BaseID:        v1ID,
+		Index: resource.SBIndex{
 			FormatVersion: resource.SBPackFormatVersion,
-			Version:       "2.0.0",
+			ID:            v2ID,
 		},
 	}
 	patchBytes, _ := json.Marshal(patch)
@@ -263,8 +267,8 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	if got, _ := os.ReadFile(filepath.Join(destDir, "new.txt")); string(got) != "freshly added" {
 		t.Errorf("new file content mismatch: %q", got)
 	}
-	if inst.Upstream.Version != "2.0.0" {
-		t.Errorf("expected version 2.0.0, got %s", inst.Upstream.Version)
+	if inst.Upstream.Version != v2ID.String() {
+		t.Errorf("expected version %s, got %s", v2ID.String(), inst.Upstream.Version)
 	}
 }
 
@@ -272,11 +276,14 @@ func TestImportRemoteSBPack(t *testing.T) {
 	mod1Content := []byte("mod1_content")
 	mod2Content := []byte("mod2_content")
 
+	v1ID, _ := uuid.NewV7()
+	v2ID, _ := uuid.NewV7()
+
 	// Pre-calculate ZIP contents so we can pre-calculate hashes for the manifest
 	v1Index := resource.SBIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Remote Pack",
-		Version:       "1.0.0",
+		ID:            v1ID,
 		Dependencies:  map[string]string{"minecraft": "1.20.1"},
 		Files: []resource.SBFile{
 			{
@@ -290,12 +297,11 @@ func TestImportRemoteSBPack(t *testing.T) {
 
 	v11Patch := resource.SBPatch{
 		FormatVersion: resource.SBPatchFormatVersion,
-		FromVersion:   "1.0.0",
-		ToVersion:     "1.1.0",
-		NewIndex: resource.SBIndex{
+		BaseID:        v1ID,
+		Index: resource.SBIndex{
 			FormatVersion: resource.SBPackFormatVersion,
 			Name:          "Remote Pack",
-			Version:       "1.1.0",
+			ID:            v2ID,
 			Dependencies:  map[string]string{"minecraft": "1.20.1"},
 			Files: []resource.SBFile{
 				{
@@ -322,7 +328,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 		case "/repo/v1.1.sbpatch":
 			tempZip := filepath.Join(t.TempDir(), "v1.1.sbpatch")
 			patch := v11Patch
-			patch.NewIndex.Files[0].Downloads = []string{fmt.Sprintf("http://%s/mod2.jar", r.Host)}
+			patch.Index.Files[0].Downloads = []string{fmt.Sprintf("http://%s/mod2.jar", r.Host)}
 			idxB, _ := json.Marshal(patch)
 			createMockZip(t, tempZip, map[string][]byte{"sb.patch.json": idxB})
 			patchB, _ := os.ReadFile(tempZip)
@@ -342,23 +348,23 @@ func TestImportRemoteSBPack(t *testing.T) {
 
 			v11Temp := filepath.Join(t.TempDir(), "v11_hash.sbpatch")
 			v11P := v11Patch
-			v11P.NewIndex.Files[0].Downloads = []string{fmt.Sprintf("http://%s/mod2.jar", r.Host)}
+			v11P.Index.Files[0].Downloads = []string{fmt.Sprintf("http://%s/mod2.jar", r.Host)}
 			v11IdxB, _ := json.Marshal(v11P)
 			createMockZip(t, v11Temp, map[string][]byte{"sb.patch.json": v11IdxB})
 			v11Hash, _ := os.ReadFile(v11Temp)
 
 			repo := resource.SBRepository{
 				Name:        "Remote Pack",
-				LatestPatch: "1.1.0",
+				LatestPatch: v2ID.String(),
 				Patches: []resource.SBRepoPatch{
 					{
-						ID:         "1.0.0",
+						ID:         v1ID.String(),
 						Type:       "sbpack",
 						Hash:       map[string]string{"sha256": calculateSHA256(v1Hash)},
 						RemotePath: fmt.Sprintf("http://%s/repo/v1.sbpack", r.Host),
 					},
 					{
-						ID:         "1.1.0",
+						ID:         v2ID.String(),
 						Type:       "sbpatch",
 						Hash:       map[string]string{"sha256": calculateSHA256(v11Hash)},
 						RemotePath: fmt.Sprintf("http://%s/repo/v1.1.sbpatch", r.Host),
@@ -385,8 +391,8 @@ func TestImportRemoteSBPack(t *testing.T) {
 		t.Fatalf("ImportRemoteSBPack failed: %v", err)
 	}
 
-	if inst.Upstream.Version != "1.1.0" {
-		t.Errorf("expected version 1.1.0, got %s", inst.Upstream.Version)
+	if inst.Upstream.Version != v2ID.String() {
+		t.Errorf("expected version %s, got %s", v2ID.String(), inst.Upstream.Version)
 	}
 
 	if _, err := os.Stat(filepath.Join(destDir, "mods/mod2.jar")); err != nil {
