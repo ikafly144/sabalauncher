@@ -131,7 +131,7 @@ func runDiff(args []string) {
 
 	// Any remaining in oldOverrides are removed
 	for rel := range oldOverrides {
-		removedFiles = append(removedFiles, filepath.ToSlash(filepath.Join("overrides", rel)))
+		removedFiles = append(removedFiles, filepath.ToSlash(rel))
 	}
 
 	// Create patch JSON

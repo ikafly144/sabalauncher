@@ -577,8 +577,12 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 
 	// 1. Delete removed files
 	for _, removed := range patch.RemovedFiles {
-		targetPath := filepath.Join(inst.Path, removed)
-		_ = os.Remove(targetPath) // Ignore if not exist
+		// TODO: Sanitize path: overrides/ in zip is extracted to instance root
+		cleanPath := strings.TrimPrefix(removed, "overrides/")
+		targetPath := filepath.Join(inst.Path, cleanPath)
+		if err := os.Remove(targetPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to remove file %s: %w", targetPath, err)
+		}
 	}
 
 	// 2. Unzip overrides and apply patches
@@ -740,7 +744,6 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 
 	return nil
 }
-
 
 func downloadWithVerify(url, dest string, hashes map[string]string) error {
 	resp, err := http.Get(url)
