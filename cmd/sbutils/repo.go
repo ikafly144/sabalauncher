@@ -166,8 +166,8 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 		if p.ID == latestPatchID && currentFile != "" {
 			path = currentFile
 		}
-// ... (rest of the function continues as before, using latestPatchID)
-		
+		// ... (rest of the function continues as before, using latestPatchID)
+
 		if path == "" {
 			// If we don't have the file, we can't fully validate.
 			// For now, assume it's valid if we can't see it, or require it.
@@ -189,7 +189,7 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 			metadata[p.ID] = patchMeta{typ: p.Type, baseID: ""}
 		}
 	}
-	
+
 	// Check reachability of LatestPatch
 	if latestPatchID != "" {
 		curr := latestPatchID
@@ -202,17 +202,17 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 				return fmt.Errorf("circular dependency detected at %s", curr)
 			}
 			visited[curr] = true
-			
+
 			m, ok := metadata[curr]
 			if !ok {
 				return fmt.Errorf("patch %s is missing from manifest or file not found", curr)
 			}
-			
+
 			if m.typ == "sbpack" {
 				// Success!
 				break
 			}
-			
+
 			curr = m.baseID
 		}
 	}

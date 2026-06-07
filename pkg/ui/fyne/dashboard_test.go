@@ -1,6 +1,7 @@
 package fyne
 
 import (
+	"io"
 	"testing"
 
 	"fyne.io/fyne/v2/test"
@@ -25,9 +26,12 @@ func (m *mockGameRunner) SubscribeProgress() <-chan core.ProgressEvent {
 	return args.Get(0).(<-chan core.ProgressEvent)
 }
 
-func (m *mockGameRunner) SubscribeLogs() <-chan core.LogEntry {
+func (m *mockGameRunner) GetLogReader() (io.ReadCloser, error) {
 	args := m.Called()
-	return args.Get(0).(<-chan core.LogEntry)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(io.ReadCloser), args.Error(1)
 }
 
 func (m *mockGameRunner) IsRunning() bool {
@@ -77,9 +81,10 @@ func TestShowLaunchOverlay(t *testing.T) {
 	a := test.NewApp()
 	w := a.NewWindow("Test")
 
+	pChan := make(chan core.ProgressEvent, 1)
 	mr := new(mockGameRunner)
-	mr.On("SubscribeProgress").Return(make(<-chan core.ProgressEvent))
-	mr.On("SubscribeLogs").Return(make(<-chan core.LogEntry))
+	mr.On("SubscribeProgress").Return((<-chan core.ProgressEvent)(pChan))
+	mr.On("GetLogReader").Return(nil, nil)
 	mr.On("IsRunning").Return(true)
 	mr.On("Stop").Return(nil)
 
@@ -92,6 +97,9 @@ func TestShowLaunchOverlay(t *testing.T) {
 	}
 
 	ui.showLaunchOverlay()
+
+	// Trigger log reader by sending finished progress
+	pChan <- core.ProgressEvent{IsFinished: true}
 
 	if ui.window.Content() == nil {
 		t.Fatal("Window content is nil")

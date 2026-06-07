@@ -110,7 +110,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			if i > 0 {
 				sb.WriteString(", ")
 			}
-			sb.WriteString(fmt.Sprintf("%s %s", v.ID, v.Version))
+			fmt.Fprintf(&sb, "%s %s", v.ID, v.Version)
 		}
 		sb.WriteString(")")
 		if len(currentInstance.Versions) > 0 {
@@ -265,7 +265,7 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 
 	topInfo := container.NewVBox(status, progress)
 
-	logWrapper := container.NewMax(widget.NewLabel("Waiting for logs..."))
+	logWrapper := container.NewStack(widget.NewLabel("Waiting for logs..."))
 
 	ctx, cancel := context.WithCancel(context.Background())
 

@@ -166,7 +166,7 @@ func (r *logContentRenderer) Objects() []fyne.CanvasObject {
 	needed := endLine - startLine
 	if len(r.labels) < needed {
 		for i := len(r.labels); i < needed; i++ {
-			t := canvas.NewText("", theme.ForegroundColor())
+			t := canvas.NewText("", theme.Color(theme.ColorNameForeground))
 			t.TextStyle = fyne.TextStyle{Monospace: true}
 			t.TextSize = theme.TextSize()
 			r.labels = append(r.labels, t)
@@ -196,7 +196,7 @@ func (r *logContentRenderer) Objects() []fyne.CanvasObject {
 		} else {
 			label.Text = ""
 		}
-		label.Color = theme.ForegroundColor()
+		label.Color = theme.Color(theme.ColorNameForeground)
 		label.Move(fyne.NewPos(0, float32(lineIdx)*logLineHeight))
 		label.Refresh()
 		res = append(res, label)

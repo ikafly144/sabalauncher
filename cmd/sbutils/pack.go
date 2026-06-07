@@ -92,7 +92,7 @@ func runPack(args []string) {
 		// but for many small files this is very fast.
 		// For very large files, we should probably stick to sequential or use a different approach.
 		// Let's use a simpler approach: just parallelize the directory walk and use a single writer.
-		
+
 		go func() {
 			_ = filepath.WalkDir(overridesDir, func(path string, d os.DirEntry, err error) error {
 				if err != nil || d.IsDir() {

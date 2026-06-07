@@ -105,7 +105,7 @@ func runDiff(args []string) {
 	for rel := range oldOverrides {
 		removedFiles = append(removedFiles, filepath.ToSlash(rel))
 	}
-// ... (rest of the function continues as before)
+	// ... (rest of the function continues as before)
 
 	// Create patch JSON
 	patch := resource.SBPatch{
