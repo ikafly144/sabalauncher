@@ -52,14 +52,4 @@ func TestRepoCommands(t *testing.T) {
 	if patch.Hash["sha256"] == "" {
 		t.Errorf("expected sha256 hash to be calculated")
 	}
-
-	// Test Set Latest
-	runRepoSetLatest([]string{"1.0.0"})
-
-	manifestBytes, _ = os.ReadFile("manifest.json")
-	_ = json.Unmarshal(manifestBytes, &repo)
-
-	if repo.LatestPatch != "1.0.0" {
-		t.Errorf("expected latest_patch '1.0.0', got '%s'", repo.LatestPatch)
-	}
 }

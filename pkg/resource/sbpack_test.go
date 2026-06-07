@@ -354,20 +354,21 @@ func TestImportRemoteSBPack(t *testing.T) {
 			v11Hash, _ := os.ReadFile(v11Temp)
 
 			repo := resource.SBRepository{
-				Name:        "Remote Pack",
-				LatestPatch: v2ID.String(),
+				Name: "Remote Pack",
 				Patches: []resource.SBRepoPatch{
 					{
 						ID:         v1ID.String(),
 						Type:       "sbpack",
 						Hash:       map[string]string{"sha256": calculateSHA256(v1Hash)},
 						RemotePath: fmt.Sprintf("http://%s/repo/v1.sbpack", r.Host),
+						Timestamp:  100,
 					},
 					{
 						ID:         v2ID.String(),
 						Type:       "sbpatch",
 						Hash:       map[string]string{"sha256": calculateSHA256(v11Hash)},
 						RemotePath: fmt.Sprintf("http://%s/repo/v1.1.sbpatch", r.Host),
+						Timestamp:  200,
 					},
 				},
 			}

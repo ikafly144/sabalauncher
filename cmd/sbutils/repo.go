@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
@@ -22,8 +24,6 @@ func runRepo(args []string) {
 		runRepoInit(args[1:])
 	case "add":
 		runRepoAdd(args[1:])
-	case "set-latest":
-		runRepoSetLatest(args[1:])
 	case "validate":
 		runRepoValidate(args[1:])
 	default:
@@ -40,9 +40,7 @@ func printRepoUsage() {
 	fmt.Println("  init <name>")
 	fmt.Println("      Initialize a new repository manifest.json")
 	fmt.Println("  add <id> <type(sbpack|sbpatch)> <file_path> <remote_url> [local_path]")
-	fmt.Println("      Calculate hashes for a local file, add it to the manifest, and set as latest")
-	fmt.Println("  set-latest <id>")
-	fmt.Println("      Update the latest_patch field in the manifest")
+	fmt.Println("      Calculate hashes for a local file, add it to the manifest with current timestamp")
 	fmt.Println("  validate")
 	fmt.Println("      Check if all patches in the manifest form a valid dependency graph")
 }
@@ -89,6 +87,7 @@ func runRepoAdd(args []string) {
 	}
 
 	repo := readManifest("manifest.json")
+	timestamp := time.Now().Unix()
 
 	// Update existing or add new
 	found := false
@@ -100,9 +99,10 @@ func runRepoAdd(args []string) {
 				Hash:       map[string]string{"sha256": hash},
 				RemotePath: remoteURL,
 				LocalPath:  localPath,
+				Timestamp:  timestamp,
 			}
 			found = true
-			fmt.Printf("Updated existing patch entry '%s'\n", id)
+			fmt.Printf("Updated existing patch entry '%s' with timestamp %d\n", id, timestamp)
 			break
 		}
 	}
@@ -114,13 +114,10 @@ func runRepoAdd(args []string) {
 			Hash:       map[string]string{"sha256": hash},
 			RemotePath: remoteURL,
 			LocalPath:  localPath,
+			Timestamp:  timestamp,
 		})
-		fmt.Printf("Added new patch entry '%s'\n", id)
+		fmt.Printf("Added new patch entry '%s' with timestamp %d\n", id, timestamp)
 	}
-
-	// Automatically set latest
-	repo.LatestPatch = id
-	fmt.Printf("Set latest_patch to '%s'\n", id)
 
 	// Validate before saving
 	if err := validateRepoGraph(&repo, filePath); err != nil {
@@ -128,37 +125,6 @@ func runRepoAdd(args []string) {
 	}
 
 	writeManifest("manifest.json", repo)
-}
-
-func runRepoSetLatest(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: sbutils repo set-latest <id>")
-		os.Exit(1)
-	}
-
-	id := args[0]
-	repo := readManifest("manifest.json")
-
-	// Verify ID exists
-	found := false
-	for _, p := range repo.Patches {
-		if p.ID == id {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		fmt.Printf("Warning: Patch ID '%s' not found in manifest\n", id)
-	}
-
-	repo.LatestPatch = id
-	if err := validateRepoGraph(&repo, ""); err != nil {
-		fmt.Printf("Warning: Repository graph validation failed: %v\n", err)
-	}
-
-	writeManifest("manifest.json", repo)
-	fmt.Printf("Set latest_patch to '%s'\n", id)
 }
 
 func runRepoValidate(args []string) {
@@ -171,6 +137,23 @@ func runRepoValidate(args []string) {
 }
 
 func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
+	if len(repo.Patches) == 0 {
+		return nil
+	}
+
+	// Sort patches by timestamp (stable sort) to identify the latest
+	slices.SortStableFunc(repo.Patches, func(a, b resource.SBRepoPatch) int {
+		if a.Timestamp < b.Timestamp {
+			return -1
+		}
+		if a.Timestamp > b.Timestamp {
+			return 1
+		}
+		return 0
+	})
+
+	latestPatchID := repo.Patches[len(repo.Patches)-1].ID
+
 	// Map patch ID -> metadata
 	type patchMeta struct {
 		typ    string
@@ -180,9 +163,10 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 
 	for _, p := range repo.Patches {
 		path := p.LocalPath
-		if p.ID == repo.LatestPatch && currentFile != "" {
+		if p.ID == latestPatchID && currentFile != "" {
 			path = currentFile
 		}
+// ... (rest of the function continues as before, using latestPatchID)
 		
 		if path == "" {
 			// If we don't have the file, we can't fully validate.
@@ -207,8 +191,8 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 	}
 	
 	// Check reachability of LatestPatch
-	if repo.LatestPatch != "" {
-		curr := repo.LatestPatch
+	if latestPatchID != "" {
+		curr := latestPatchID
 		visited := make(map[string]bool)
 		for {
 			if curr == "" || curr == uuid.Nil.String() {

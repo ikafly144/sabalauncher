@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -64,9 +65,8 @@ type SBPatch struct {
 }
 
 type SBRepository struct {
-	Name        string        `json:"name"`
-	LatestPatch string        `json:"latest_patch"`
-	Patches     []SBRepoPatch `json:"patches"`
+	Name    string        `json:"name"`
+	Patches []SBRepoPatch `json:"patches"`
 }
 
 type SBRepoPatch struct {
@@ -75,6 +75,7 @@ type SBRepoPatch struct {
 	Hash       map[string]string `json:"hash"`
 	RemotePath string            `json:"remote_path"`
 	LocalPath  string            `json:"local_path,omitempty"`
+	Timestamp  int64             `json:"timestamp"`
 }
 
 func FetchRepository(url string) (*SBRepository, error) {
@@ -92,6 +93,18 @@ func FetchRepository(url string) (*SBRepository, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&repo); err != nil {
 		return nil, err
 	}
+
+	// Sort patches by timestamp (stable sort)
+	slices.SortStableFunc(repo.Patches, func(a, b SBRepoPatch) int {
+		if a.Timestamp < b.Timestamp {
+			return -1
+		}
+		if a.Timestamp > b.Timestamp {
+			return 1
+		}
+		return 0
+	})
+
 	return &repo, nil
 }
 
@@ -176,7 +189,8 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, obser
 	inst.Upstream.Version = initialPatch.ID
 
 	// 2. Apply patches sequentially up to latest_patch
-	if inst.Upstream.Version != repo.LatestPatch {
+	latestPatchID := repo.Patches[len(repo.Patches)-1].ID
+	if inst.Upstream.Version != latestPatchID {
 		observer.OnProgress("Applying updates", 50, "")
 		if err := UpdateInstanceRemoteWithObserver(inst, observer); err != nil {
 			return nil, fmt.Errorf("failed to apply initial patches: %w", err)
@@ -201,7 +215,12 @@ func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver)
 		return err
 	}
 
-	if inst.Upstream.Version == repo.LatestPatch {
+	if len(repo.Patches) == 0 {
+		return nil
+	}
+
+	latestPatchID := repo.Patches[len(repo.Patches)-1].ID
+	if inst.Upstream.Version == latestPatchID {
 		slog.Info("Instance is already up to date", "name", inst.Name)
 		return nil
 	}
@@ -249,8 +268,8 @@ func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver)
 		appliedCount++
 	}
 
-	if appliedCount == 0 && repo.LatestPatch != "" && inst.Upstream.Version != repo.LatestPatch {
-		return fmt.Errorf("failed to find update path from '%s' to '%s'", inst.Upstream.Version, repo.LatestPatch)
+	if appliedCount == 0 && inst.Upstream.Version != latestPatchID {
+		return fmt.Errorf("failed to find update path from '%s' to '%s'", inst.Upstream.Version, latestPatchID)
 	}
 
 	return nil
