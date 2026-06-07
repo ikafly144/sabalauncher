@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"io"
 
 	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
@@ -74,8 +75,8 @@ type GameRunner interface {
 	IsRunning() bool
 	// SubscribeProgress returns a channel that receives progress updates.
 	SubscribeProgress() <-chan ProgressEvent
-	// SubscribeLogs returns a channel that receives log entries.
-	SubscribeLogs() <-chan LogEntry
+	// GetLogReader returns an io.ReadCloser to read game logs.
+	GetLogReader() (io.ReadCloser, error)
 }
 
 // DiscordManager defines the interface for managing Discord Rich Presence.

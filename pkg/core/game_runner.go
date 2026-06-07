@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -19,7 +21,7 @@ type gameRunner struct {
 	config    *LauncherConfig
 
 	progressChan chan ProgressEvent
-	logsChan     chan LogEntry
+	logFile      *os.File
 
 	running bool
 	cancel  context.CancelFunc
@@ -33,7 +35,6 @@ func NewGameRunner(auth Authenticator, instances InstanceManager, dataDir string
 		dataPath:     dataDir,
 		config:       config,
 		progressChan: make(chan ProgressEvent, 100),
-		logsChan:     make(chan LogEntry, 1000),
 	}
 }
 
@@ -43,6 +44,16 @@ func (r *gameRunner) Launch(instanceID uuid.UUID) error {
 		r.mu.Unlock()
 		return fmt.Errorf("game is already running")
 	}
+
+	// Create temporary log file
+	logPath := filepath.Join(os.TempDir(), fmt.Sprintf("saba-game-%s.log", time.Now().Format("20060102-150405")))
+	f, err := os.Create(logPath)
+	if err != nil {
+		r.mu.Unlock()
+		return fmt.Errorf("failed to create log file: %w", err)
+	}
+	r.logFile = f
+
 	ctx, cancel := context.WithCancel(context.Background())
 	r.running = true
 	r.cancel = cancel
@@ -97,9 +108,6 @@ func (r *gameRunner) Launch(instanceID uuid.UUID) error {
 		IsFinished: true,
 	}
 
-	stdout := &logWriter{source: "Game", ch: r.logsChan}
-	stderr := &logWriter{source: "Game", ch: r.logsChan}
-
 	// 3. Boot Game using ModLoader and LaunchConfig
 	loader, err := resource.GetModLoader(inst)
 	if err != nil {
@@ -107,7 +115,7 @@ func (r *gameRunner) Launch(instanceID uuid.UUID) error {
 	}
 
 	features := map[string]bool{
-		"is_demo_user":          false, // Change later if needed
+		"is_demo_user":          false,
 		"has_custom_resolution": true,
 	}
 
@@ -136,7 +144,7 @@ func (r *gameRunner) Launch(instanceID uuid.UUID) error {
 		return fmt.Errorf("failed to get minecraft profile: %w", err)
 	}
 
-	if err := resource.BootGameFromConfig(ctx, javaPath, config, manifest, inst, profile, mcAccount.AccessToken, stdout, stderr); err != nil {
+	if err := resource.BootGameFromConfig(ctx, javaPath, config, manifest, inst, profile, mcAccount.AccessToken, r.logFile, r.logFile); err != nil {
 		return fmt.Errorf("boot failed: %w", err)
 	}
 
@@ -150,6 +158,9 @@ func (r *gameRunner) Stop() error {
 		return nil
 	}
 	r.cancel()
+	if r.logFile != nil {
+		r.logFile.Close()
+	}
 	return nil
 }
 
@@ -163,49 +174,11 @@ func (r *gameRunner) SubscribeProgress() <-chan ProgressEvent {
 	return r.progressChan
 }
 
-func (r *gameRunner) SubscribeLogs() <-chan LogEntry {
-	return r.logsChan
-}
-
-type logWriter struct {
-	source string
-	ch     chan<- LogEntry
-	buf    []byte
-}
-
-func (w *logWriter) Write(p []byte) (n int, err error) {
-	w.buf = append(w.buf, p...)
-	for {
-		// Find newline
-		i := -1
-		for j, b := range w.buf {
-			if b == '\n' {
-				i = j
-				break
-			}
-		}
-		if i == -1 {
-			break
-		}
-
-		line := string(w.buf[:i])
-		w.buf = w.buf[i+1:]
-
-		// Optional: strip carriage return
-		if len(line) > 0 && line[len(line)-1] == '\r' {
-			line = line[:len(line)-1]
-		}
-
-		select {
-		case w.ch <- LogEntry{
-			Source:  w.source,
-			Message: line,
-		}:
-		default:
-			// Drop log if channel is full to prevent blocking the game
-		}
+func (r *gameRunner) GetLogReader() (io.ReadCloser, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.logFile == nil {
+		return nil, fmt.Errorf("no log file available")
 	}
-	return len(p), nil
+	return os.Open(r.logFile.Name())
 }
-
-var _ io.Writer = (*logWriter)(nil)

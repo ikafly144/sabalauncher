@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -266,19 +265,14 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 
 	topInfo := container.NewVBox(status, progress)
 
-	logEntry := widget.NewMultiLineEntry()
-	logEntry.Disable()
+	logWrapper := container.NewMax(widget.NewLabel("Waiting for logs..."))
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
 		pChan := ui.runner.SubscribeProgress()
-		lChan := ui.runner.SubscribeLogs()
 
-		logBuffer := []string{}
-		ticker := time.NewTicker(200 * time.Millisecond)
-		defer ticker.Stop()
-
+		logReaderReady := false
 		for {
 			select {
 			case <-ctx.Done():
@@ -291,18 +285,20 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 					status.SetText(fmt.Sprintf("%s (%s)", p.TaskName, p.Status))
 					progress.SetValue(p.Percentage / 100.0)
 				})
-			case l, ok := <-lChan:
-				if !ok {
-					continue
-				}
-				logBuffer = append(logBuffer, fmt.Sprintf("[%s] %s\n", l.Source, l.Message))
-			case <-ticker.C:
-				if len(logBuffer) > 0 {
-					textToAppend := strings.Join(logBuffer, "")
-					logBuffer = []string{}
-					fyne.Do(func() {
-						logEntry.Append(textToAppend)
-					})
+
+				// Once game starts (Setup is finished), open the log reader
+				if p.IsFinished && !logReaderReady {
+					lr, err := ui.runner.GetLogReader()
+					if err == nil {
+						mv := NewMmapLogView(lr)
+						if mv != nil {
+							fyne.Do(func() {
+								logWrapper.Objects[0] = mv
+								logWrapper.Refresh()
+							})
+							logReaderReady = true
+						}
+					}
 				}
 			}
 		}
@@ -313,7 +309,7 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 		container.NewPadded(stopBtn),
 		nil,
 		nil,
-		container.NewPadded(container.NewScroll(logEntry)),
+		logWrapper,
 	)
 
 	ui.window.SetContent(content)
