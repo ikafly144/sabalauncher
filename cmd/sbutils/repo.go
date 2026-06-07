@@ -174,12 +174,14 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 
 	latestPatchID := repo.Patches[len(repo.Patches)-1].ID
 
-	// Map patch ID -> metadata
+	// Map patch ID (manifest) -> metadata
 	type patchMeta struct {
 		typ    string
 		baseID string
 	}
 	metadata := make(map[string]patchMeta)
+	// Map internal index ID -> manifest entry ID
+	internalToManifest := make(map[string]string)
 
 	for _, p := range repo.Patches {
 		path := p.LocalPath
@@ -199,9 +201,10 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 		}
 
 		if path != "" {
-			bID, _, err := peekPatchMetadata(path)
+			bID, iID, err := peekPatchMetadata(path)
 			if err == nil {
 				metadata[p.ID] = patchMeta{typ: p.Type, baseID: bID.String()}
+				internalToManifest[iID.String()] = p.ID
 			}
 		} else {
 			// Placeholder for missing files
@@ -232,7 +235,7 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 				break
 			}
 
-			curr = m.baseID
+			curr = internalToManifest[m.baseID]
 		}
 	}
 
