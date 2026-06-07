@@ -26,6 +26,8 @@ func main() {
 		runDiff(os.Args[2:])
 	case "patch":
 		runPatch(os.Args[2:])
+	case "split":
+		runSplit(os.Args[2:])
 	case "repo":
 		runRepo(os.Args[2:])
 	default:
@@ -51,6 +53,8 @@ func printUsage() {
 	fmt.Println("      Create a patch from old to new sbpack")
 	fmt.Println("  patch <base.sbpack> <patch.sbpatch> <output.sbpack>")
 	fmt.Println("      Apply a patch to a base sbpack to generate a new sbpack")
-	fmt.Println("  repo <init|add|set-latest|validate> [arguments]")
+	fmt.Println("  split <base.sbpack> <large.sbpatch> <output_prefix> <max_size_mb>")
+	fmt.Println("      Split a large sbpatch into multiple sequential patches")
+	fmt.Println("  repo <init|add|validate> [arguments]")
 	fmt.Println("      Manage an sbrepository manifest.json")
 }
