@@ -188,8 +188,8 @@ func runSplit(args []string) {
 		w := zip.NewWriter(outFile)
 
 		for _, f := range chunk {
-			if strings.HasPrefix(f.relPath, "REMOVE:") {
-				path := strings.TrimPrefix(f.relPath, "REMOVE:")
+			if after, ok := strings.CutPrefix(f.relPath, "REMOVE:"); ok {
+				path := after
 				chunkP.RemovedFiles = append(chunkP.RemovedFiles, path)
 				delete(newFiles, path)
 			} else {
@@ -199,10 +199,10 @@ func runSplit(args []string) {
 				// Update index file entry from final state
 				// We need to strip "overrides/" or "patches/" to get instance path
 				instPath := f.relPath
-				if strings.HasPrefix(instPath, "overrides/") {
-					instPath = strings.TrimPrefix(instPath, "overrides/")
-				} else if strings.HasPrefix(instPath, "patches/") {
-					instPath = strings.TrimPrefix(instPath, "patches/")
+				if after, ok := strings.CutPrefix(instPath, "overrides/"); ok {
+					instPath = after
+				} else if after, ok := strings.CutPrefix(instPath, "patches/"); ok {
+					instPath = after
 				}
 
 				if finalF, ok := finalFilesMap[instPath]; ok {
