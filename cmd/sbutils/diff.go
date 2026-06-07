@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -139,16 +140,43 @@ func runDiff(args []string) {
 		os.Exit(1)
 	}
 
-	// Add added overrides
+	// Add added overrides (parallelize)
+	type addResult struct {
+		rel  string
+		data []byte
+		err  error
+	}
+	addResults := make(chan addResult, len(addedOverrides))
+	var addWg sync.WaitGroup
+
 	for _, rel := range addedOverrides {
-		srcPath := filepath.Join(newOverridesDir, filepath.FromSlash(rel))
-		zipPath := filepath.ToSlash(filepath.Join("overrides", rel))
-		if err := addFileToZip(w, srcPath, zipPath); err != nil {
-			fmt.Printf("Failed to add override %s: %v\n", rel, err)
+		addWg.Add(1)
+		go func(rel string) {
+			defer addWg.Done()
+			srcPath := filepath.Join(newOverridesDir, filepath.FromSlash(rel))
+			data, err := os.ReadFile(srcPath)
+			addResults <- addResult{rel, data, err}
+		}(rel)
+	}
+
+	go func() {
+		addWg.Wait()
+		close(addResults)
+	}()
+
+	for res := range addResults {
+		if res.err != nil {
+			fmt.Printf("Failed to read added override %s: %v\n", res.rel, res.err)
+			continue
+		}
+		zipPath := filepath.ToSlash(filepath.Join("overrides", res.rel))
+		if err := addDataToZip(w, res.data, zipPath); err != nil {
+			fmt.Printf("Failed to add added override %s to zip: %v\n", res.rel, err)
 		}
 	}
 
 	// Add patched overrides (parallelize binary diffing)
+	// ... (rest of the function continues)
 	type patchResult struct {
 		rel  string
 		data []byte
@@ -213,37 +241,75 @@ func extractZip(src, dest string) error {
 	}
 	defer r.Close()
 
-	for _, f := range r.File {
-		fpath := filepath.Join(dest, f.Name)
-		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
-			return fmt.Errorf("illegal file path: %s", fpath)
-		}
-		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(fpath, os.ModePerm); err != nil {
-				return err
-			}
-			continue
-		}
-		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
-			return err
-		}
-		outFile, err := os.Create(fpath)
-		if err != nil {
-			return err
-		}
-		rc, err := f.Open()
-		if err != nil {
-			outFile.Close()
-			return err
-		}
-		_, err = io.Copy(outFile, rc)
-		outFile.Close()
-		rc.Close()
-		if err != nil {
-			return err
-		}
+	numWorkers := runtime.NumCPU()
+	type task struct {
+		f *zip.File
 	}
-	return nil
+	tasks := make(chan task, len(r.File))
+	var wg sync.WaitGroup
+	var lastErr error
+	var errMu sync.Mutex
+
+	for range numWorkers {
+		wg.Go(func() {
+			for t := range tasks {
+				f := t.f
+				fpath := filepath.Join(dest, f.Name)
+				if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
+					errMu.Lock()
+					lastErr = fmt.Errorf("illegal file path: %s", fpath)
+					errMu.Unlock()
+					continue
+				}
+
+				if f.FileInfo().IsDir() {
+					_ = os.MkdirAll(fpath, os.ModePerm)
+					continue
+				}
+
+				if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+					errMu.Lock()
+					lastErr = err
+					errMu.Unlock()
+					continue
+				}
+
+				outFile, err := os.Create(fpath)
+				if err != nil {
+					errMu.Lock()
+					lastErr = err
+					errMu.Unlock()
+					continue
+				}
+
+				rc, err := f.Open()
+				if err != nil {
+					outFile.Close()
+					errMu.Lock()
+					lastErr = err
+					errMu.Unlock()
+					continue
+				}
+
+				_, err = io.Copy(outFile, rc)
+				outFile.Close()
+				rc.Close()
+				if err != nil {
+					errMu.Lock()
+					lastErr = err
+					errMu.Unlock()
+				}
+			}
+		})
+	}
+
+	for _, f := range r.File {
+		tasks <- task{f}
+	}
+	close(tasks)
+	wg.Wait()
+
+	return lastErr
 }
 
 func hashFile(path string) (string, error) {
