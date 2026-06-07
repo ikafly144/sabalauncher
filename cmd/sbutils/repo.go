@@ -42,19 +42,15 @@ func printRepoUsage() {
 	fmt.Println("  init <name>")
 	fmt.Println("      Initialize a new repository manifest.json")
 	fmt.Println("  add <id> <type(sbpack|sbpatch)> <file_path> <remote_url> [local_path]")
-	fmt.Println("      Calculate hashes for a local file, add it to the manifest with current timestamp")
-	fmt.Println("  add <file_path> <remote_prefix>")
-	fmt.Println("      Shorthand: Derive ID/type from filename and join with prefix for remote URL")
+	fmt.Println("      Full: Calculate hashes for a local file and add it with specific details")
+	fmt.Println("  add <remote_prefix> <file_path> [<file_path2> ...]")
+	fmt.Println("      Shorthand: Add one or more files, deriving ID/type from filenames joined with prefix")
 	fmt.Println("  validate")
 	fmt.Println("      Check if all patches in the manifest form a valid dependency graph")
 }
 
 func runRepoInit(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Usage: sbutils repo init <name>")
-		os.Exit(1)
-	}
-
+// ... (rest of runRepoInit unchanged)
 	repo := resource.SBRepository{
 		Name:    args[0],
 		Patches: []resource.SBRepoPatch{},
@@ -65,49 +61,75 @@ func runRepoInit(args []string) {
 }
 
 func runRepoAdd(args []string) {
-	var id, typ, filePath, remoteURL, localPath string
-
-	if len(args) == 2 {
-		// Shorthand: add <file_path> <remote_prefix>
-		filePath = args[0]
-		remotePrefix := args[1]
-		filename := filepath.Base(filePath)
-		ext := filepath.Ext(filename)
-
-		id = strings.TrimSuffix(filename, ext)
-		typ = strings.TrimPrefix(ext, ".")
-		remoteURL = strings.TrimSuffix(remotePrefix, "/") + "/" + filename
-		localPath = filename
-
-		fmt.Printf("Shorthand used: ID=%s, Type=%s, Remote=%s\n", id, typ, remoteURL)
-	} else if len(args) >= 4 {
-		// Full: add <id> <type> <file_path> <remote_url> [local_path]
-		id = args[0]
-		typ = args[1]
-		filePath = args[2]
-		remoteURL = args[3]
-		if len(args) > 4 {
-			localPath = args[4]
-		}
-	} else {
-		fmt.Println("Usage: sbutils repo add <id> <type(sbpack|sbpatch)> <file_path> <remote_url> [local_path]")
-		fmt.Println("   or: sbutils repo add <file_path> <remote_prefix>")
-		os.Exit(1)
-	}
-
-	if typ != "sbpack" && typ != "sbpatch" {
-		fmt.Printf("Invalid type: %s. Must be 'sbpack' or 'sbpatch' (derived from extension if shorthand)\n", typ)
-		os.Exit(1)
-	}
-
-	hash, err := hashFile(filePath)
-	if err != nil {
-		fmt.Printf("Failed to hash file: %v\n", err)
+	if len(args) < 2 {
+		printRepoUsage()
 		os.Exit(1)
 	}
 
 	repo := readManifest("manifest.json")
 	timestamp := time.Now().Unix()
+
+	// Heuristic to distinguish full vs shorthand
+	isFull := false
+	if len(args) == 4 || len(args) == 5 {
+		if args[1] == "sbpack" || args[1] == "sbpatch" {
+			isFull = true
+		}
+	}
+
+	if isFull {
+		id := args[0]
+		typ := args[1]
+		filePath := args[2]
+		remoteURL := args[3]
+		var localPath string
+		if len(args) > 4 {
+			localPath = args[4]
+		}
+		addFileToManifest(&repo, id, typ, filePath, remoteURL, localPath, timestamp)
+	} else {
+		// Shorthand: add <remote_prefix> <file1> <file2> ...
+		remotePrefix := args[0]
+		files := args[1:]
+
+		for _, filePath := range files {
+			filename := filepath.Base(filePath)
+			ext := filepath.Ext(filename)
+
+			id := strings.TrimSuffix(filename, ext)
+			typ := strings.TrimPrefix(ext, ".")
+			remoteURL := strings.TrimSuffix(remotePrefix, "/") + "/" + filename
+			localPath := filename
+
+			fmt.Printf("Processing shorthand: %s -> ID=%s, Type=%s\n", filename, id, typ)
+			addFileToManifest(&repo, id, typ, filePath, remoteURL, localPath, timestamp)
+		}
+	}
+
+	// Validate before saving
+	// Using the last processed file for graph validation if possible
+	lastFile := args[len(args)-1]
+	if isFull {
+		lastFile = args[2]
+	}
+	if err := validateRepoGraph(&repo, lastFile); err != nil {
+		fmt.Printf("Warning: Repository graph validation failed: %v\n", err)
+	}
+
+	writeManifest("manifest.json", repo)
+}
+
+func addFileToManifest(repo *resource.SBRepository, id, typ, filePath, remoteURL, localPath string, timestamp int64) {
+	if typ != "sbpack" && typ != "sbpatch" {
+		fmt.Printf("Error: Invalid type '%s' for ID '%s'. Must be 'sbpack' or 'sbpatch'.\n", typ, id)
+		os.Exit(1)
+	}
+
+	hash, err := hashFile(filePath)
+	if err != nil {
+		fmt.Printf("Failed to hash file %s: %v\n", filePath, err)
+		os.Exit(1)
+	}
 
 	// Update existing or add new
 	found := false
@@ -138,13 +160,6 @@ func runRepoAdd(args []string) {
 		})
 		fmt.Printf("Added new patch entry '%s' with timestamp %d\n", id, timestamp)
 	}
-
-	// Validate before saving
-	if err := validateRepoGraph(&repo, filePath); err != nil {
-		fmt.Printf("Warning: Repository graph validation failed: %v\n", err)
-	}
-
-	writeManifest("manifest.json", repo)
 }
 
 func runRepoValidate(args []string) {
