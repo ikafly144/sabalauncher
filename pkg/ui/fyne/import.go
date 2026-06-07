@@ -4,6 +4,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/browser"
 	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 )
@@ -63,7 +64,7 @@ func (ui *FyneUI) showRegisterRemoteModpackDialog() {
 	d.Show()
 }
 
-func (ui *FyneUI) showUpdateInstanceDialog(instanceName string) {
+func (ui *FyneUI) showUpdateInstanceDialog(instanceID uuid.UUID) {
 	path, err := browser.SelectFile(0, "Update files (*.sbpatch, *.sbpack)|*.sbpatch;*.sbpack")
 	if err != nil {
 		dialog.ShowError(err, ui.window)
@@ -73,15 +74,15 @@ func (ui *FyneUI) showUpdateInstanceDialog(instanceName string) {
 		return // Canceled
 	}
 
-	ui.startUpdate(instanceName, path)
+	ui.startUpdate(instanceID, path)
 }
 
-func (ui *FyneUI) startUpdate(instanceName string, path string) {
+func (ui *FyneUI) startUpdate(instanceID uuid.UUID, path string) {
 	progress := dialog.NewCustom(i18n.T("updating_progress"), i18n.T("cancel"), widget.NewProgressBarInfinite(), ui.window)
 	progress.Show()
 
 	go func() {
-		err := ui.instances.UpdateInstance(instanceName, path)
+		err := ui.instances.UpdateInstance(instanceID, path)
 		progress.Hide()
 		if err != nil {
 			dialog.ShowError(err, ui.window)

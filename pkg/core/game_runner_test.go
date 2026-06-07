@@ -3,6 +3,7 @@ package core
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
@@ -21,7 +22,7 @@ type mockInstanceManager struct {
 	inst *resource.Instance
 }
 
-func (m *mockInstanceManager) GetInstance(name string) (*resource.Instance, error) {
+func (m *mockInstanceManager) GetInstance(id uuid.UUID) (*resource.Instance, error) {
 	return m.inst, nil
 }
 

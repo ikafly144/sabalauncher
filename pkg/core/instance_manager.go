@@ -38,15 +38,15 @@ func (im *instanceManager) GetInstances() ([]*resource.Instance, error) {
 	return im.instances, nil
 }
 
-func (im *instanceManager) GetInstance(name string) (*resource.Instance, error) {
+func (im *instanceManager) GetInstance(id uuid.UUID) (*resource.Instance, error) {
 	im.mu.RLock()
 	defer im.mu.RUnlock()
 	for _, inst := range im.instances {
-		if inst.Name == name {
+		if inst.UID == id {
 			return inst, nil
 		}
 	}
-	return nil, fmt.Errorf("instance not found: %s", name)
+	return nil, fmt.Errorf("instance not found: %s", id)
 }
 
 func (im *instanceManager) ImportInstance(packPath string) error {
@@ -79,20 +79,20 @@ func (im *instanceManager) AddRemoteInstance(manifestURL string) error {
 	return im.saveInstances()
 }
 
-func (im *instanceManager) UpdateInstance(instanceName string, path string) error {
+func (im *instanceManager) UpdateInstance(instanceID uuid.UUID, path string) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()
 
 	var targetInst *resource.Instance
 	for _, inst := range im.instances {
-		if inst.Name == instanceName || inst.UID.String() == instanceName {
+		if inst.UID == instanceID {
 			targetInst = inst
 			break
 		}
 	}
 
 	if targetInst == nil {
-		return fmt.Errorf("instance not found: %s", instanceName)
+		return fmt.Errorf("instance not found: %s", instanceID)
 	}
 
 	var err error
@@ -117,13 +117,13 @@ func (im *instanceManager) UpdateInstance(instanceName string, path string) erro
 	return im.saveInstances()
 }
 
-func (im *instanceManager) DeleteInstance(name string) error {
+func (im *instanceManager) DeleteInstance(instanceID uuid.UUID) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()
 
 	found := false
 	for i, inst := range im.instances {
-		if inst.Name == name || inst.UID.String() == name {
+		if inst.UID == instanceID {
 			// Delete files from disk
 			if err := os.RemoveAll(inst.Path); err != nil {
 				return fmt.Errorf("failed to delete instance files: %w", err)
@@ -136,7 +136,7 @@ func (im *instanceManager) DeleteInstance(name string) error {
 	}
 
 	if !found {
-		return fmt.Errorf("instance not found: %s", name)
+		return fmt.Errorf("instance not found: %s", instanceID)
 	}
 
 	return im.saveInstances()

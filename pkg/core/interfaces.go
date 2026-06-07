@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
@@ -48,23 +49,23 @@ type InstanceManager interface {
 	// GetInstances returns the list of all available instances.
 	GetInstances() ([]*resource.Instance, error)
 	// DeleteInstance removes an instance by its name or UID.
-	DeleteInstance(name string) error
+	DeleteInstance(instanceID uuid.UUID) error
 	// RefreshInstances updates all instances from local storage.
 	RefreshInstances() error
 	// GetInstance returns a specific instance.
-	GetInstance(name string) (*resource.Instance, error)
+	GetInstance(id uuid.UUID) (*resource.Instance, error)
 	// ImportInstance imports a modpack from an .sbpack file.
 	ImportInstance(packPath string) error
 	// AddRemoteInstance registers a remote modpack repository.
 	AddRemoteInstance(manifestURL string) error
 	// UpdateInstance updates an instance using an .sbpatch file.
-	UpdateInstance(instanceName string, patchPath string) error
+	UpdateInstance(instanceID uuid.UUID, patchPath string) error
 }
 
 // GameRunner defines the interface for launching and managing the game process.
 type GameRunner interface {
 	// Launch starts the game with the specified instance.
-	Launch(instanceName string) error
+	Launch(instanceID uuid.UUID) error
 	// Stop terminates the running game process.
 	Stop() error
 	// IsRunning returns true if the game is currently active.
@@ -77,6 +78,6 @@ type GameRunner interface {
 
 // DiscordManager defines the interface for managing Discord Rich Presence.
 type DiscordManager interface {
-	SetActivity(instanceName string) error
+	SetActivity(instanceID uuid.UUID) error
 	ClearActivity() error
 }

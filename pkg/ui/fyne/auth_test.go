@@ -15,6 +15,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+var _ core.Authenticator = (*mockAuthenticator)(nil)
+var _ core.InstanceManager = (*mockInstanceManager)(nil)
+var _ core.DiscordManager = (*mockDiscordManager)(nil)
+
 type mockInstanceManager struct {
 	mock.Mock
 }
@@ -24,13 +28,13 @@ func (m *mockInstanceManager) GetInstances() ([]*resource.Instance, error) {
 	return args.Get(0).([]*resource.Instance), args.Error(1)
 }
 
-func (m *mockInstanceManager) GetInstance(name string) (*resource.Instance, error) {
-	args := m.Called(name)
+func (m *mockInstanceManager) GetInstance(instanceID uuid.UUID) (*resource.Instance, error) {
+	args := m.Called(instanceID)
 	return args.Get(0).(*resource.Instance), args.Error(1)
 }
 
-func (m *mockInstanceManager) DeleteInstance(name string) error {
-	args := m.Called(name)
+func (m *mockInstanceManager) DeleteInstance(instanceID uuid.UUID) error {
+	args := m.Called(instanceID)
 	return args.Error(0)
 }
 
@@ -49,8 +53,8 @@ func (m *mockInstanceManager) AddRemoteInstance(manifestURL string) error {
 	return args.Error(0)
 }
 
-func (m *mockInstanceManager) UpdateInstance(instanceName string, patchPath string) error {
-	args := m.Called(instanceName, patchPath)
+func (m *mockInstanceManager) UpdateInstance(instanceID uuid.UUID, patchPath string) error {
+	args := m.Called(instanceID, patchPath)
 	return args.Error(0)
 }
 
@@ -117,8 +121,8 @@ type mockDiscordManager struct {
 	mock.Mock
 }
 
-func (m *mockDiscordManager) SetActivity(profileName string) error {
-	args := m.Called(profileName)
+func (m *mockDiscordManager) SetActivity(instanceID uuid.UUID) error {
+	args := m.Called(instanceID)
 	return args.Error(0)
 }
 

@@ -1,6 +1,9 @@
 package core
 
-import "github.com/ikafly144/sabalauncher/v2/pkg/rpc"
+import (
+	"github.com/google/uuid"
+	"github.com/ikafly144/sabalauncher/v2/pkg/rpc"
+)
 
 type discordManager struct {
 	auth      Authenticator
@@ -14,8 +17,8 @@ func NewDiscordManager(auth Authenticator, instances InstanceManager) DiscordMan
 	}
 }
 
-func (d *discordManager) SetActivity(instanceName string) error {
-	inst, err := d.instances.GetInstance(instanceName)
+func (d *discordManager) SetActivity(instanceID uuid.UUID) error {
+	inst, err := d.instances.GetInstance(instanceID)
 	if err != nil {
 		return err
 	}

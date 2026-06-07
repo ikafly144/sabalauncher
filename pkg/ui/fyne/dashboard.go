@@ -15,6 +15,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
@@ -37,8 +38,8 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		return widget.NewLabel(i18n.T("error_prefix", err.Error()))
 	}
 
-	if ui.selectedInstanceName == "" && len(instances) > 0 {
-		ui.selectedInstanceName = instances[0].Name
+	if ui.selectedInstanceUID == uuid.Nil && len(instances) > 0 {
+		ui.selectedInstanceUID = instances[0].UID
 	}
 
 	// Instance selection (left side) with Icons
@@ -63,7 +64,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			icon.Refresh()
 
 			label.SetText(p.Name)
-			if p.Name == ui.selectedInstanceName {
+			if p.UID == ui.selectedInstanceUID {
 				label.TextStyle = fyne.TextStyle{Bold: true}
 			} else {
 				label.TextStyle = fyne.TextStyle{}
@@ -71,7 +72,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		},
 	)
 	instanceList.OnSelected = func(id widget.ListItemID) {
-		ui.selectedInstanceName = instances[id].Name
+		ui.selectedInstanceUID = instances[id].UID
 		ui.showMainView()
 	}
 
@@ -88,7 +89,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	var currentInstance *resource.Instance
 	found := false
 	for _, p := range instances {
-		if p.Name == ui.selectedInstanceName {
+		if p.UID == ui.selectedInstanceUID {
 			currentInstance = p
 			found = true
 			break
@@ -107,6 +108,11 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			}
 		}
 
+		if currentInstance.Upstream != nil && currentInstance.Upstream.Version != "" {
+			patchVer := currentInstance.Upstream.Version
+			versionStr = fmt.Sprintf("%s (Patch: %s)", versionStr, patchVer)
+		}
+
 		detailVersion := widget.NewLabel(i18n.T("version_label", versionStr))
 
 		// Action Buttons for current instance
@@ -117,7 +123,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			go func() {
 				if isRemote {
 					// Force update before launch
-					if err := ui.instances.UpdateInstance(currentInstance.Name, ""); err != nil {
+					if err := ui.instances.UpdateInstance(currentInstance.UID, ""); err != nil {
 						fyne.Do(func() {
 							closeOverlay()
 							dialog.ShowError(fmt.Errorf("failed to update before play: %w", err), ui.window)
@@ -127,8 +133,8 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 					}
 				}
 
-				_ = ui.discord.SetActivity(ui.selectedInstanceName)
-				if err := ui.runner.Launch(ui.selectedInstanceName); err != nil {
+				_ = ui.discord.SetActivity(currentInstance.UID)
+				if err := ui.runner.Launch(currentInstance.UID); err != nil {
 					fyne.Do(func() {
 						dialog.ShowError(err, ui.window)
 					})
@@ -143,16 +149,16 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		playBtn.Importance = widget.HighImportance
 
 		updateBtn := widget.NewButton(i18n.T("update_btn"), func() {
-			ui.showUpdateInstanceDialog(currentInstance.Name)
+			ui.showUpdateInstanceDialog(currentInstance.UID)
 		})
 
 		deleteBtn := widget.NewButton(i18n.T("delete_instance_btn"), func() {
 			dialog.ShowConfirm(i18n.T("delete_instance_confirm_title"), i18n.T("delete_instance_confirm_body", currentInstance.Name), func(ok bool) {
 				if ok {
-					if err := ui.instances.DeleteInstance(currentInstance.Name); err != nil {
+					if err := ui.instances.DeleteInstance(currentInstance.UID); err != nil {
 						dialog.ShowError(err, ui.window)
 					} else {
-						ui.selectedInstanceName = "" // Reset selection
+						ui.selectedInstanceUID = uuid.Nil // Reset selection
 						ui.showMainView()
 					}
 				}

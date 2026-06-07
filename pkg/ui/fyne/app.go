@@ -2,6 +2,7 @@ package fyne
 
 import (
 	"fyne.io/fyne/v2"
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/core"
 	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 )
@@ -16,8 +17,8 @@ type FyneUI struct {
 	discord   core.DiscordManager
 	config    *core.LauncherConfig
 
-	version              string
-	selectedInstanceName string
+	version             string
+	selectedInstanceUID uuid.UUID
 }
 
 func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManager, runner core.GameRunner, discord core.DiscordManager, config *core.LauncherConfig, version string) *FyneUI {

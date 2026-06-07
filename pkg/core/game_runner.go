@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
@@ -36,7 +37,7 @@ func NewGameRunner(auth Authenticator, instances InstanceManager, dataDir string
 	}
 }
 
-func (r *gameRunner) Launch(instanceName string) error {
+func (r *gameRunner) Launch(instanceID uuid.UUID) error {
 	r.mu.Lock()
 	if r.running {
 		r.mu.Unlock()
@@ -54,7 +55,7 @@ func (r *gameRunner) Launch(instanceName string) error {
 		r.mu.Unlock()
 	}()
 
-	inst, err := r.instances.GetInstance(instanceName)
+	inst, err := r.instances.GetInstance(instanceID)
 	if err != nil {
 		return err
 	}
