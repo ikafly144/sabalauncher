@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,6 +43,8 @@ func printRepoUsage() {
 	fmt.Println("      Initialize a new repository manifest.json")
 	fmt.Println("  add <id> <type(sbpack|sbpatch)> <file_path> <remote_url> [local_path]")
 	fmt.Println("      Calculate hashes for a local file, add it to the manifest with current timestamp")
+	fmt.Println("  add <file_path> <remote_prefix>")
+	fmt.Println("      Shorthand: Derive ID/type from filename and join with prefix for remote URL")
 	fmt.Println("  validate")
 	fmt.Println("      Check if all patches in the manifest form a valid dependency graph")
 }
@@ -61,22 +65,38 @@ func runRepoInit(args []string) {
 }
 
 func runRepoAdd(args []string) {
-	if len(args) < 4 {
+	var id, typ, filePath, remoteURL, localPath string
+
+	if len(args) == 2 {
+		// Shorthand: add <file_path> <remote_prefix>
+		filePath = args[0]
+		remotePrefix := args[1]
+		filename := filepath.Base(filePath)
+		ext := filepath.Ext(filename)
+
+		id = strings.TrimSuffix(filename, ext)
+		typ = strings.TrimPrefix(ext, ".")
+		remoteURL = strings.TrimSuffix(remotePrefix, "/") + "/" + filename
+		localPath = filename
+
+		fmt.Printf("Shorthand used: ID=%s, Type=%s, Remote=%s\n", id, typ, remoteURL)
+	} else if len(args) >= 4 {
+		// Full: add <id> <type> <file_path> <remote_url> [local_path]
+		id = args[0]
+		typ = args[1]
+		filePath = args[2]
+		remoteURL = args[3]
+		if len(args) > 4 {
+			localPath = args[4]
+		}
+	} else {
 		fmt.Println("Usage: sbutils repo add <id> <type(sbpack|sbpatch)> <file_path> <remote_url> [local_path]")
+		fmt.Println("   or: sbutils repo add <file_path> <remote_prefix>")
 		os.Exit(1)
 	}
 
-	id := args[0]
-	typ := args[1]
-	filePath := args[2]
-	remoteURL := args[3]
-	var localPath string
-	if len(args) > 4 {
-		localPath = args[4]
-	}
-
 	if typ != "sbpack" && typ != "sbpatch" {
-		fmt.Printf("Invalid type: %s. Must be 'sbpack' or 'sbpatch'\n", typ)
+		fmt.Printf("Invalid type: %s. Must be 'sbpack' or 'sbpatch' (derived from extension if shorthand)\n", typ)
 		os.Exit(1)
 	}
 
@@ -166,7 +186,6 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 		if p.ID == latestPatchID && currentFile != "" {
 			path = currentFile
 		}
-		// ... (rest of the function continues as before, using latestPatchID)
 
 		if path == "" {
 			// If we don't have the file, we can't fully validate.
