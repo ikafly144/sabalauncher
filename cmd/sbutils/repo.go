@@ -50,7 +50,11 @@ func printRepoUsage() {
 }
 
 func runRepoInit(args []string) {
-// ... (rest of runRepoInit unchanged)
+	if len(args) < 1 {
+		fmt.Println("Usage: sbutils repo init <name>")
+		os.Exit(1)
+	}
+
 	repo := resource.SBRepository{
 		Name:    args[0],
 		Patches: []resource.SBRepoPatch{},
@@ -107,7 +111,6 @@ func runRepoAdd(args []string) {
 	}
 
 	// Validate before saving
-	// Using the last processed file for graph validation if possible
 	lastFile := args[len(args)-1]
 	if isFull {
 		lastFile = args[2]
@@ -205,9 +208,6 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 		}
 
 		if path == "" {
-			// If we don't have the file, we can't fully validate.
-			// For now, assume it's valid if we can't see it, or require it.
-			// Let's try current dir if LocalPath is empty
 			if _, err := os.Stat(p.ID + ".sbpack"); err == nil {
 				path = p.ID + ".sbpack"
 			} else if _, err := os.Stat(p.ID + ".sbpatch"); err == nil {
@@ -222,7 +222,6 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 				internalToManifest[iID.String()] = p.ID
 			}
 		} else {
-			// Placeholder for missing files
 			metadata[p.ID] = patchMeta{typ: p.Type, baseID: ""}
 		}
 	}
@@ -246,7 +245,6 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 			}
 
 			if m.typ == "sbpack" {
-				// Success!
 				break
 			}
 

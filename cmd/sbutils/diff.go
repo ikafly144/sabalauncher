@@ -106,7 +106,6 @@ func runDiff(args []string) {
 	for rel := range oldOverrides {
 		removedFiles = append(removedFiles, filepath.ToSlash(rel))
 	}
-	// ... (rest of the function continues as before)
 
 	// Create patch JSON
 	patch := resource.SBPatch{
@@ -176,7 +175,6 @@ func runDiff(args []string) {
 	}
 
 	// Add patched overrides (parallelize binary diffing)
-	// ... (rest of the function continues)
 	type patchResult struct {
 		rel  string
 		data []byte

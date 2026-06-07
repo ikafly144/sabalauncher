@@ -2,6 +2,7 @@ package resource
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,8 +60,7 @@ func TestFabricLoader_GenerateLaunchConfig(t *testing.T) {
 	meta.LauncherMeta.MainClass.Client = "net.fabricmc.loader.impl.launch.knot.KnotClient"
 
 	metaFile, _ := os.Create(filepath.Join(versionDir, "fabric-meta.json"))
-	// We need to encode the meta
-	// ... (omitted for brevity, but you get the point)
+	_ = json.NewEncoder(metaFile).Encode(meta)
 	metaFile.Close()
 
 	// This test might be hard to run without real vanilla manifest too.
