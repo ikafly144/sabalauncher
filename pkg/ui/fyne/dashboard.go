@@ -101,20 +101,25 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		detailTitle := widget.NewLabelWithStyle(currentInstance.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 
 		versionStr := i18n.T("unknown_version")
-		for _, v := range currentInstance.Versions {
-			if v.ID == "minecraft" {
-				versionStr = v.Version
-				break
-			}
-		}
-
 		if currentInstance.Upstream != nil && currentInstance.Upstream.Version != "" {
 			patchVer := currentInstance.Upstream.Version
-			versionStr = fmt.Sprintf("%s (Patch: %s)", versionStr, patchVer)
+			versionStr = patchVer
+		}
+		var sb strings.Builder
+		sb.WriteString("(")
+		for i, v := range currentInstance.Versions {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%s %s", v.ID, v.Version))
+		}
+		sb.WriteString(")")
+		if len(currentInstance.Versions) > 0 {
+			versionStr = fmt.Sprintf("%s %s", versionStr, sb.String())
 		}
 
 		detailVersion := widget.NewLabel(i18n.T("version_label", versionStr))
-
+		detailVersion.Wrapping = fyne.TextWrapBreak
 		// Action Buttons for current instance
 		isRemote := currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != ""
 
