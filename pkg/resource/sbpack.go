@@ -134,16 +134,9 @@ func downloadAndVerifyRepoPatch(p SBRepoPatch, observer ProgressObserver) (strin
 		return "", err
 	}
 
-	if observer != nil {
-		observer.OnProgress("Downloading "+filepath.Base(localPath), 0, "0%")
-	}
-
-	if err := downloadWithVerify(p.RemotePath, localPath, p.Hash); err != nil {
+	taskName := "Downloading " + filepath.Base(localPath)
+	if err := downloadWithVerify(p.RemotePath, localPath, p.Hash, observer, taskName); err != nil {
 		return "", err
-	}
-
-	if observer != nil {
-		observer.OnProgress("Downloading "+filepath.Base(localPath), 100, "100%")
 	}
 
 	return localPath, nil
@@ -181,7 +174,7 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, obser
 	}
 
 	observer.OnProgress("Importing base pack", 30, "")
-	inst, err := ImportSBPack(localPackPath, destDir, uid)
+	inst, err := ImportSBPack(localPackPath, destDir, uid, observer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to import initial sbpack: %w", err)
 	}
@@ -256,11 +249,11 @@ func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver)
 
 		switch p.Type {
 		case "sbpatch":
-			if err := ApplySBPatch(inst, localPath); err != nil {
+			if err := ApplySBPatch(inst, localPath, observer); err != nil {
 				return err
 			}
 		case "sbpack":
-			if err := ApplySBPack(inst, localPath); err != nil {
+			if err := ApplySBPack(inst, localPath, observer); err != nil {
 				return err
 			}
 		}
@@ -276,7 +269,10 @@ func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver)
 }
 
 // ImportSBPack imports a new instance from an .sbpack ZIP file.
-func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, error) {
+func ImportSBPack(packPath string, destDir string, uid uuid.UUID, observer ProgressObserver) (*Instance, error) {
+	if observer == nil {
+		observer = &NopProgressObserver{}
+	}
 	reader, err := zip.OpenReader(packPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sbpack: %w", err)
@@ -387,7 +383,8 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, er
 
 		// Download
 		if len(fileInfo.Downloads) > 0 {
-			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes); err != nil {
+			taskName := "Downloading " + filepath.Base(fileInfo.Path)
+			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName); err != nil {
 				slog.Error("Failed to download file", "path", fileInfo.Path, "error", err)
 				return nil, err
 			}
@@ -425,7 +422,10 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID) (*Instance, er
 }
 
 // ApplySBPack updates an existing instance using a full .sbpack file.
-func ApplySBPack(inst *Instance, packPath string) error {
+func ApplySBPack(inst *Instance, packPath string, observer ProgressObserver) error {
+	if observer == nil {
+		observer = &NopProgressObserver{}
+	}
 	reader, err := zip.OpenReader(packPath)
 	if err != nil {
 		return fmt.Errorf("failed to open sbpack: %w", err)
@@ -530,7 +530,8 @@ func ApplySBPack(inst *Instance, packPath string) error {
 			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 				return err
 			}
-			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes); err != nil {
+			taskName := "Downloading " + filepath.Base(fileInfo.Path)
+			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName); err != nil {
 				return err
 			}
 		}
@@ -573,7 +574,10 @@ func ApplySBPack(inst *Instance, packPath string) error {
 }
 
 // ApplySBPatch applies an .sbpatch file to an existing instance.
-func ApplySBPatch(inst *Instance, patchPath string) error {
+func ApplySBPatch(inst *Instance, patchPath string, observer ProgressObserver) error {
+	if observer == nil {
+		observer = &NopProgressObserver{}
+	}
 	reader, err := zip.OpenReader(patchPath)
 	if err != nil {
 		return fmt.Errorf("failed to open sbpatch: %w", err)
@@ -744,7 +748,8 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 				return err
 			}
-			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes); err != nil {
+			taskName := "Downloading " + filepath.Base(fileInfo.Path)
+			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName); err != nil {
 				slog.Error("Failed to download file during patch", "path", fileInfo.Path, "error", err)
 				return err
 			}
@@ -793,7 +798,7 @@ func ApplySBPatch(inst *Instance, patchPath string) error {
 	return nil
 }
 
-func downloadWithVerify(url, dest string, hashes map[string]string) error {
+func downloadWithVerify(url, dest string, hashes map[string]string, observer ProgressObserver, taskName string) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -810,11 +815,44 @@ func downloadWithVerify(url, dest string, hashes map[string]string) error {
 	}
 	defer out.Close()
 
-	if _, err := io.Copy(out, resp.Body); err != nil {
+	if observer == nil {
+		observer = &NopProgressObserver{}
+	}
+
+	total := resp.ContentLength
+	pw := &progressWriter{
+		total:    total,
+		observer: observer,
+		taskName: taskName,
+		writer:   out,
+	}
+
+	if _, err := io.Copy(pw, resp.Body); err != nil {
 		return err
 	}
 
 	return verifyHashes(dest, hashes)
+}
+
+type progressWriter struct {
+	total    int64
+	current  int64
+	observer ProgressObserver
+	taskName string
+	writer   io.Writer
+}
+
+func (pw *progressWriter) Write(p []byte) (int, error) {
+	n, err := pw.writer.Write(p)
+	if err != nil {
+		return n, err
+	}
+	pw.current += int64(n)
+	if pw.total > 0 {
+		percentage := float64(pw.current) / float64(pw.total) * 100.0
+		pw.observer.OnProgress(pw.taskName, percentage, fmt.Sprintf("%.1f%%", percentage))
+	}
+	return n, nil
 }
 
 func verifyHashes(path string, hashes map[string]string) error {

@@ -98,7 +98,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 
 	// 3. Test Import
 	testUID := uuid.New()
-	inst, err := resource.ImportSBPack(packPath, destDir, testUID)
+	inst, err := resource.ImportSBPack(packPath, destDir, testUID, nil)
 	if err != nil {
 		t.Fatalf("ImportSBPack failed: %v", err)
 	}
@@ -157,7 +157,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	})
 
 	// 5. Test Apply
-	if err := resource.ApplySBPatch(inst, patchPath); err != nil {
+	if err := resource.ApplySBPatch(inst, patchPath, nil); err != nil {
 		t.Fatalf("ApplySBPatch failed: %v", err)
 	}
 
@@ -253,7 +253,7 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	})
 
 	// 3. Apply patch
-	if err := resource.ApplySBPatch(inst, patchPath); err != nil {
+	if err := resource.ApplySBPatch(inst, patchPath, nil); err != nil {
 		t.Fatalf("ApplySBPatch failed: %v", err)
 	}
 

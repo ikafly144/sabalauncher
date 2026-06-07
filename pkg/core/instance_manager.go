@@ -58,7 +58,7 @@ func (im *instanceManager) GetInstance(id uuid.UUID) (*resource.Instance, error)
 func (im *instanceManager) ImportInstance(packPath string) error {
 	uid := uuid.New()
 	destDir := filepath.Join(im.dataDir, "instances", uid.String())
-	inst, err := resource.ImportSBPack(packPath, destDir, uid)
+	inst, err := resource.ImportSBPack(packPath, destDir, uid, nil)
 	if err != nil {
 		return err
 	}
@@ -126,9 +126,9 @@ func (im *instanceManager) UpdateInstance(instanceID uuid.UUID, path string) err
 		}
 		err = resource.UpdateInstanceRemote(targetInst)
 	} else if strings.HasSuffix(strings.ToLower(path), ".sbpatch") {
-		err = resource.ApplySBPatch(targetInst, path)
+		err = resource.ApplySBPatch(targetInst, path, nil)
 	} else if strings.HasSuffix(strings.ToLower(path), ".sbpack") {
-		err = resource.ApplySBPack(targetInst, path)
+		err = resource.ApplySBPack(targetInst, path, nil)
 	} else {
 		return fmt.Errorf("unsupported file format: %s (expected .sbpack or .sbpatch)", filepath.Base(path))
 	}
