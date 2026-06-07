@@ -33,10 +33,8 @@ func parallelHashOverrides(baseDir string) map[string]string {
 	paths := make(chan string, 100)
 	var wg sync.WaitGroup
 
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range numWorkers {
+		wg.Go(func() {
 			for path := range paths {
 				hash, err := hashFile(path)
 				if err != nil {
@@ -52,7 +50,7 @@ func parallelHashOverrides(baseDir string) map[string]string {
 				results[rel] = hash
 				mu.Unlock()
 			}
-		}()
+		})
 	}
 
 	_ = filepath.WalkDir(baseDir, func(path string, d os.DirEntry, err error) error {

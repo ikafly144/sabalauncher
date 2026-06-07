@@ -158,10 +158,7 @@ func (r *logContentRenderer) Objects() []fyne.CanvasObject {
 		return nil
 	}
 
-	endLine := startLine + numLines
-	if endLine > len(view.lines) {
-		endLine = len(view.lines)
-	}
+	endLine := min(startLine+numLines, len(view.lines))
 
 	needed := endLine - startLine
 	if len(r.labels) < needed {
@@ -174,7 +171,7 @@ func (r *logContentRenderer) Objects() []fyne.CanvasObject {
 	}
 
 	res := make([]fyne.CanvasObject, 0, needed)
-	for i := 0; i < needed; i++ {
+	for i := range needed {
 		lineIdx := startLine + i
 		start := view.lines[lineIdx]
 		var end int64
@@ -186,10 +183,9 @@ func (r *logContentRenderer) Objects() []fyne.CanvasObject {
 
 		label := r.labels[i]
 		if end > start {
-			readLen := end - start
-			if readLen > 2048 { // Limit line length for safety
-				readLen = 2048
-			}
+			readLen := min(end-start,
+				// Limit line length for safety
+				2048)
 			buf := make([]byte, readLen)
 			_, _ = view.reader.ReadAt(buf, start)
 			label.Text = string(bytes.TrimRight(buf, "\r\n"))
