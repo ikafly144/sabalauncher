@@ -330,41 +330,50 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID, observer Progr
 	}
 
 	// Unzip overrides
+	overrideFiles := []string{}
+	for _, f := range reader.File {
+		if strings.HasPrefix(f.Name, "overrides/") && !f.FileInfo().IsDir() {
+			overrideFiles = append(overrideFiles, f.Name)
+		}
+	}
+	totalExtract := len(overrideFiles)
+
+	for i, fName := range overrideFiles {
+		f, _ := reader.Open(fName) // fName exists
+		relPath := strings.TrimPrefix(fName, "overrides/")
+		if relPath == "" {
+			f.Close()
+			continue
+		}
+
+		percentage := float64(i) / float64(totalExtract) * 100.0
+		observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalExtract))
+
+		destPath := filepath.Join(destDir, relPath)
+		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+			f.Close()
+			return nil, err
+		}
+
+		destFile, err := os.Create(destPath)
+		if err != nil {
+			f.Close()
+			return nil, err
+		}
+
+		_, err = io.Copy(destFile, f)
+		destFile.Close()
+		f.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// For compatibility with previous loop structure if directories needed
 	for _, f := range reader.File {
 		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
-			relPath := after
-			if relPath == "" {
-				continue
-			}
-
-			destPath := filepath.Join(destDir, relPath)
-			if f.FileInfo().IsDir() {
-				if err := os.MkdirAll(destPath, 0755); err != nil {
-					return nil, err
-				}
-				continue
-			}
-
-			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-				return nil, err
-			}
-
-			rc, err := f.Open()
-			if err != nil {
-				return nil, err
-			}
-
-			destFile, err := os.Create(destPath)
-			if err != nil {
-				rc.Close()
-				return nil, err
-			}
-
-			_, err = io.Copy(destFile, rc)
-			destFile.Close()
-			rc.Close()
-			if err != nil {
-				return nil, err
+			if f.FileInfo().IsDir() && after != "" {
+				_ = os.MkdirAll(filepath.Join(destDir, after), 0755)
 			}
 		}
 	}
@@ -485,36 +494,50 @@ func ApplySBPack(inst *Instance, packPath string, observer ProgressObserver) err
 	}
 
 	// Unzip overrides from new pack
+	overrideFiles := []string{}
+	for _, f := range reader.File {
+		if strings.HasPrefix(f.Name, "overrides/") && !f.FileInfo().IsDir() {
+			overrideFiles = append(overrideFiles, f.Name)
+		}
+	}
+	totalExtract := len(overrideFiles)
+
+	for i, fName := range overrideFiles {
+		f, _ := reader.Open(fName)
+		relPath := strings.TrimPrefix(fName, "overrides/")
+		if relPath == "" {
+			f.Close()
+			continue
+		}
+
+		percentage := float64(i) / float64(totalExtract) * 100.0
+		observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalExtract))
+
+		destPath := filepath.Join(inst.Path, relPath)
+		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+			f.Close()
+			return err
+		}
+
+		df, err := os.Create(destPath)
+		if err != nil {
+			f.Close()
+			return err
+		}
+
+		_, err = io.Copy(df, f)
+		df.Close()
+		f.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	// For compatibility with directories
 	for _, f := range reader.File {
 		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
-			relPath := after
-			if relPath == "" {
-				continue
-			}
-			destPath := filepath.Join(inst.Path, relPath)
-			if f.FileInfo().IsDir() {
-				if err := os.MkdirAll(destPath, 0755); err != nil {
-					return err
-				}
-				continue
-			}
-			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-				return err
-			}
-			rc, err := f.Open()
-			if err != nil {
-				return err
-			}
-			df, err := os.Create(destPath)
-			if err != nil {
-				rc.Close()
-				return err
-			}
-			_, err = io.Copy(df, rc)
-			df.Close()
-			rc.Close()
-			if err != nil {
-				return err
+			if f.FileInfo().IsDir() && after != "" {
+				_ = os.MkdirAll(filepath.Join(inst.Path, after), 0755)
 			}
 		}
 	}
@@ -638,21 +661,29 @@ func ApplySBPatch(inst *Instance, patchPath string, observer ProgressObserver) e
 	}
 
 	// 2. Unzip overrides and apply patches
+	type patchTask struct {
+		f    *zip.File
+		mode string // "extract" or "patch"
+	}
+	tasks := []patchTask{}
 	for _, f := range reader.File {
-		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
-			relPath := after
-			if relPath == "" {
-				continue
-			}
+		if strings.HasPrefix(f.Name, "overrides/") && !f.FileInfo().IsDir() {
+			tasks = append(tasks, patchTask{f, "extract"})
+		} else if strings.HasPrefix(f.Name, "patches/") && !f.FileInfo().IsDir() {
+			tasks = append(tasks, patchTask{f, "patch"})
+		}
+	}
+	totalTasks := len(tasks)
+
+	for i, t := range tasks {
+		f := t.f
+		percentage := float64(i) / float64(totalTasks) * 100.0
+
+		if t.mode == "extract" {
+			relPath := strings.TrimPrefix(f.Name, "overrides/")
+			observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalTasks))
 
 			destPath := filepath.Join(inst.Path, relPath)
-			if f.FileInfo().IsDir() {
-				if err := os.MkdirAll(destPath, 0755); err != nil {
-					return err
-				}
-				continue
-			}
-
 			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 				return err
 			}
@@ -674,60 +705,60 @@ func ApplySBPatch(inst *Instance, patchPath string, observer ProgressObserver) e
 			if err != nil {
 				return err
 			}
-		}
+		} else {
+			relPath := strings.TrimPrefix(f.Name, "patches/")
+			observer.OnProgress("Patching "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalTasks))
 
-		if patch.FormatVersion >= SBPatchFormatVersion {
-			if after, ok := strings.CutPrefix(f.Name, "patches/"); ok {
-				relPath := after
-				if relPath == "" || f.FileInfo().IsDir() {
-					continue
-				}
+			targetPath := filepath.Join(inst.Path, relPath)
+			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+				return err
+			}
 
-				targetPath := filepath.Join(inst.Path, relPath)
+			oldFile, err := os.Open(targetPath)
+			if err != nil {
+				return fmt.Errorf("failed to open old file for patching %s: %w", relPath, err)
+			}
 
-				// Ensure parent directory exists
-				if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-					return err
-				}
+			patchFile, err := f.Open()
+			if err != nil {
+				oldFile.Close()
+				return err
+			}
 
-				oldFile, err := os.Open(targetPath)
-				if err != nil {
-					return fmt.Errorf("failed to open old file for patching %s: %w", relPath, err)
-				}
+			tempFile, err := os.CreateTemp("", "sbpatch-*")
+			if err != nil {
+				oldFile.Close()
+				patchFile.Close()
+				return err
+			}
 
-				patchFile, err := f.Open()
-				if err != nil {
-					oldFile.Close()
-					return err
-				}
-
-				tempFile, err := os.CreateTemp("", "sbpatch-*")
-				if err != nil {
-					oldFile.Close()
-					patchFile.Close()
-					return err
-				}
-
-				if err := binarydist.Patch(oldFile, tempFile, patchFile); err != nil {
-					oldFile.Close()
-					patchFile.Close()
-					tempFile.Close()
-					_ = os.Remove(tempFile.Name())
-					return fmt.Errorf("failed to apply binary patch to %s: %w", relPath, err)
-				}
-
+			if err := binarydist.Patch(oldFile, tempFile, patchFile); err != nil {
 				oldFile.Close()
 				patchFile.Close()
 				tempFile.Close()
+				_ = os.Remove(tempFile.Name())
+				return fmt.Errorf("failed to apply binary patch to %s: %w", relPath, err)
+			}
 
-				// Replace old file with patched version
-				if err := os.Remove(targetPath); err != nil {
-					_ = os.Remove(tempFile.Name())
-					return err
-				}
-				if err := os.Rename(tempFile.Name(), targetPath); err != nil {
-					return err
-				}
+			oldFile.Close()
+			patchFile.Close()
+			tempFile.Close()
+
+			if err := os.Remove(targetPath); err != nil {
+				_ = os.Remove(tempFile.Name())
+				return err
+			}
+			if err := os.Rename(tempFile.Name(), targetPath); err != nil {
+				return err
+			}
+		}
+	}
+
+	// For compatibility with directories
+	for _, f := range reader.File {
+		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
+			if f.FileInfo().IsDir() && after != "" {
+				_ = os.MkdirAll(filepath.Join(inst.Path, after), 0755)
 			}
 		}
 	}
