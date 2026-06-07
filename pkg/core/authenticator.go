@@ -2,9 +2,11 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
+	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
 )
 
@@ -72,9 +74,10 @@ func (a *msaAuthenticator) TrySilentLogin(ctx context.Context) error {
 
 	profile, err := mcAuth.GetMinecraftProfile()
 	if err != nil {
+		_ = a.Logout()
 		a.mu.Lock()
 		a.status = AuthStatusError
-		a.lastErr = err
+		a.lastErr = errors.New(i18n.T("minecraft_not_owned"))
 		a.mu.Unlock()
 		return err
 	}
@@ -135,9 +138,10 @@ func (a *msaAuthenticator) WaitLogin(ctx context.Context) error {
 
 	profile, err := mcAuth.GetMinecraftProfile()
 	if err != nil {
+		_ = a.Logout()
 		a.mu.Lock()
 		a.status = AuthStatusError
-		a.lastErr = err
+		a.lastErr = errors.New(i18n.T("minecraft_not_owned"))
 		a.mu.Unlock()
 		return err
 	}

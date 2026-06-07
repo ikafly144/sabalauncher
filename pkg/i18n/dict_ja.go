@@ -21,6 +21,7 @@ var dictJA = map[string]string{
 	"retry_browser":        "再試行 (ブラウザ)",
 	"retry_device":         "再試行 (デバイスコード)",
 	"default_login_error":  "ログイン中にエラーが発生しました。",
+	"minecraft_not_owned":  "有効なマインクラフトの権利が見つかりませんでした。マインクラフトを購入したアカウントでログインしているか確認してください。",
 
 	// dashboard.go
 	"tab_launcher":                  "ランチャー",

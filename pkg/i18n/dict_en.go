@@ -21,6 +21,7 @@ var dictEN = map[string]string{
 	"retry_browser":        "Retry Login (Browser)",
 	"retry_device":         "Retry Login (Device Code)",
 	"default_login_error":  "Something went wrong during login.",
+	"minecraft_not_owned":  "Minecraft was not found on this account. Please make sure you are logged in with an account that owns Minecraft.",
 
 	// dashboard.go
 	"tab_launcher":                  "Launcher",
