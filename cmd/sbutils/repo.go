@@ -103,10 +103,10 @@ func runRepoAdd(args []string) {
 			id := strings.TrimSuffix(filename, ext)
 			typ := strings.TrimPrefix(ext, ".")
 			remoteURL := strings.TrimSuffix(remotePrefix, "/") + "/" + filename
-			localPath := filename
+			// localPath := filename
 
 			fmt.Printf("Processing shorthand: %s -> ID=%s, Type=%s\n", filename, id, typ)
-			addFileToManifest(&repo, id, typ, filePath, remoteURL, localPath, timestamp)
+			addFileToManifest(&repo, id, typ, filePath, remoteURL, "", timestamp)
 		}
 	}
 
