@@ -101,7 +101,10 @@ func (s *InstanceLoaderSetupStep) Name() string {
 }
 
 func (s *InstanceLoaderSetupStep) Progress() float32 {
-	return 0.0
+	if s.loader == nil {
+		return 1.0
+	}
+	return s.loader.Progress()
 }
 
 func (s *InstanceLoaderSetupStep) Do(ctx *SetupContext) error {

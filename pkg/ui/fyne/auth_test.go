@@ -58,6 +58,11 @@ func (m *mockInstanceManager) UpdateInstance(instanceID uuid.UUID, patchPath str
 	return args.Error(0)
 }
 
+func (m *mockInstanceManager) SubscribeProgress() <-chan core.ProgressEvent {
+	args := m.Called()
+	return args.Get(0).(chan core.ProgressEvent)
+}
+
 type mockAuthenticator struct {
 	mock.Mock
 }

@@ -386,7 +386,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 	destDir := filepath.Join(t.TempDir(), "remote-instance")
 	uid := uuid.New()
 
-	inst, err := resource.ImportRemoteSBPack(server.URL+"/repo/manifest.json", destDir, uid)
+	inst, err := resource.ImportRemoteSBPack(server.URL+"/repo/manifest.json", destDir, uid, nil)
 	if err != nil {
 		t.Fatalf("ImportRemoteSBPack failed: %v", err)
 	}

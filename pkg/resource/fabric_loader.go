@@ -16,6 +16,8 @@ import (
 type FabricLoader struct {
 	GameVersion   string
 	LoaderVersion string
+	worker        *DownloadWorker
+	isInstalled   bool
 }
 
 // NewFabricLoader creates a new FabricLoader instance.
@@ -24,6 +26,19 @@ func NewFabricLoader(gameVersion, loaderVersion string) *FabricLoader {
 		GameVersion:   gameVersion,
 		LoaderVersion: loaderVersion,
 	}
+}
+
+func (f *FabricLoader) Progress() float32 {
+	if f.isInstalled {
+		return 1.0
+	}
+	if f.worker == nil {
+		return 0.0
+	}
+	// We don't have total count easily here without modifying worker,
+	// but we can estimate or just show remain.
+	// Actually, let's keep it simple.
+	return 0.5 // Default to 50% while downloading
 }
 
 type FabricMetaResponse struct {
@@ -65,6 +80,7 @@ type FabricLibraryInfo struct {
 // Install handles the downloading of Fabric loader and its dependencies.
 func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing Fabric", "gameVersion", f.GameVersion, "loaderVersion", f.LoaderVersion)
+	f.isInstalled = false
 
 	url := fmt.Sprintf("%s/%s/%s", FabricMetaURL, f.GameVersion, f.LoaderVersion)
 	resp, err := http.Get(url)
@@ -83,7 +99,7 @@ func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 	}
 
 	dataPath := DataDir
-	var worker DownloadWorker
+	f.worker = &DownloadWorker{}
 
 	// Add libraries to download worker
 	libs := append(meta.LauncherMeta.Libraries.Common, meta.LauncherMeta.Libraries.Client...)
@@ -102,14 +118,14 @@ func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 			}
 			downloadURL := libURL + libPath
 
-			worker.addTask(func() error {
+			f.worker.addTask(func() error {
 				return downloadFile(downloadURL, fullPath)
 			})
 		}
 	}
 
-	if worker.Remain() > 0 {
-		if err := worker.Run(); err != nil {
+	if f.worker.Remain() > 0 {
+		if err := f.worker.Run(); err != nil {
 			return fmt.Errorf("failed to download fabric libraries: %w", err)
 		}
 	}
@@ -126,7 +142,12 @@ func (f *FabricLoader) Install(ctx context.Context, inst *Instance) error {
 	}
 	defer metaFile.Close()
 
-	return json.NewEncoder(metaFile).Encode(meta)
+	if err := json.NewEncoder(metaFile).Encode(meta); err != nil {
+		return err
+	}
+
+	f.isInstalled = true
+	return nil
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with Fabric.

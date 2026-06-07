@@ -24,6 +24,7 @@ var CurseForgeAPIKey string
 type ModLoader interface {
 	Install(ctx context.Context, inst *Instance) error
 	GenerateLaunchConfig(inst *Instance, features map[string]bool, memory uint64) (*LaunchConfig, error)
+	Progress() float32
 }
 
 // GetModLoader returns the appropriate ModLoader implementation for the given instance.
@@ -74,6 +75,10 @@ func NewVanillaLoader(version string) *VanillaLoader {
 func (v *VanillaLoader) Install(ctx context.Context, inst *Instance) error {
 	// Vanilla installation is handled by Instance setup.
 	return nil
+}
+
+func (v *VanillaLoader) Progress() float32 {
+	return 1.0
 }
 
 func (v *VanillaLoader) GenerateLaunchConfig(inst *Instance, features map[string]bool, memory uint64) (*LaunchConfig, error) {

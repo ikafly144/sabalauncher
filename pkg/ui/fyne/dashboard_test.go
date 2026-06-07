@@ -48,6 +48,7 @@ func TestShowDashboardView(t *testing.T) {
 	mp.On("GetInstances").Return([]*resource.Instance{
 		{Name: "Instance 1", Versions: []resource.InstanceVersion{{ID: "minecraft", Version: "1.20.1"}}},
 	}, nil)
+	mp.On("SubscribeProgress").Return(make(chan core.ProgressEvent))
 
 	mr := new(mockGameRunner)
 	ma := new(mockAuthenticator)

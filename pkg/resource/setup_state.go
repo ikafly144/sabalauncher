@@ -337,7 +337,7 @@ func (f *ForgeDownloadStep) Progress() float32 {
 
 type ForgeInstallStep struct {
 	downloadStep    *ForgeDownloadStep
-	done            bool
+	progress        float32
 	vanillaManifest *ClientManifest // The vanilla manifest used for Forge installation
 	manifest        *ClientManifest
 }
@@ -354,11 +354,13 @@ func (f *ForgeInstallStep) Name() string {
 
 func (f *ForgeInstallStep) Do(ctx *SetupContext) error {
 	if f.downloadStep.installerPath != nil {
+		f.progress = 0.1
 		err := InstallForge(*f.downloadStep.installerPath, ctx.dataPath)
 		if err != nil {
 			return err
 		}
 	}
+	f.progress = 0.8
 	dirname := f.downloadStep.vanillaVersionName + "-forge-" + f.downloadStep.forgeVersionName
 	file, err := os.OpenFile(filepath.Join(ctx.dataPath, "versions", dirname, dirname+".json"), os.O_RDONLY, 0644)
 	if err != nil {
@@ -375,15 +377,12 @@ func (f *ForgeInstallStep) Do(ctx *SetupContext) error {
 		return err
 	}
 	*f.manifest = *m
-	f.done = true
+	f.progress = 1.0
 	return nil
 }
 
 func (f *ForgeInstallStep) Progress() float32 {
-	if f.done {
-		return 1.0
-	}
-	return 0.0
+	return f.progress
 }
 
 func NewModDownloadStep(zipReader *zip.Reader, oldMods, newMods *modLoader) Step {

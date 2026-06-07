@@ -13,6 +13,7 @@ import (
 type ForgeLoader struct {
 	VanillaVersion string
 	ForgeVersion   string
+	progress       float32
 }
 
 // NewForgeLoader creates a new ForgeLoader instance.
@@ -23,9 +24,14 @@ func NewForgeLoader(vanillaVersion, forgeVersion string) *ForgeLoader {
 	}
 }
 
+func (f *ForgeLoader) Progress() float32 {
+	return f.progress
+}
+
 // Install handles the downloading and installation of Forge.
 func (f *ForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing Forge", "vanillaVersion", f.VanillaVersion, "forgeVersion", f.ForgeVersion)
+	f.progress = 0.0
 
 	// This logic is currently spread across ForgeManifestLoader and SetupState.
 	// For the refactor, we'll implement it here or call existing helpers.
@@ -39,6 +45,7 @@ func (f *ForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	if err != nil {
 		return fmt.Errorf("failed to get vanilla version: %w", err)
 	}
+	f.progress = 0.1
 	vanillaManifest, err := GetClientManifest(ver)
 	if err != nil {
 		return fmt.Errorf("failed to get vanilla manifest: %w", err)
@@ -54,18 +61,21 @@ func (f *ForgeLoader) Install(ctx context.Context, inst *Instance) error {
 		if err != nil {
 			return fmt.Errorf("failed to download forge: %w", err)
 		}
+		f.progress = 0.2
 		if err := worker.Run(); err != nil {
 			return fmt.Errorf("failed to run forge download worker: %w", err)
 		}
 		installerPath = path
 
 		// 3. Install Forge
+		f.progress = 0.5
 		if err := InstallForge(installerPath, dataPath); err != nil {
 			return fmt.Errorf("failed to install forge: %w", err)
 		}
 		defer os.Remove(installerPath)
 	}
 
+	f.progress = 1.0
 	return nil
 }
 

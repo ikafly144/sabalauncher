@@ -14,9 +14,10 @@ import (
 )
 
 type instanceManager struct {
-	dataDir   string
-	instances []*resource.Instance
-	mu        sync.RWMutex
+	dataDir      string
+	instances    []*resource.Instance
+	progressChan chan ProgressEvent
+	mu           sync.RWMutex
 }
 
 func NewInstanceManager(dataDir string) (InstanceManager, error) {
@@ -24,12 +25,17 @@ func NewInstanceManager(dataDir string) (InstanceManager, error) {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 	im := &instanceManager{
-		dataDir: dataDir,
+		dataDir:      dataDir,
+		progressChan: make(chan ProgressEvent, 100),
 	}
 	if err := im.RefreshInstances(); err != nil {
 		return nil, err
 	}
 	return im, nil
+}
+
+func (im *instanceManager) SubscribeProgress() <-chan ProgressEvent {
+	return im.progressChan
 }
 
 func (im *instanceManager) GetInstances() ([]*resource.Instance, error) {
@@ -67,7 +73,12 @@ func (im *instanceManager) ImportInstance(packPath string) error {
 func (im *instanceManager) AddRemoteInstance(manifestURL string) error {
 	uid := uuid.New()
 	destDir := filepath.Join(im.dataDir, "instances", uid.String())
-	inst, err := resource.ImportRemoteSBPack(manifestURL, destDir, uid)
+
+	observer := &progressBridge{
+		ch: im.progressChan,
+	}
+
+	inst, err := resource.ImportRemoteSBPack(manifestURL, destDir, uid, observer)
 	if err != nil {
 		return err
 	}
@@ -77,6 +88,18 @@ func (im *instanceManager) AddRemoteInstance(manifestURL string) error {
 	im.mu.Unlock()
 
 	return im.saveInstances()
+}
+
+type progressBridge struct {
+	ch chan ProgressEvent
+}
+
+func (p *progressBridge) OnProgress(taskName string, percentage float64, status string) {
+	p.ch <- ProgressEvent{
+		TaskName:   taskName,
+		Percentage: percentage,
+		Status:     status,
+	}
 }
 
 func (im *instanceManager) UpdateInstance(instanceID uuid.UUID, path string) error {

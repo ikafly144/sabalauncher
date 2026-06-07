@@ -15,6 +15,8 @@ import (
 type QuiltLoader struct {
 	GameVersion   string
 	LoaderVersion string
+	worker        *DownloadWorker
+	isInstalled   bool
 }
 
 // NewQuiltLoader creates a new QuiltLoader instance.
@@ -23,6 +25,16 @@ func NewQuiltLoader(gameVersion, loaderVersion string) *QuiltLoader {
 		GameVersion:   gameVersion,
 		LoaderVersion: loaderVersion,
 	}
+}
+
+func (q *QuiltLoader) Progress() float32 {
+	if q.isInstalled {
+		return 1.0
+	}
+	if q.worker == nil {
+		return 0.0
+	}
+	return 0.5
 }
 
 type QuiltLauncherMeta struct {
@@ -39,6 +51,7 @@ type QuiltLibraryInfo struct {
 // Install handles the downloading of Quilt loader and its dependencies.
 func (q *QuiltLoader) Install(ctx context.Context, inst *Instance) error {
 	slog.Info("Installing Quilt", "gameVersion", q.GameVersion, "loaderVersion", q.LoaderVersion)
+	q.isInstalled = false
 
 	url := fmt.Sprintf("%s/%s/%s/profile/json", QuiltMetaURL, q.GameVersion, q.LoaderVersion)
 	resp, err := http.Get(url)
@@ -57,7 +70,7 @@ func (q *QuiltLoader) Install(ctx context.Context, inst *Instance) error {
 	}
 
 	dataPath := DataDir
-	var worker DownloadWorker
+	q.worker = &DownloadWorker{}
 
 	// Add libraries to download worker
 	for _, lib := range meta.Libraries {
@@ -71,14 +84,14 @@ func (q *QuiltLoader) Install(ctx context.Context, inst *Instance) error {
 			}
 			downloadURL := libURL + libPath
 
-			worker.addTask(func() error {
+			q.worker.addTask(func() error {
 				return downloadFile(downloadURL, fullPath)
 			})
 		}
 	}
 
-	if worker.Remain() > 0 {
-		if err := worker.Run(); err != nil {
+	if q.worker.Remain() > 0 {
+		if err := q.worker.Run(); err != nil {
 			return fmt.Errorf("failed to download quilt libraries: %w", err)
 		}
 	}
@@ -95,7 +108,12 @@ func (q *QuiltLoader) Install(ctx context.Context, inst *Instance) error {
 	}
 	defer metaFile.Close()
 
-	return json.NewEncoder(metaFile).Encode(meta)
+	if err := json.NewEncoder(metaFile).Encode(meta); err != nil {
+		return err
+	}
+
+	q.isInstalled = true
+	return nil
 }
 
 // GenerateLaunchConfig produces the configuration required to launch the game with Quilt.

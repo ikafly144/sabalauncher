@@ -60,6 +60,8 @@ type InstanceManager interface {
 	AddRemoteInstance(manifestURL string) error
 	// UpdateInstance updates an instance using an .sbpatch file.
 	UpdateInstance(instanceID uuid.UUID, patchPath string) error
+	// SubscribeProgress returns a channel that receives progress updates.
+	SubscribeProgress() <-chan ProgressEvent
 }
 
 // GameRunner defines the interface for launching and managing the game process.

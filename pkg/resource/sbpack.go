@@ -111,7 +111,7 @@ func getRepoPatchLocalPath(p SBRepoPatch) string {
 	return filepath.Join(DataDir, "cache", hash, filename)
 }
 
-func downloadAndVerifyRepoPatch(p SBRepoPatch) (string, error) {
+func downloadAndVerifyRepoPatch(p SBRepoPatch, observer ProgressObserver) (string, error) {
 	localPath := getRepoPatchLocalPath(p)
 	if verifyHashes(localPath, p.Hash) == nil {
 		return localPath, nil
@@ -121,13 +121,27 @@ func downloadAndVerifyRepoPatch(p SBRepoPatch) (string, error) {
 		return "", err
 	}
 
+	if observer != nil {
+		observer.OnProgress("Downloading "+filepath.Base(localPath), 0, "0%")
+	}
+
 	if err := downloadWithVerify(p.RemotePath, localPath, p.Hash); err != nil {
 		return "", err
 	}
+
+	if observer != nil {
+		observer.OnProgress("Downloading "+filepath.Base(localPath), 100, "100%")
+	}
+
 	return localPath, nil
 }
 
-func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID) (*Instance, error) {
+func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, observer ProgressObserver) (*Instance, error) {
+	if observer == nil {
+		observer = &NopProgressObserver{}
+	}
+
+	observer.OnProgress("Fetching repository manifest", 0, "")
 	repo, err := FetchRepository(manifestURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch repository manifest: %w", err)
@@ -147,11 +161,13 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID) (*Ins
 		return nil, fmt.Errorf("no base sbpack found in repository")
 	}
 
-	localPackPath, err := downloadAndVerifyRepoPatch(*initialPatch)
+	observer.OnProgress("Downloading initial base pack", 10, "")
+	localPackPath, err := downloadAndVerifyRepoPatch(*initialPatch, observer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download and verify initial patch: %w", err)
 	}
 
+	observer.OnProgress("Importing base pack", 30, "")
 	inst, err := ImportSBPack(localPackPath, destDir, uid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to import initial sbpack: %w", err)
@@ -161,15 +177,21 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID) (*Ins
 
 	// 2. Apply patches sequentially up to latest_patch
 	if inst.Upstream.Version != repo.LatestPatch {
-		if err := UpdateInstanceRemote(inst); err != nil {
+		observer.OnProgress("Applying updates", 50, "")
+		if err := UpdateInstanceRemoteWithObserver(inst, observer); err != nil {
 			return nil, fmt.Errorf("failed to apply initial patches: %w", err)
 		}
 	}
 
+	observer.OnProgress("Registration complete", 100, "")
 	return inst, nil
 }
 
 func UpdateInstanceRemote(inst *Instance) error {
+	return UpdateInstanceRemoteWithObserver(inst, &NopProgressObserver{})
+}
+
+func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver) error {
 	if inst.Upstream == nil || inst.Upstream.ManifestURL == "" {
 		return fmt.Errorf("instance does not have a remote manifest")
 	}
@@ -187,17 +209,28 @@ func UpdateInstanceRemote(inst *Instance) error {
 	// Find the chain of patches from current version to latest
 	applying := false
 	appliedCount := 0
+	patchesToApply := []SBRepoPatch{}
 	for _, p := range repo.Patches {
 		if !applying {
 			if p.ID == inst.Upstream.Version {
 				applying = true
-				continue
 			}
 			continue
 		}
+		patchesToApply = append(patchesToApply, p)
+	}
+
+	if !applying {
+		return fmt.Errorf("current version '%s' not found in repository manifest", inst.Upstream.Version)
+	}
+
+	totalPatches := len(patchesToApply)
+	for i, p := range patchesToApply {
+		progress := 50.0 + (float64(i)/float64(totalPatches))*50.0
+		observer.OnProgress(fmt.Sprintf("Applying patch %d/%d (%s)", i+1, totalPatches, p.ID), progress, "")
 
 		// Apply this patch
-		localPath, err := downloadAndVerifyRepoPatch(p)
+		localPath, err := downloadAndVerifyRepoPatch(p, observer)
 		if err != nil {
 			return err
 		}
@@ -214,10 +247,6 @@ func UpdateInstanceRemote(inst *Instance) error {
 		}
 		inst.Upstream.Version = p.ID
 		appliedCount++
-	}
-
-	if !applying {
-		return fmt.Errorf("current version '%s' not found in repository manifest", inst.Upstream.Version)
 	}
 
 	if appliedCount == 0 && repo.LatestPatch != "" && inst.Upstream.Version != repo.LatestPatch {

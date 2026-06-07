@@ -175,7 +175,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		if isRemote {
 			actions = container.NewBorder(nil, nil, nil, deleteBtn, playBtn)
 		} else {
-			actions = container.NewHBox(nil, nil, nil, container.NewHBox(updateBtn, deleteBtn), playBtn)
+			actions = container.NewBorder(nil, nil, nil, container.NewHBox(updateBtn, deleteBtn), playBtn)
 		}
 
 		detailContainer := container.NewVBox(

@@ -19,9 +19,14 @@ import (
 type NeoForgeLoader struct {
 	VanillaVersion  string
 	NeoForgeVersion string
+	progress        float32
 }
 
 var ErrNeoForgeManifestNotFound = errors.New("neoforge manifest not found")
+
+func (n *NeoForgeLoader) Progress() float32 {
+	return n.progress
+}
 
 func (n *NeoForgeLoader) findManifestID(dataPath string) (string, error) {
 	preferred := n.VanillaVersion + "-neoforge-" + n.NeoForgeVersion
@@ -56,12 +61,14 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	dataPath := DataDir
 	if manifestID, err := n.findManifestID(dataPath); err == nil {
 		slog.Info("NeoForge is already installed", "version", n.NeoForgeVersion, "id", manifestID)
+		n.progress = 1.0
 		return nil
 	} else if !errors.Is(err, ErrNeoForgeManifestNotFound) {
 		return err
 	}
 
 	slog.Info("Installing NeoForge", "vanilla", n.VanillaVersion, "neoforge", n.NeoForgeVersion)
+	n.progress = 0.0
 
 	// 1. Download Installer
 	installerURL := fmt.Sprintf("%s/%s/neoforge-%s-installer.jar", NeoForgeMavenURL, n.NeoForgeVersion, n.NeoForgeVersion)
@@ -72,6 +79,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
 
+	n.progress = 0.1
 	resp, err := http.Get(installerURL)
 	if err != nil {
 		return fmt.Errorf("failed to download neoforge installer: %w", err)
@@ -87,6 +95,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 	}
 	tmpFile.Close()
 
+	n.progress = 0.5
 	// 2. Run Installer
 	// NeoForge installer requires a dummy launcher_profiles.json
 	dummyProfiles := filepath.Join(dataPath, "launcher_profiles.json")
@@ -106,6 +115,7 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 		return fmt.Errorf("neoforge installer failed: %w", err)
 	}
 
+	n.progress = 1.0
 	return nil
 }
 
