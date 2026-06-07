@@ -1,7 +1,11 @@
 package fyne
 
 import (
+	"image/color"
+
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/google/uuid"
@@ -46,7 +50,9 @@ func (ui *FyneUI) showRegisterRemoteModpackDialog() {
 
 	d := dialog.NewForm(i18n.T("register_remote_title"), i18n.T("register_btn"), i18n.T("cancel"), items, func(ok bool) {
 		if ok {
-			progress := dialog.NewCustom(i18n.T("registering_progress"), i18n.T("cancel"), widget.NewProgressBarInfinite(), ui.window)
+			minWidth := canvas.NewRectangle(color.Transparent)
+			minWidth.SetMinSize(fyne.NewSize(400, 0))
+			progress := dialog.NewCustom(i18n.T("registering_progress"), i18n.T("cancel"), container.NewStack(widget.NewProgressBarInfinite(), minWidth), ui.window)
 			progress.Show()
 			go func() {
 				err := ui.instances.AddRemoteInstance(entry.Text)
