@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
@@ -74,25 +76,64 @@ func runPack(args []string) {
 	// Add overrides
 	overridesDir := filepath.Join(dir, "overrides")
 	if _, err := os.Stat(overridesDir); err == nil {
-		err = filepath.Walk(overridesDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
+		type task struct {
+			path    string
+			relPath string
+		}
+		tasks := make(chan task, 100)
+		results := make(chan struct {
+			relPath string
+			data    []byte
+			err     error
+		}, 100)
+		var wg sync.WaitGroup
+
+		// We use a limited number of workers to avoid OOM if files are large,
+		// but for many small files this is very fast.
+		// For very large files, we should probably stick to sequential or use a different approach.
+		// Let's use a simpler approach: just parallelize the directory walk and use a single writer.
+		
+		go func() {
+			_ = filepath.WalkDir(overridesDir, func(path string, d os.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				relPath, _ := filepath.Rel(dir, path)
+				tasks <- task{path: path, relPath: filepath.ToSlash(relPath)}
 				return nil
-			}
+			})
+			close(tasks)
+		}()
 
-			relPath, err := filepath.Rel(dir, path)
-			if err != nil {
-				return err
-			}
-			relPath = filepath.ToSlash(relPath)
+		numWorkers := runtime.NumCPU()
+		for i := 0; i < numWorkers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for t := range tasks {
+					data, err := os.ReadFile(t.path)
+					results <- struct {
+						relPath string
+						data    []byte
+						err     error
+					}{t.relPath, data, err}
+				}
+			}()
+		}
 
-			return addFileToZip(w, path, relPath)
-		})
-		if err != nil {
-			fmt.Printf("Failed to add overrides to zip: %v\n", err)
-			os.Exit(1)
+		go func() {
+			wg.Wait()
+			close(results)
+		}()
+
+		for res := range results {
+			if res.err != nil {
+				fmt.Printf("Failed to read %s: %v\n", res.relPath, res.err)
+				continue
+			}
+			if err := addDataToZip(w, res.data, res.relPath); err != nil {
+				fmt.Printf("Failed to add %s to zip: %v\n", res.relPath, err)
+			}
 		}
 	}
 

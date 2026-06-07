@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
 
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 	"github.com/kr/binarydist"
@@ -72,11 +74,11 @@ func runPatch(args []string) {
 	// Copy overrides from patch to base
 	patchOverrides := filepath.Join(patchDir, "overrides")
 	if _, err := os.Stat(patchOverrides); err == nil {
-		if err := filepath.Walk(patchOverrides, func(path string, info os.FileInfo, err error) error {
+		if err := filepath.WalkDir(patchOverrides, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
-			if !info.IsDir() {
+			if !d.IsDir() {
 				rel, _ := filepath.Rel(patchOverrides, path)
 				destPath := filepath.Join(baseDir, "overrides", rel)
 				if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
@@ -175,21 +177,62 @@ func runPatch(args []string) {
 		fmt.Printf("Failed to add index to pack: %v\n", err)
 	}
 
-	// Add updated overrides
+	// Add updated overrides (parallelize)
 	baseOverrides := filepath.Join(baseDir, "overrides")
 	if _, err := os.Stat(baseOverrides); err == nil {
-		if err := filepath.Walk(baseOverrides, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() {
+		type task struct {
+			path    string
+			relPath string
+		}
+		tasks := make(chan task, 100)
+		results := make(chan struct {
+			relPath string
+			data    []byte
+			err     error
+		}, 100)
+		var wg sync.WaitGroup
+
+		go func() {
+			_ = filepath.WalkDir(baseOverrides, func(path string, d os.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
 				rel, _ := filepath.Rel(baseDir, path)
-				rel = filepath.ToSlash(rel)
-				return addFileToZip(w, path, rel)
+				tasks <- task{path: path, relPath: filepath.ToSlash(rel)}
+				return nil
+			})
+			close(tasks)
+		}()
+
+		numWorkers := runtime.NumCPU()
+		for i := 0; i < numWorkers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for t := range tasks {
+					data, err := os.ReadFile(t.path)
+					results <- struct {
+						relPath string
+						data    []byte
+						err     error
+					}{t.relPath, data, err}
+				}
+			}()
+		}
+
+		go func() {
+			wg.Wait()
+			close(results)
+		}()
+
+		for res := range results {
+			if res.err != nil {
+				fmt.Printf("Failed to read updated override %s: %v\n", res.relPath, res.err)
+				continue
 			}
-			return nil
-		}); err != nil {
-			fmt.Printf("Failed to walk base overrides: %v\n", err)
+			if err := addDataToZip(w, res.data, res.relPath); err != nil {
+				fmt.Printf("Failed to add updated override %s to zip: %v\n", res.relPath, err)
+			}
 		}
 	}
 
