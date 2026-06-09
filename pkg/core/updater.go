@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v88/github"
 )
 
 const (
@@ -36,7 +36,10 @@ func CheckForUpdate(currentVersionStr string) (*UpdateInfo, error) {
 		return nil, fmt.Errorf("invalid current version %s: %w", currentVersionStr, err)
 	}
 
-	client := github.NewClient(nil)
+	client, err := github.NewClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GitHub client: %w", err)
+	}
 	release, _, err := client.Repositories.GetLatestRelease(context.Background(), RepoOwner, RepoName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch latest release: %w", err)

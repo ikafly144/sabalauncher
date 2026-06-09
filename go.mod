@@ -9,7 +9,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Xuanwo/go-locale v1.1.3
 	github.com/bugph0bia/go-logging v1.0.0
-	github.com/google/go-github/v66 v66.0.0
+	github.com/google/go-github/v88 v88.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
 	github.com/kr/binarydist v0.1.0
@@ -40,7 +40,6 @@ require (
 	github.com/godbus/dbus/v5 v5.2.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-licenses/v2 v2.0.1 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/licenseclassifier/v2 v2.0.0 // indirect
