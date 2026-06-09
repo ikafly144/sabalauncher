@@ -109,8 +109,13 @@ func (m *MultiProgress) Update(p core.ProgressEvent) {
 			tb.label.SetText(p.TaskName)
 		}
 
-		// Clean up finished download bars after a short delay or immediately?
-		// Leaving them can clutter the UI, but it's good to see 100%.
-		// For now, let's keep them.
+		if p.IsFinished {
+			m.barsContainer.Remove(tb.vbox)
+			delete(m.bars, p.TaskName)
+
+			if len(m.bars) == 0 {
+				m.scrollBars.Hide()
+			}
+		}
 	}
 }
