@@ -43,18 +43,18 @@ func (m *mockInstanceManager) RefreshInstances() error {
 	return args.Error(0)
 }
 
-func (m *mockInstanceManager) ImportInstance(packPath string) error {
-	args := m.Called(packPath)
+func (m *mockInstanceManager) ImportInstance(ctx context.Context, packPath string) error {
+	args := m.Called(ctx, packPath)
 	return args.Error(0)
 }
 
-func (m *mockInstanceManager) AddRemoteInstance(manifestURL string) error {
-	args := m.Called(manifestURL)
+func (m *mockInstanceManager) AddRemoteInstance(ctx context.Context, manifestURL string) error {
+	args := m.Called(ctx, manifestURL)
 	return args.Error(0)
 }
 
-func (m *mockInstanceManager) UpdateInstance(instanceID uuid.UUID, patchPath string) error {
-	args := m.Called(instanceID, patchPath)
+func (m *mockInstanceManager) UpdateInstance(ctx context.Context, instanceID uuid.UUID, patchPath string) error {
+	args := m.Called(ctx, instanceID, patchPath)
 	return args.Error(0)
 }
 

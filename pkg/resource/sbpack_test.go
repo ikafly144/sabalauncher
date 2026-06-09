@@ -3,6 +3,7 @@ package resource_test
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -98,7 +99,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 
 	// 3. Test Import
 	testUID := uuid.New()
-	inst, err := resource.ImportSBPack(packPath, destDir, testUID, nil)
+	inst, err := resource.ImportSBPack(context.Background(), packPath, destDir, testUID, nil)
 	if err != nil {
 		t.Fatalf("ImportSBPack failed: %v", err)
 	}
@@ -157,7 +158,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	})
 
 	// 5. Test Apply
-	if err := resource.ApplySBPatch(inst, patchPath, nil); err != nil {
+	if err := resource.ApplySBPatch(context.Background(), inst, patchPath, nil); err != nil {
 		t.Fatalf("ApplySBPatch failed: %v", err)
 	}
 
@@ -253,7 +254,7 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	})
 
 	// 3. Apply patch
-	if err := resource.ApplySBPatch(inst, patchPath, nil); err != nil {
+	if err := resource.ApplySBPatch(context.Background(), inst, patchPath, nil); err != nil {
 		t.Fatalf("ApplySBPatch failed: %v", err)
 	}
 
@@ -387,7 +388,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 	destDir := filepath.Join(t.TempDir(), "remote-instance")
 	uid := uuid.New()
 
-	inst, err := resource.ImportRemoteSBPack(server.URL+"/repo/manifest.json", destDir, uid, nil)
+	inst, err := resource.ImportRemoteSBPack(context.Background(), server.URL+"/repo/manifest.json", destDir, uid, nil)
 	if err != nil {
 		t.Fatalf("ImportRemoteSBPack failed: %v", err)
 	}

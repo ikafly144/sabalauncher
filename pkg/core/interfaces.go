@@ -56,11 +56,11 @@ type InstanceManager interface {
 	// GetInstance returns a specific instance.
 	GetInstance(id uuid.UUID) (*resource.Instance, error)
 	// ImportInstance imports a modpack from an .sbpack file.
-	ImportInstance(packPath string) error
+	ImportInstance(ctx context.Context, packPath string) error
 	// AddRemoteInstance registers a remote modpack repository.
-	AddRemoteInstance(manifestURL string) error
+	AddRemoteInstance(ctx context.Context, manifestURL string) error
 	// UpdateInstance updates an instance using an .sbpatch file.
-	UpdateInstance(instanceID uuid.UUID, patchPath string) error
+	UpdateInstance(ctx context.Context, instanceID uuid.UUID, patchPath string) error
 	// SubscribeProgress returns a channel that receives progress updates.
 	SubscribeProgress() <-chan ProgressEvent
 }

@@ -109,7 +109,7 @@ func (m *MultiProgress) Update(p core.ProgressEvent) {
 			tb.label.SetText(p.TaskName)
 		}
 
-		if p.IsFinished {
+		if p.IsFinished || p.Percentage >= 100.0 {
 			m.barsContainer.Remove(tb.vbox)
 			delete(m.bars, p.TaskName)
 

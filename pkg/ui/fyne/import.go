@@ -1,6 +1,8 @@
 package fyne
 
 import (
+	"context"
+	"errors"
 	"image/color"
 
 	"fyne.io/fyne/v2"
@@ -30,7 +32,12 @@ func (ui *FyneUI) showImportModpackDialog() {
 	minWidth.SetMinSize(fyne.NewSize(400, 0))
 	multiProg := NewMultiProgress(i18n.T("importing_progress"))
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	progress := dialog.NewCustom(i18n.T("importing_progress"), i18n.T("cancel"), container.NewStack(minWidth, multiProg), ui.window)
+	progress.SetOnClosed(func() {
+		cancel()
+	})
 	progress.Show()
 
 	go func() {
@@ -49,12 +56,14 @@ func (ui *FyneUI) showImportModpackDialog() {
 			}
 		}()
 
-		err := ui.instances.ImportInstance(path)
+		err := ui.instances.ImportInstance(ctx, path)
 		done <- true
 		fyne.Do(progress.Hide)
 		if err != nil {
 			fyne.Do(func() {
-				dialog.ShowError(err, ui.window)
+				if !errors.Is(err, context.Canceled) {
+					dialog.ShowError(err, ui.window)
+				}
 			})
 		} else {
 			fyne.Do(func() {
@@ -79,7 +88,12 @@ func (ui *FyneUI) showRegisterRemoteModpackDialog() {
 
 			multiProg := NewMultiProgress(i18n.T("registering_progress"))
 
+			ctx, cancel := context.WithCancel(context.Background())
+
 			d := dialog.NewCustom(i18n.T("register_remote_title"), i18n.T("cancel"), container.NewStack(minWidth, multiProg), ui.window)
+			d.SetOnClosed(func() {
+				cancel()
+			})
 			d.Show()
 
 			go func() {
@@ -98,12 +112,14 @@ func (ui *FyneUI) showRegisterRemoteModpackDialog() {
 					}
 				}()
 
-				err := ui.instances.AddRemoteInstance(entry.Text)
+				err := ui.instances.AddRemoteInstance(ctx, entry.Text)
 				done <- true
 				fyne.Do(d.Hide)
 				if err != nil {
 					fyne.Do(func() {
-						dialog.ShowError(err, ui.window)
+						if !errors.Is(err, context.Canceled) {
+							dialog.ShowError(err, ui.window)
+						}
 					})
 				} else {
 					fyne.Do(func() {
@@ -136,7 +152,12 @@ func (ui *FyneUI) startUpdate(instanceID uuid.UUID, path string) {
 	minWidth.SetMinSize(fyne.NewSize(400, 0))
 	multiProg := NewMultiProgress(i18n.T("updating_progress"))
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	progress := dialog.NewCustom(i18n.T("updating_progress"), i18n.T("cancel"), container.NewStack(minWidth, multiProg), ui.window)
+	progress.SetOnClosed(func() {
+		cancel()
+	})
 	progress.Show()
 
 	go func() {
@@ -155,12 +176,14 @@ func (ui *FyneUI) startUpdate(instanceID uuid.UUID, path string) {
 			}
 		}()
 
-		err := ui.instances.UpdateInstance(instanceID, path)
+		err := ui.instances.UpdateInstance(ctx, instanceID, path)
 		done <- true
 		fyne.Do(progress.Hide)
 		if err != nil {
 			fyne.Do(func() {
-				dialog.ShowError(err, ui.window)
+				if !errors.Is(err, context.Canceled) {
+					dialog.ShowError(err, ui.window)
+				}
 			})
 		} else {
 			fyne.Do(func() {

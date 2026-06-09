@@ -1,8 +1,12 @@
 package core
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -55,11 +59,48 @@ func (im *instanceManager) GetInstance(id uuid.UUID) (*resource.Instance, error)
 	return nil, fmt.Errorf("instance not found: %s", id)
 }
 
-func (im *instanceManager) ImportInstance(packPath string) error {
+func copyDir(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		destPath := filepath.Join(dst, relPath)
+
+		if d.IsDir() {
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			return os.MkdirAll(destPath, info.Mode())
+		}
+
+		srcF, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer srcF.Close()
+
+		dstF, err := os.Create(destPath)
+		if err != nil {
+			return err
+		}
+		defer dstF.Close()
+
+		_, err = io.Copy(dstF, srcF)
+		return err
+	})
+}
+
+func (im *instanceManager) ImportInstance(ctx context.Context, packPath string) error {
 	uid := uuid.New()
 	destDir := filepath.Join(im.dataDir, "instances", uid.String())
-	inst, err := resource.ImportSBPack(packPath, destDir, uid, nil)
+	inst, err := resource.ImportSBPack(ctx, packPath, destDir, uid, nil)
 	if err != nil {
+		_ = os.RemoveAll(destDir)
 		return err
 	}
 
@@ -70,7 +111,7 @@ func (im *instanceManager) ImportInstance(packPath string) error {
 	return im.saveInstances()
 }
 
-func (im *instanceManager) AddRemoteInstance(manifestURL string) error {
+func (im *instanceManager) AddRemoteInstance(ctx context.Context, manifestURL string) error {
 	uid := uuid.New()
 	destDir := filepath.Join(im.dataDir, "instances", uid.String())
 
@@ -78,8 +119,9 @@ func (im *instanceManager) AddRemoteInstance(manifestURL string) error {
 		ch: im.progressChan,
 	}
 
-	inst, err := resource.ImportRemoteSBPack(manifestURL, destDir, uid, observer)
+	inst, err := resource.ImportRemoteSBPack(ctx, manifestURL, destDir, uid, observer)
 	if err != nil {
+		_ = os.RemoveAll(destDir)
 		return err
 	}
 
@@ -103,7 +145,7 @@ func (p *progressBridge) OnProgress(taskName string, percentage float64, status 
 	}
 }
 
-func (im *instanceManager) UpdateInstance(instanceID uuid.UUID, path string) error {
+func (im *instanceManager) UpdateInstance(ctx context.Context, instanceID uuid.UUID, path string) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()
 
@@ -123,18 +165,23 @@ func (im *instanceManager) UpdateInstance(instanceID uuid.UUID, path string) err
 	if path == "" {
 		// Remote update
 		if targetInst.Upstream == nil || targetInst.Upstream.ManifestURL == "" {
-			return fmt.Errorf("instance does not have a remote manifest, please provide a patch file")
+			err = fmt.Errorf("instance does not have a remote manifest, please provide a patch file")
+		} else {
+			err = resource.UpdateInstanceRemote(ctx, targetInst)
 		}
-		err = resource.UpdateInstanceRemote(targetInst)
 	} else if strings.HasSuffix(strings.ToLower(path), ".sbpatch") {
-		err = resource.ApplySBPatch(targetInst, path, nil)
+		err = resource.ApplySBPatch(ctx, targetInst, path, nil)
 	} else if strings.HasSuffix(strings.ToLower(path), ".sbpack") {
-		err = resource.ApplySBPack(targetInst, path, nil)
+		err = resource.ApplySBPack(ctx, targetInst, path, nil)
 	} else {
-		return fmt.Errorf("unsupported file format: %s (expected .sbpack or .sbpatch)", filepath.Base(path))
+		err = fmt.Errorf("unsupported file format: %s (expected .sbpack or .sbpatch)", filepath.Base(path))
 	}
 
 	if err != nil {
+		// If it's not a context.Canceled error, wrap it
+		if !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("update failed, rolled back to previous state: %w", err)
+		}
 		return err
 	}
 
@@ -149,9 +196,11 @@ func (im *instanceManager) DeleteInstance(instanceID uuid.UUID) error {
 	for i, inst := range im.instances {
 		if inst.UID == instanceID {
 			// Delete files from disk
-			if err := os.RemoveAll(inst.Path); err != nil {
-				return fmt.Errorf("failed to delete instance files: %w", err)
-			}
+			go func() {
+				if err := os.RemoveAll(inst.Path); err != nil {
+					slog.Error("Failed to delete instance files", "error", err)
+				}
+			}()
 
 			im.instances = append(im.instances[:i], im.instances[i+1:]...)
 			found = true

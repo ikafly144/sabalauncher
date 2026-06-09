@@ -2,6 +2,7 @@ package fyne
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -123,14 +124,16 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		isRemote := currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != ""
 
 		playBtn := widget.NewButton(i18n.T("play_btn"), func() {
-			closeOverlay := ui.showLaunchOverlay()
+			ctx, closeOverlay := ui.showLaunchOverlay()
 			go func() {
 				if isRemote {
 					// Force update before launch
-					if err := ui.instances.UpdateInstance(currentInstance.UID, ""); err != nil {
+					if err := ui.instances.UpdateInstance(ctx, currentInstance.UID, ""); err != nil {
 						fyne.Do(func() {
 							closeOverlay()
-							dialog.ShowError(fmt.Errorf("failed to update before play: %w", err), ui.window)
+							if !errors.Is(err, context.Canceled) {
+								dialog.ShowError(fmt.Errorf("failed to update before play: %w", err), ui.window)
+							}
 							ui.showMainView()
 						})
 						return
@@ -253,10 +256,13 @@ func (ui *FyneUI) makeSettingsView() fyne.CanvasObject {
 	)
 }
 
-func (ui *FyneUI) showLaunchOverlay() func() {
+func (ui *FyneUI) showLaunchOverlay() (context.Context, func()) {
 	multiProg := NewMultiProgress(i18n.T("preparing"))
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	stopBtn := widget.NewButton(i18n.T("stop_btn"), func() {
+		cancel()
 		if err := ui.runner.Stop(); err != nil {
 			slog.Error("failed to stop game runner", "err", err)
 		}
@@ -264,8 +270,6 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 	stopBtn.Importance = widget.DangerImportance
 
 	logWrapper := container.NewStack(widget.NewLabel("Waiting for logs..."))
-
-	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
 		pChan := ui.runner.SubscribeProgress()
@@ -311,7 +315,7 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 
 	ui.window.SetContent(content)
 
-	return func() {
+	return ctx, func() {
 		cancel()
 	}
 }

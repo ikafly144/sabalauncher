@@ -2,6 +2,7 @@ package resource
 
 import (
 	"archive/zip"
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
@@ -21,6 +22,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/kr/binarydist"
 )
+
+const uiMaxFilenameLength = 30
 
 const (
 	SBPackFormatVersion  = 2
@@ -79,8 +82,12 @@ type SBRepoPatch struct {
 	Timestamp  int64             `json:"timestamp"`
 }
 
-func FetchRepository(url string) (*SBRepository, error) {
-	resp, err := http.Get(url)
+func FetchRepository(ctx context.Context, url string) (*SBRepository, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +132,7 @@ func getRepoPatchLocalPath(p SBRepoPatch) string {
 	return filepath.Join(DataDir, "cache", hash, filename)
 }
 
-func downloadAndVerifyRepoPatch(p SBRepoPatch, observer ProgressObserver) (string, error) {
+func downloadAndVerifyRepoPatch(ctx context.Context, p SBRepoPatch, observer ProgressObserver) (string, error) {
 	localPath := getRepoPatchLocalPath(p)
 	if verifyHashes(localPath, p.Hash) == nil {
 		return localPath, nil
@@ -136,20 +143,20 @@ func downloadAndVerifyRepoPatch(p SBRepoPatch, observer ProgressObserver) (strin
 	}
 
 	taskName := "Downloading " + filepath.Base(localPath)
-	if err := downloadWithVerify(p.RemotePath, localPath, p.Hash, observer, taskName, "download"); err != nil {
+	if err := downloadWithVerify(ctx, p.RemotePath, localPath, p.Hash, observer, taskName, "download"); err != nil {
 		return "", err
 	}
 
 	return localPath, nil
 }
 
-func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, observer ProgressObserver) (*Instance, error) {
+func ImportRemoteSBPack(ctx context.Context, manifestURL string, destDir string, uid uuid.UUID, observer ProgressObserver) (*Instance, error) {
 	if observer == nil {
 		observer = &NopProgressObserver{}
 	}
 
 	observer.OnProgress("Fetching repository manifest", 0, "", "main")
-	repo, err := FetchRepository(manifestURL)
+	repo, err := FetchRepository(ctx, manifestURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch repository manifest: %w", err)
 	}
@@ -169,13 +176,13 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, obser
 	}
 
 	observer.OnProgress("Downloading initial base pack", 10, "", "main")
-	localPackPath, err := downloadAndVerifyRepoPatch(*initialPatch, observer)
+	localPackPath, err := downloadAndVerifyRepoPatch(ctx, *initialPatch, observer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download and verify initial patch: %w", err)
 	}
 
 	observer.OnProgress("Importing base pack", 30, "", "main")
-	inst, err := ImportSBPack(localPackPath, destDir, uid, observer)
+	inst, err := ImportSBPack(ctx, localPackPath, destDir, uid, observer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to import initial sbpack: %w", err)
 	}
@@ -186,7 +193,7 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, obser
 	latestPatchID := repo.Patches[len(repo.Patches)-1].ID
 	if inst.Upstream.Version != latestPatchID {
 		observer.OnProgress("Applying updates", 50, "", "main")
-		if err := UpdateInstanceRemoteWithObserver(inst, observer); err != nil {
+		if err := UpdateInstanceRemoteWithObserver(ctx, inst, observer); err != nil {
 			return nil, fmt.Errorf("failed to apply initial patches: %w", err)
 		}
 	}
@@ -195,16 +202,16 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, obser
 	return inst, nil
 }
 
-func UpdateInstanceRemote(inst *Instance) error {
-	return UpdateInstanceRemoteWithObserver(inst, &NopProgressObserver{})
+func UpdateInstanceRemote(ctx context.Context, inst *Instance) error {
+	return UpdateInstanceRemoteWithObserver(ctx, inst, &NopProgressObserver{})
 }
 
-func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver) error {
+func UpdateInstanceRemoteWithObserver(ctx context.Context, inst *Instance, observer ProgressObserver) error {
 	if inst.Upstream == nil || inst.Upstream.ManifestURL == "" {
 		return fmt.Errorf("instance does not have a remote manifest")
 	}
 
-	repo, err := FetchRepository(inst.Upstream.ManifestURL)
+	repo, err := FetchRepository(ctx, inst.Upstream.ManifestURL)
 	if err != nil {
 		return err
 	}
@@ -247,7 +254,7 @@ func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver)
 		wg.Add(1)
 		go func(p SBRepoPatch) {
 			defer wg.Done()
-			_, err := downloadAndVerifyRepoPatch(p, observer)
+			_, err := downloadAndVerifyRepoPatch(ctx, p, observer)
 			if err != nil {
 				downloadErrs <- fmt.Errorf("failed to download patch %s: %w", p.ID, err)
 			}
@@ -263,6 +270,11 @@ func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver)
 		}
 	}
 
+	// Check if context was cancelled during download
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// 2. Sequential Apply
 	for i, p := range patchesToApply {
 		progress := (float64(i) / float64(totalPatches)) * 100.0
@@ -272,11 +284,11 @@ func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver)
 
 		switch p.Type {
 		case "sbpatch":
-			if err := ApplySBPatch(inst, localPath, observer); err != nil {
+			if err := ApplySBPatch(ctx, inst, localPath, observer); err != nil {
 				return err
 			}
 		case "sbpack":
-			if err := ApplySBPack(inst, localPath, observer); err != nil {
+			if err := ApplySBPack(ctx, inst, localPath, observer); err != nil {
 				return err
 			}
 		}
@@ -292,7 +304,7 @@ func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver)
 }
 
 // ImportSBPack imports a new instance from an .sbpack ZIP file.
-func ImportSBPack(packPath string, destDir string, uid uuid.UUID, observer ProgressObserver) (*Instance, error) {
+func ImportSBPack(ctx context.Context, packPath string, destDir string, uid uuid.UUID, observer ProgressObserver) (*Instance, error) {
 	if observer == nil {
 		observer = &NopProgressObserver{}
 	}
@@ -370,7 +382,11 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID, observer Progr
 		}
 
 		percentage := float64(i) / float64(totalExtract) * 100.0
-		observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalExtract), "main")
+		filename := filepath.Base(relPath)
+		if len(filename) > uiMaxFilenameLength {
+			filename = filename[:uiMaxFilenameLength] + "..."
+		}
+		observer.OnProgress("Extracting "+filename, percentage, fmt.Sprintf("%d/%d", i+1, totalExtract), "main")
 
 		destPath := filepath.Join(destDir, relPath)
 		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
@@ -416,7 +432,7 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID, observer Progr
 		// Download
 		if len(fileInfo.Downloads) > 0 {
 			taskName := "Downloading " + filepath.Base(fileInfo.Path)
-			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName, "main"); err != nil {
+			if err := downloadWithVerify(ctx, fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName, "main"); err != nil {
 				slog.Error("Failed to download file", "path", fileInfo.Path, "error", err)
 				return nil, err
 			}
@@ -454,406 +470,469 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID, observer Progr
 }
 
 // ApplySBPack updates an existing instance using a full .sbpack file.
-func ApplySBPack(inst *Instance, packPath string, observer ProgressObserver) error {
+func ApplySBPack(ctx context.Context, inst *Instance, packPath string, observer ProgressObserver) error {
 	if observer == nil {
 		observer = &NopProgressObserver{}
 	}
-	reader, err := zip.OpenReader(packPath)
+
+	backup, err := newInstanceBackup(inst.Path)
 	if err != nil {
-		return fmt.Errorf("failed to open sbpack: %w", err)
+		return err
 	}
-	defer reader.Close()
+	defer backup.Cleanup()
 
-	var newIndex SBIndex
-	var indexFound bool
-	for _, f := range reader.File {
-		if f.Name == "sb.index.json" {
-			rc, err := f.Open()
-			if err != nil {
-				return err
-			}
-			err = json.NewDecoder(rc).Decode(&newIndex)
-			rc.Close()
-			if err != nil {
-				return fmt.Errorf("failed to parse sb.index.json: %w", err)
-			}
-			indexFound = true
-			break
+	err = func() error { // TODO: refactor to avoid this closure by making backup.Restore() more flexible
+		reader, err := zip.OpenReader(packPath)
+		if err != nil {
+			return fmt.Errorf("failed to open sbpack: %w", err)
 		}
-	}
+		defer reader.Close()
 
-	if !indexFound {
-		return fmt.Errorf("sb.index.json not found in pack")
-	}
-
-	if newIndex.FormatVersion < SBPackFormatVersion {
-		return fmt.Errorf("unsupported sbpack format version: %d (requires %d)", newIndex.FormatVersion, SBPackFormatVersion)
-	}
-
-	// Load old index to find removed files
-	var oldIndex SBIndex
-	oldIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
-	if err == nil {
-		_ = json.Unmarshal(oldIndexBytes, &oldIndex)
-	}
-
-	removedFiles := []string{}
-	for _, oldF := range oldIndex.Files {
-		found := false
-		for _, newF := range newIndex.Files {
-			if oldF.Path == newF.Path {
-				found = true
+		var newIndex SBIndex
+		var indexFound bool
+		for _, f := range reader.File {
+			if f.Name == "sb.index.json" {
+				rc, err := f.Open()
+				if err != nil {
+					return err
+				}
+				err = json.NewDecoder(rc).Decode(&newIndex)
+				rc.Close()
+				if err != nil {
+					return fmt.Errorf("failed to parse sb.index.json: %w", err)
+				}
+				indexFound = true
 				break
 			}
 		}
-		if !found {
-			removedFiles = append(removedFiles, oldF.Path)
-		}
-	}
 
-	// Perform update (similar to patch)
-	for _, removed := range removedFiles {
-		_ = os.Remove(filepath.Join(inst.Path, removed))
-	}
-
-	// Unzip overrides from new pack
-	overrideFiles := []string{}
-	for _, f := range reader.File {
-		if strings.HasPrefix(f.Name, "overrides/") && !f.FileInfo().IsDir() {
-			overrideFiles = append(overrideFiles, f.Name)
-		}
-	}
-	totalExtract := len(overrideFiles)
-
-	for i, fName := range overrideFiles {
-		f, _ := reader.Open(fName)
-		relPath := strings.TrimPrefix(fName, "overrides/")
-		if relPath == "" {
-			f.Close()
-			continue
+		if !indexFound {
+			return fmt.Errorf("sb.index.json not found in pack")
 		}
 
-		percentage := float64(i) / float64(totalExtract) * 100.0
-		observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalExtract), "main")
-
-		destPath := filepath.Join(inst.Path, relPath)
-		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-			f.Close()
-			return err
+		if newIndex.FormatVersion < SBPackFormatVersion {
+			return fmt.Errorf("unsupported sbpack format version: %d (requires %d)", newIndex.FormatVersion, SBPackFormatVersion)
 		}
 
-		df, err := os.Create(destPath)
-		if err != nil {
-			f.Close()
-			return err
+		// Load old index to find removed files
+		var oldIndex SBIndex
+		oldIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
+		if err == nil {
+			_ = json.Unmarshal(oldIndexBytes, &oldIndex)
 		}
 
-		_, err = io.Copy(df, f)
-		df.Close()
-		f.Close()
-		if err != nil {
-			return err
-		}
-	}
-
-	// For compatibility with directories
-	for _, f := range reader.File {
-		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
-			if f.FileInfo().IsDir() && after != "" {
-				_ = os.MkdirAll(filepath.Join(inst.Path, after), 0755)
+		removedFiles := []string{}
+		for _, oldF := range oldIndex.Files {
+			found := false
+			for _, newF := range newIndex.Files {
+				if oldF.Path == newF.Path {
+					found = true
+					break
+				}
+			}
+			if !found {
+				removedFiles = append(removedFiles, oldF.Path)
 			}
 		}
-	}
 
-	// Download/Verify files
-	newMods := []Mod{}
-	for _, fileInfo := range newIndex.Files {
-		if fileInfo.Env != nil && fileInfo.Env.Client == SBEnvUnsupported {
-			continue
+		// Perform update (similar to patch)
+		for _, removed := range removedFiles {
+			_ = backup.Backup(removed)
+			_ = os.Remove(filepath.Join(inst.Path, removed))
 		}
-		destPath := filepath.Join(inst.Path, fileInfo.Path)
-		if verifyHashes(destPath, fileInfo.Hashes) != nil && len(fileInfo.Downloads) > 0 {
+
+		// Unzip overrides from new pack
+		overrideFiles := []string{}
+		for _, f := range reader.File {
+			if strings.HasPrefix(f.Name, "overrides/") && !f.FileInfo().IsDir() {
+				overrideFiles = append(overrideFiles, f.Name)
+			}
+		}
+		totalExtract := len(overrideFiles)
+
+		for i, fName := range overrideFiles {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			f, _ := reader.Open(fName)
+			relPath := strings.TrimPrefix(fName, "overrides/")
+			if relPath == "" {
+				f.Close()
+				continue
+			}
+
+			percentage := float64(i) / float64(totalExtract) * 100.0
+			filename := filepath.Base(relPath)
+			if len(filename) > uiMaxFilenameLength {
+				filename = filename[:uiMaxFilenameLength] + "..."
+			}
+			observer.OnProgress("Extracting "+filename, percentage, fmt.Sprintf("%d/%d", i+1, totalExtract), "main")
+
+			_ = backup.Backup(relPath)
+			destPath := filepath.Join(inst.Path, relPath)
 			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+				f.Close()
 				return err
 			}
-			taskName := "Downloading " + filepath.Base(fileInfo.Path)
-			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName, "main"); err != nil {
+
+			df, err := os.Create(destPath)
+			if err != nil {
+				f.Close()
+				return err
+			}
+
+			_, err = io.Copy(df, f)
+			df.Close()
+			f.Close()
+			if err != nil {
 				return err
 			}
 		}
-		if strings.HasPrefix(fileInfo.Path, "mods/") && strings.HasSuffix(fileInfo.Path, ".jar") {
-			modName := filepath.Base(fileInfo.Path)
-			newMods = append(newMods, Mod{
-				Name:     modName,
-				File:     fileInfo.Path,
-				Version:  "unknown",
-				UpdateAt: time.Now(),
-				Source: &URLSource{
-					FileURI: func() string {
-						if len(fileInfo.Downloads) > 0 {
-							return fileInfo.Downloads[0]
-						} else {
-							return ""
-						}
-					}(),
-				},
-			})
+
+		// For compatibility with directories
+		for _, f := range reader.File {
+			if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
+				if f.FileInfo().IsDir() && after != "" {
+					_ = os.MkdirAll(filepath.Join(inst.Path, after), 0755)
+				}
+			}
 		}
-	}
 
-	if inst.Upstream != nil {
-		inst.Upstream.Version = newIndex.ID.String()
-	}
-	inst.Versions = make([]InstanceVersion, 0, len(newIndex.Dependencies))
-	for id, ver := range newIndex.Dependencies {
-		inst.Versions = append(inst.Versions, InstanceVersion{ID: id, Version: ver})
-	}
-	inst.Mods = newMods
+		// Download/Verify files
+		newMods := []Mod{}
+		for _, fileInfo := range newIndex.Files {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if fileInfo.Env != nil && fileInfo.Env.Client == SBEnvUnsupported {
+				continue
+			}
+			destPath := filepath.Join(inst.Path, fileInfo.Path)
+			if verifyHashes(destPath, fileInfo.Hashes) != nil && len(fileInfo.Downloads) > 0 {
+				_ = backup.Backup(fileInfo.Path)
+				if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+					return err
+				}
+				taskName := "Downloading " + filepath.Base(fileInfo.Path)
+				if err := downloadWithVerify(ctx, fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName, "main"); err != nil {
+					return err
+				}
+			}
+			if strings.HasPrefix(fileInfo.Path, "mods/") && strings.HasSuffix(fileInfo.Path, ".jar") {
+				modName := filepath.Base(fileInfo.Path)
+				newMods = append(newMods, Mod{
+					Name:     modName,
+					File:     fileInfo.Path,
+					Version:  "unknown",
+					UpdateAt: time.Now(),
+					Source: &URLSource{
+						FileURI: func() string {
+							if len(fileInfo.Downloads) > 0 {
+								return fileInfo.Downloads[0]
+							} else {
+								return ""
+							}
+						}(),
+					},
+				})
+			}
+		}
 
-	// Save new index
-	newIndexBytes, _ := json.MarshalIndent(newIndex, "", "  ")
-	if err := os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644); err != nil {
-		return fmt.Errorf("failed to save new index: %w", err)
-	}
+		if inst.Upstream != nil {
+			inst.Upstream.Version = newIndex.ID.String()
+		}
+		inst.Versions = make([]InstanceVersion, 0, len(newIndex.Dependencies))
+		for id, ver := range newIndex.Dependencies {
+			inst.Versions = append(inst.Versions, InstanceVersion{ID: id, Version: ver})
+		}
+		inst.Mods = newMods
 
+		// Save new index
+		_ = backup.Backup("sb.index.json")
+		newIndexBytes, _ := json.MarshalIndent(newIndex, "", "  ")
+		if err := os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644); err != nil {
+			return fmt.Errorf("failed to save new index: %w", err)
+		}
+
+		return nil
+	}()
+
+	if err != nil {
+		_ = backup.Restore()
+		return err
+	}
 	return nil
 }
 
 // ApplySBPatch applies an .sbpatch file to an existing instance.
-func ApplySBPatch(inst *Instance, patchPath string, observer ProgressObserver) error {
+func ApplySBPatch(ctx context.Context, inst *Instance, patchPath string, observer ProgressObserver) error {
 	if observer == nil {
 		observer = &NopProgressObserver{}
 	}
-	reader, err := zip.OpenReader(patchPath)
+
+	backup, err := newInstanceBackup(inst.Path)
 	if err != nil {
-		return fmt.Errorf("failed to open sbpatch: %w", err)
+		return err
 	}
-	defer reader.Close()
+	defer backup.Cleanup()
 
-	var patch SBPatch
-	var patchFound bool
-
-	// Read patch index
-	for _, f := range reader.File {
-		if f.Name == "sb.patch.json" {
-			rc, err := f.Open()
-			if err != nil {
-				return err
-			}
-			err = json.NewDecoder(rc).Decode(&patch)
-			rc.Close()
-			if err != nil {
-				return fmt.Errorf("failed to parse sb.patch.json: %w", err)
-			}
-			patchFound = true
-			break
+	err = func() error { // TODO: refactor to avoid this closure by making backup.Restore() more flexible
+		reader, err := zip.OpenReader(patchPath)
+		if err != nil {
+			return fmt.Errorf("failed to open sbpatch: %w", err)
 		}
-	}
+		defer reader.Close()
 
-	if !patchFound {
-		return fmt.Errorf("sb.patch.json not found in patch")
-	}
+		var patch SBPatch
+		var patchFound bool
 
-	if patch.FormatVersion < SBPatchFormatVersion {
-		return fmt.Errorf("unsupported sbpatch format version: %d (requires %d)", patch.FormatVersion, SBPatchFormatVersion)
-	}
-
-	// Load current index from disk to check modpack version
-	var currentIndex SBIndex
-	currentIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
-	if err != nil {
-		return fmt.Errorf("failed to read current index: %w", err)
-	}
-	if err := json.Unmarshal(currentIndexBytes, &currentIndex); err != nil {
-		return fmt.Errorf("failed to parse current index: %w", err)
-	}
-
-	if currentIndex.ID != patch.BaseID {
-		return fmt.Errorf("version mismatch: instance modpack is at %s, patch requires %s",
-			currentIndex.ID, patch.BaseID)
-	}
-
-	// 1. Delete removed files
-	for _, removed := range patch.RemovedFiles {
-		// Sanitize path: overrides/ in zip is extracted to instance root
-		cleanPath := strings.TrimPrefix(removed, "overrides/") // TODO: remove this hack by standardizing patch format to not include "overrides/" prefix
-		targetPath := filepath.Join(inst.Path, cleanPath)
-		if err := os.Remove(targetPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("failed to remove file %s: %w", targetPath, err)
-		}
-	}
-
-	// 2. Unzip overrides and apply patches
-	type patchTask struct {
-		f    *zip.File
-		mode string // "extract" or "patch"
-	}
-	tasks := []patchTask{}
-	for _, f := range reader.File {
-		if strings.HasPrefix(f.Name, "overrides/") && !f.FileInfo().IsDir() {
-			tasks = append(tasks, patchTask{f, "extract"})
-		} else if strings.HasPrefix(f.Name, "patches/") && !f.FileInfo().IsDir() {
-			tasks = append(tasks, patchTask{f, "patch"})
-		}
-	}
-	totalTasks := len(tasks)
-
-	for i, t := range tasks {
-		f := t.f
-		percentage := float64(i) / float64(totalTasks) * 100.0
-
-		if t.mode == "extract" {
-			relPath := strings.TrimPrefix(f.Name, "overrides/")
-			observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalTasks), "main")
-
-			destPath := filepath.Join(inst.Path, relPath)
-			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-				return err
-			}
-
-			rc, err := f.Open()
-			if err != nil {
-				return err
-			}
-
-			destFile, err := os.Create(destPath)
-			if err != nil {
+		// Read patch index
+		for _, f := range reader.File {
+			if f.Name == "sb.patch.json" {
+				rc, err := f.Open()
+				if err != nil {
+					return err
+				}
+				err = json.NewDecoder(rc).Decode(&patch)
 				rc.Close()
+				if err != nil {
+					return fmt.Errorf("failed to parse sb.patch.json: %w", err)
+				}
+				patchFound = true
+				break
+			}
+		}
+
+		if !patchFound {
+			return fmt.Errorf("sb.patch.json not found in patch")
+		}
+
+		if patch.FormatVersion < SBPatchFormatVersion {
+			return fmt.Errorf("unsupported sbpatch format version: %d (requires %d)", patch.FormatVersion, SBPatchFormatVersion)
+		}
+
+		// Load current index from disk to check modpack version
+		var currentIndex SBIndex
+		currentIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
+		if err != nil {
+			return fmt.Errorf("failed to read current index: %w", err)
+		}
+		if err := json.Unmarshal(currentIndexBytes, &currentIndex); err != nil {
+			return fmt.Errorf("failed to parse current index: %w", err)
+		}
+
+		if currentIndex.ID != patch.BaseID {
+			return fmt.Errorf("version mismatch: instance modpack is at %s, patch requires %s",
+				currentIndex.ID, patch.BaseID)
+		}
+
+		// 1. Delete removed files
+		for _, removed := range patch.RemovedFiles {
+			// Sanitize path: overrides/ in zip is extracted to instance root
+			cleanPath := strings.TrimPrefix(removed, "overrides/") // TODO: remove this hack by standardizing patch format to not include "overrides/" prefix
+			targetPath := filepath.Join(inst.Path, cleanPath)
+			_ = backup.Backup(cleanPath)
+			if err := os.Remove(targetPath); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("failed to remove file %s: %w", targetPath, err)
+			}
+		}
+
+		// 2. Unzip overrides and apply patches
+		type patchTask struct {
+			f    *zip.File
+			mode string // "extract" or "patch"
+		}
+		tasks := []patchTask{}
+		for _, f := range reader.File {
+			if strings.HasPrefix(f.Name, "overrides/") && !f.FileInfo().IsDir() {
+				tasks = append(tasks, patchTask{f, "extract"})
+			} else if strings.HasPrefix(f.Name, "patches/") && !f.FileInfo().IsDir() {
+				tasks = append(tasks, patchTask{f, "patch"})
+			}
+		}
+		totalTasks := len(tasks)
+
+		for i, t := range tasks {
+			if err := ctx.Err(); err != nil {
 				return err
 			}
+			f := t.f
+			percentage := float64(i) / float64(totalTasks) * 100.0
 
-			_, err = io.Copy(destFile, rc)
-			destFile.Close()
-			rc.Close()
-			if err != nil {
-				return err
-			}
-		} else {
-			relPath := strings.TrimPrefix(f.Name, "patches/")
-			observer.OnProgress("Patching "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalTasks), "main")
+			if t.mode == "extract" {
+				relPath := strings.TrimPrefix(f.Name, "overrides/")
+				filename := filepath.Base(relPath)
+				if len(filename) > uiMaxFilenameLength {
+					filename = filename[:uiMaxFilenameLength] + "..."
+				}
+				observer.OnProgress("Extracting "+filename, percentage, fmt.Sprintf("%d/%d", i+1, totalTasks), "main")
 
-			targetPath := filepath.Join(inst.Path, relPath)
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-				return err
-			}
+				_ = backup.Backup(relPath)
+				destPath := filepath.Join(inst.Path, relPath)
+				if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+					return err
+				}
 
-			oldFile, err := os.Open(targetPath)
-			if err != nil {
-				return fmt.Errorf("failed to open old file for patching %s: %w", relPath, err)
-			}
+				rc, err := f.Open()
+				if err != nil {
+					return err
+				}
 
-			patchFile, err := f.Open()
-			if err != nil {
-				oldFile.Close()
-				return err
-			}
+				destFile, err := os.Create(destPath)
+				if err != nil {
+					rc.Close()
+					return err
+				}
 
-			tempFile, err := os.CreateTemp("", "sbpatch-*")
-			if err != nil {
-				oldFile.Close()
-				patchFile.Close()
-				return err
-			}
+				_, err = io.Copy(destFile, rc)
+				destFile.Close()
+				rc.Close()
+				if err != nil {
+					return err
+				}
+			} else {
+				relPath := strings.TrimPrefix(f.Name, "patches/")
+				observer.OnProgress("Patching "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalTasks), "main")
 
-			if err := binarydist.Patch(oldFile, tempFile, patchFile); err != nil {
+				_ = backup.Backup(relPath)
+				targetPath := filepath.Join(inst.Path, relPath)
+				if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+					return err
+				}
+
+				oldFile, err := os.Open(targetPath)
+				if err != nil {
+					return fmt.Errorf("failed to open old file for patching %s: %w", relPath, err)
+				}
+
+				patchFile, err := f.Open()
+				if err != nil {
+					oldFile.Close()
+					return err
+				}
+
+				tempFile, err := os.CreateTemp("", "sbpatch-*")
+				if err != nil {
+					oldFile.Close()
+					patchFile.Close()
+					return err
+				}
+
+				if err := binarydist.Patch(oldFile, tempFile, patchFile); err != nil {
+					oldFile.Close()
+					patchFile.Close()
+					tempFile.Close()
+					_ = os.Remove(tempFile.Name())
+					return fmt.Errorf("failed to apply binary patch to %s: %w", relPath, err)
+				}
+
 				oldFile.Close()
 				patchFile.Close()
 				tempFile.Close()
-				_ = os.Remove(tempFile.Name())
-				return fmt.Errorf("failed to apply binary patch to %s: %w", relPath, err)
-			}
 
-			oldFile.Close()
-			patchFile.Close()
-			tempFile.Close()
-
-			if err := os.Remove(targetPath); err != nil {
-				_ = os.Remove(tempFile.Name())
-				return err
-			}
-			if err := os.Rename(tempFile.Name(), targetPath); err != nil {
-				return err
-			}
-		}
-	}
-
-	// For compatibility with directories
-	for _, f := range reader.File {
-		if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
-			if f.FileInfo().IsDir() && after != "" {
-				_ = os.MkdirAll(filepath.Join(inst.Path, after), 0755)
-			}
-		}
-	}
-
-	// 3. Download/Verify new index files
-	newMods := []Mod{}
-	for _, fileInfo := range patch.Index.Files {
-		if fileInfo.Env != nil && fileInfo.Env.Client == SBEnvUnsupported {
-			continue
-		}
-
-		destPath := filepath.Join(inst.Path, fileInfo.Path)
-
-		// Check if file already exists and hashes match
-		if verifyHashes(destPath, fileInfo.Hashes) == nil {
-			// Already up to date
-		} else if len(fileInfo.Downloads) > 0 {
-			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-				return err
-			}
-			taskName := "Downloading " + filepath.Base(fileInfo.Path)
-			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName, "main"); err != nil {
-				slog.Error("Failed to download file during patch", "path", fileInfo.Path, "error", err)
-				return err
+				if err := os.Remove(targetPath); err != nil {
+					_ = os.Remove(tempFile.Name())
+					return err
+				}
+				if err := os.Rename(tempFile.Name(), targetPath); err != nil {
+					return err
+				}
 			}
 		}
 
-		if strings.HasPrefix(fileInfo.Path, "mods/") && strings.HasSuffix(fileInfo.Path, ".jar") {
-			modName := filepath.Base(fileInfo.Path)
-			newMods = append(newMods, Mod{
-				Name:     modName,
-				File:     fileInfo.Path,
-				Version:  "unknown",
-				UpdateAt: time.Now(),
-				Source: &URLSource{
-					ModURL: "",
-					FileURI: func() string {
-						if len(fileInfo.Downloads) > 0 {
-							return fileInfo.Downloads[0]
-						} else {
-							return ""
-						}
-					}(),
-				},
+		// For compatibility with directories
+		for _, f := range reader.File {
+			if after, ok := strings.CutPrefix(f.Name, "overrides/"); ok {
+				if f.FileInfo().IsDir() && after != "" {
+					_ = os.MkdirAll(filepath.Join(inst.Path, after), 0755)
+				}
+			}
+		}
+
+		// 3. Download/Verify new index files
+		newMods := []Mod{}
+		for _, fileInfo := range patch.Index.Files {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if fileInfo.Env != nil && fileInfo.Env.Client == SBEnvUnsupported {
+				continue
+			}
+
+			destPath := filepath.Join(inst.Path, fileInfo.Path)
+
+			// Check if file already exists and hashes match
+			if verifyHashes(destPath, fileInfo.Hashes) == nil {
+				// Already up to date
+			} else if len(fileInfo.Downloads) > 0 {
+				_ = backup.Backup(fileInfo.Path)
+				if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+					return err
+				}
+				taskName := "Downloading " + filepath.Base(fileInfo.Path)
+				if err := downloadWithVerify(ctx, fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName, "main"); err != nil {
+					slog.Error("Failed to download file during patch", "path", fileInfo.Path, "error", err)
+					return err
+				}
+			}
+
+			if strings.HasPrefix(fileInfo.Path, "mods/") && strings.HasSuffix(fileInfo.Path, ".jar") {
+				modName := filepath.Base(fileInfo.Path)
+				newMods = append(newMods, Mod{
+					Name:     modName,
+					File:     fileInfo.Path,
+					Version:  "unknown",
+					UpdateAt: time.Now(),
+					Source: &URLSource{
+						ModURL: "",
+						FileURI: func() string {
+							if len(fileInfo.Downloads) > 0 {
+								return fileInfo.Downloads[0]
+							} else {
+								return ""
+							}
+						}(),
+					},
+				})
+			}
+		}
+
+		// Update instance state
+		if inst.Upstream != nil {
+			inst.Upstream.Version = patch.Index.ID.String()
+		}
+		inst.Versions = make([]InstanceVersion, 0, len(patch.Index.Dependencies))
+		for id, ver := range patch.Index.Dependencies {
+			inst.Versions = append(inst.Versions, InstanceVersion{
+				ID:      id,
+				Version: ver,
 			})
 		}
-	}
+		inst.Mods = newMods
 
-	// Update instance state
-	if inst.Upstream != nil {
-		inst.Upstream.Version = patch.Index.ID.String()
-	}
-	inst.Versions = make([]InstanceVersion, 0, len(patch.Index.Dependencies))
-	for id, ver := range patch.Index.Dependencies {
-		inst.Versions = append(inst.Versions, InstanceVersion{
-			ID:      id,
-			Version: ver,
-		})
-	}
-	inst.Mods = newMods
+		// Save new index
+		_ = backup.Backup("sb.index.json")
+		newIndexBytes, _ := json.MarshalIndent(patch.Index, "", "  ")
+		if err := os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644); err != nil {
+			return fmt.Errorf("failed to save new index: %w", err)
+		}
 
-	// Save new index
-	newIndexBytes, _ := json.MarshalIndent(patch.Index, "", "  ")
-	if err := os.WriteFile(filepath.Join(inst.Path, "sb.index.json"), newIndexBytes, 0644); err != nil {
-		return fmt.Errorf("failed to save new index: %w", err)
-	}
+		return nil
+	}()
 
+	if err != nil {
+		_ = backup.Restore()
+		return err
+	}
 	return nil
 }
 
-func downloadWithVerify(url, dest string, hashes map[string]string, observer ProgressObserver, taskName string, category string) error {
-	resp, err := http.Get(url)
+func downloadWithVerify(ctx context.Context, url, dest string, hashes map[string]string, observer ProgressObserver, taskName string, category string) error {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
