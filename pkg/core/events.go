@@ -4,14 +4,21 @@ import (
 	"time"
 )
 
+// ProgressCategory defines the type of task for UI routing.
+type ProgressCategory string
+
+const (
+	ProgressCategoryMain     ProgressCategory = "main"
+	ProgressCategoryDownload ProgressCategory = "download"
+)
+
 // ProgressEvent represents a progress update from a background task (e.g., downloading).
 type ProgressEvent struct {
-	TaskName   string  // e.g., "Downloading Forge"
-	Percentage float64 // 0.0 to 100.0
-	Status     string  // e.g., "45 MB / 100 MB"
-	Total      int
-	Current    int
-	IsFinished bool
+	TaskName   string           // e.g., "Downloading Forge"
+	Percentage float64          // 0.0 to 100.0
+	Status     string           // e.g., "45 MB / 100 MB"
+	IsFinished bool             // set to true when the specific task is done
+	Category   ProgressCategory // Helps UI decide how to display this (e.g. multi-bar for parallel downloads)
 }
 
 // LogLevel represents the severity of a log entry.

@@ -26,16 +26,40 @@ func (ui *FyneUI) showImportModpackDialog() {
 	}
 
 	// Show progress or immediate import
-	progress := dialog.NewCustom(i18n.T("importing_progress"), i18n.T("cancel"), widget.NewProgressBarInfinite(), ui.window)
+	minWidth := canvas.NewRectangle(color.Transparent)
+	minWidth.SetMinSize(fyne.NewSize(400, 0))
+	multiProg := NewMultiProgress(i18n.T("importing_progress"))
+
+	progress := dialog.NewCustom(i18n.T("importing_progress"), i18n.T("cancel"), container.NewStack(minWidth, multiProg), ui.window)
 	progress.Show()
 
 	go func() {
+		pChan := ui.instances.SubscribeProgress()
+		done := make(chan bool)
+		go func() {
+			for {
+				select {
+				case p := <-pChan:
+					fyne.Do(func() {
+						multiProg.Update(p)
+					})
+				case <-done:
+					return
+				}
+			}
+		}()
+
 		err := ui.instances.ImportInstance(path)
-		progress.Hide()
+		done <- true
+		fyne.Do(progress.Hide)
 		if err != nil {
-			dialog.ShowError(err, ui.window)
+			fyne.Do(func() {
+				dialog.ShowError(err, ui.window)
+			})
 		} else {
-			ui.showMainView()
+			fyne.Do(func() {
+				ui.showMainView()
+			})
 		}
 	}()
 }
@@ -52,9 +76,10 @@ func (ui *FyneUI) showRegisterRemoteModpackDialog() {
 		if ok {
 			minWidth := canvas.NewRectangle(color.Transparent)
 			minWidth.SetMinSize(fyne.NewSize(400, 0))
-			progress := widget.NewProgressBar()
-			progressTitle := widget.NewLabel(i18n.T("registering_progress"))
-			d := dialog.NewCustom(i18n.T("register_remote_title"), i18n.T("cancel"), container.NewVBox(progressTitle, container.NewStack(progress, minWidth)), ui.window)
+
+			multiProg := NewMultiProgress(i18n.T("registering_progress"))
+
+			d := dialog.NewCustom(i18n.T("register_remote_title"), i18n.T("cancel"), container.NewStack(minWidth, multiProg), ui.window)
 			d.Show()
 
 			go func() {
@@ -65,10 +90,7 @@ func (ui *FyneUI) showRegisterRemoteModpackDialog() {
 						select {
 						case p := <-pChan:
 							fyne.Do(func() {
-								progress.SetValue(p.Percentage / 100.0)
-								if p.TaskName != "" {
-									progressTitle.SetText(p.TaskName)
-								}
+								multiProg.Update(p)
 							})
 						case <-done:
 							return
@@ -110,16 +132,40 @@ func (ui *FyneUI) showUpdateInstanceDialog(instanceID uuid.UUID) {
 }
 
 func (ui *FyneUI) startUpdate(instanceID uuid.UUID, path string) {
-	progress := dialog.NewCustom(i18n.T("updating_progress"), i18n.T("cancel"), widget.NewProgressBarInfinite(), ui.window)
+	minWidth := canvas.NewRectangle(color.Transparent)
+	minWidth.SetMinSize(fyne.NewSize(400, 0))
+	multiProg := NewMultiProgress(i18n.T("updating_progress"))
+
+	progress := dialog.NewCustom(i18n.T("updating_progress"), i18n.T("cancel"), container.NewStack(minWidth, multiProg), ui.window)
 	progress.Show()
 
 	go func() {
+		pChan := ui.instances.SubscribeProgress()
+		done := make(chan bool)
+		go func() {
+			for {
+				select {
+				case p := <-pChan:
+					fyne.Do(func() {
+						multiProg.Update(p)
+					})
+				case <-done:
+					return
+				}
+			}
+		}()
+
 		err := ui.instances.UpdateInstance(instanceID, path)
-		progress.Hide()
+		done <- true
+		fyne.Do(progress.Hide)
 		if err != nil {
-			dialog.ShowError(err, ui.window)
+			fyne.Do(func() {
+				dialog.ShowError(err, ui.window)
+			})
 		} else {
-			ui.showMainView()
+			fyne.Do(func() {
+				ui.showMainView()
+			})
 		}
 	}()
 }

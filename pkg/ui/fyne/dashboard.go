@@ -254,16 +254,14 @@ func (ui *FyneUI) makeSettingsView() fyne.CanvasObject {
 }
 
 func (ui *FyneUI) showLaunchOverlay() func() {
-	progress := widget.NewProgressBar()
-	status := widget.NewLabel(i18n.T("preparing"))
+	multiProg := NewMultiProgress(i18n.T("preparing"))
+
 	stopBtn := widget.NewButton(i18n.T("stop_btn"), func() {
 		if err := ui.runner.Stop(); err != nil {
 			slog.Error("failed to stop game runner", "err", err)
 		}
 	})
 	stopBtn.Importance = widget.DangerImportance
-
-	topInfo := container.NewVBox(status, progress)
 
 	logWrapper := container.NewStack(widget.NewLabel("Waiting for logs..."))
 
@@ -282,8 +280,7 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 					continue
 				}
 				fyne.Do(func() {
-					status.SetText(fmt.Sprintf("%s (%s)", p.TaskName, p.Status))
-					progress.SetValue(p.Percentage / 100.0)
+					multiProg.Update(p)
 				})
 
 				// Once game starts (Setup is finished), open the log reader
@@ -305,7 +302,7 @@ func (ui *FyneUI) showLaunchOverlay() func() {
 	}()
 
 	content := container.NewBorder(
-		container.NewVBox(createHeader(), container.NewPadded(topInfo)),
+		container.NewVBox(createHeader(), container.NewPadded(multiProg)),
 		container.NewPadded(stopBtn),
 		nil,
 		nil,

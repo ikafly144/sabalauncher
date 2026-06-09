@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -135,7 +136,7 @@ func downloadAndVerifyRepoPatch(p SBRepoPatch, observer ProgressObserver) (strin
 	}
 
 	taskName := "Downloading " + filepath.Base(localPath)
-	if err := downloadWithVerify(p.RemotePath, localPath, p.Hash, observer, taskName); err != nil {
+	if err := downloadWithVerify(p.RemotePath, localPath, p.Hash, observer, taskName, "download"); err != nil {
 		return "", err
 	}
 
@@ -147,7 +148,7 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, obser
 		observer = &NopProgressObserver{}
 	}
 
-	observer.OnProgress("Fetching repository manifest", 0, "")
+	observer.OnProgress("Fetching repository manifest", 0, "", "main")
 	repo, err := FetchRepository(manifestURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch repository manifest: %w", err)
@@ -167,13 +168,13 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, obser
 		return nil, fmt.Errorf("no base sbpack found in repository")
 	}
 
-	observer.OnProgress("Downloading initial base pack", 10, "")
+	observer.OnProgress("Downloading initial base pack", 10, "", "main")
 	localPackPath, err := downloadAndVerifyRepoPatch(*initialPatch, observer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download and verify initial patch: %w", err)
 	}
 
-	observer.OnProgress("Importing base pack", 30, "")
+	observer.OnProgress("Importing base pack", 30, "", "main")
 	inst, err := ImportSBPack(localPackPath, destDir, uid, observer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to import initial sbpack: %w", err)
@@ -184,13 +185,13 @@ func ImportRemoteSBPack(manifestURL string, destDir string, uid uuid.UUID, obser
 	// 2. Apply patches sequentially up to latest_patch
 	latestPatchID := repo.Patches[len(repo.Patches)-1].ID
 	if inst.Upstream.Version != latestPatchID {
-		observer.OnProgress("Applying updates", 50, "")
+		observer.OnProgress("Applying updates", 50, "", "main")
 		if err := UpdateInstanceRemoteWithObserver(inst, observer); err != nil {
 			return nil, fmt.Errorf("failed to apply initial patches: %w", err)
 		}
 	}
 
-	observer.OnProgress("Registration complete", 100, "")
+	observer.OnProgress("Registration complete", 100, "", "main")
 	return inst, nil
 }
 
@@ -237,15 +238,37 @@ func UpdateInstanceRemoteWithObserver(inst *Instance, observer ProgressObserver)
 	}
 
 	totalPatches := len(patchesToApply)
-	for i, p := range patchesToApply {
-		progress := 50.0 + (float64(i)/float64(totalPatches))*50.0
-		observer.OnProgress(fmt.Sprintf("Applying patch %d/%d (%s)", i+1, totalPatches, p.ID), progress, "")
 
-		// Apply this patch
-		localPath, err := downloadAndVerifyRepoPatch(p, observer)
+	// 1. Parallel Download all patches
+	var wg sync.WaitGroup
+	downloadErrs := make(chan error, totalPatches)
+
+	for _, p := range patchesToApply {
+		wg.Add(1)
+		go func(p SBRepoPatch) {
+			defer wg.Done()
+			_, err := downloadAndVerifyRepoPatch(p, observer)
+			if err != nil {
+				downloadErrs <- fmt.Errorf("failed to download patch %s: %w", p.ID, err)
+			}
+		}(p)
+	}
+
+	wg.Wait()
+	close(downloadErrs)
+
+	for err := range downloadErrs {
 		if err != nil {
 			return err
 		}
+	}
+
+	// 2. Sequential Apply
+	for i, p := range patchesToApply {
+		progress := (float64(i) / float64(totalPatches)) * 100.0
+		observer.OnProgress(fmt.Sprintf("Applying patch %d/%d (%s)", i+1, totalPatches, p.ID), progress, "", "main")
+
+		localPath := getRepoPatchLocalPath(p)
 
 		switch p.Type {
 		case "sbpatch":
@@ -347,7 +370,7 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID, observer Progr
 		}
 
 		percentage := float64(i) / float64(totalExtract) * 100.0
-		observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalExtract))
+		observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalExtract), "main")
 
 		destPath := filepath.Join(destDir, relPath)
 		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
@@ -393,7 +416,7 @@ func ImportSBPack(packPath string, destDir string, uid uuid.UUID, observer Progr
 		// Download
 		if len(fileInfo.Downloads) > 0 {
 			taskName := "Downloading " + filepath.Base(fileInfo.Path)
-			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName); err != nil {
+			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName, "main"); err != nil {
 				slog.Error("Failed to download file", "path", fileInfo.Path, "error", err)
 				return nil, err
 			}
@@ -511,7 +534,7 @@ func ApplySBPack(inst *Instance, packPath string, observer ProgressObserver) err
 		}
 
 		percentage := float64(i) / float64(totalExtract) * 100.0
-		observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalExtract))
+		observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalExtract), "main")
 
 		destPath := filepath.Join(inst.Path, relPath)
 		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
@@ -554,7 +577,7 @@ func ApplySBPack(inst *Instance, packPath string, observer ProgressObserver) err
 				return err
 			}
 			taskName := "Downloading " + filepath.Base(fileInfo.Path)
-			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName); err != nil {
+			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName, "main"); err != nil {
 				return err
 			}
 		}
@@ -681,7 +704,7 @@ func ApplySBPatch(inst *Instance, patchPath string, observer ProgressObserver) e
 
 		if t.mode == "extract" {
 			relPath := strings.TrimPrefix(f.Name, "overrides/")
-			observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalTasks))
+			observer.OnProgress("Extracting "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalTasks), "main")
 
 			destPath := filepath.Join(inst.Path, relPath)
 			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
@@ -707,7 +730,7 @@ func ApplySBPatch(inst *Instance, patchPath string, observer ProgressObserver) e
 			}
 		} else {
 			relPath := strings.TrimPrefix(f.Name, "patches/")
-			observer.OnProgress("Patching "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalTasks))
+			observer.OnProgress("Patching "+filepath.Base(relPath), percentage, fmt.Sprintf("%d/%d", i+1, totalTasks), "main")
 
 			targetPath := filepath.Join(inst.Path, relPath)
 			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
@@ -780,7 +803,7 @@ func ApplySBPatch(inst *Instance, patchPath string, observer ProgressObserver) e
 				return err
 			}
 			taskName := "Downloading " + filepath.Base(fileInfo.Path)
-			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName); err != nil {
+			if err := downloadWithVerify(fileInfo.Downloads[0], destPath, fileInfo.Hashes, observer, taskName, "main"); err != nil {
 				slog.Error("Failed to download file during patch", "path", fileInfo.Path, "error", err)
 				return err
 			}
@@ -829,7 +852,7 @@ func ApplySBPatch(inst *Instance, patchPath string, observer ProgressObserver) e
 	return nil
 }
 
-func downloadWithVerify(url, dest string, hashes map[string]string, observer ProgressObserver, taskName string) error {
+func downloadWithVerify(url, dest string, hashes map[string]string, observer ProgressObserver, taskName string, category string) error {
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -855,6 +878,7 @@ func downloadWithVerify(url, dest string, hashes map[string]string, observer Pro
 		total:    total,
 		observer: observer,
 		taskName: taskName,
+		category: category,
 		writer:   out,
 	}
 
@@ -870,6 +894,7 @@ type progressWriter struct {
 	current  int64
 	observer ProgressObserver
 	taskName string
+	category string
 	writer   io.Writer
 }
 
@@ -881,7 +906,7 @@ func (pw *progressWriter) Write(p []byte) (int, error) {
 	pw.current += int64(n)
 	if pw.total > 0 {
 		percentage := float64(pw.current) / float64(pw.total) * 100.0
-		pw.observer.OnProgress(pw.taskName, percentage, fmt.Sprintf("%.1f%%", percentage))
+		pw.observer.OnProgress(pw.taskName, percentage, fmt.Sprintf("%.1f%%", percentage), pw.category)
 	}
 	return n, nil
 }

@@ -94,11 +94,12 @@ type progressBridge struct {
 	ch chan ProgressEvent
 }
 
-func (p *progressBridge) OnProgress(taskName string, percentage float64, status string) {
+func (p *progressBridge) OnProgress(taskName string, percentage float64, status string, category string) {
 	p.ch <- ProgressEvent{
 		TaskName:   taskName,
 		Percentage: percentage,
 		Status:     status,
+		Category:   ProgressCategory(category),
 	}
 }
 

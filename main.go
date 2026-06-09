@@ -63,7 +63,7 @@ func main() {
 	flag.Parse()
 
 	// Initialize Core Services
-	auth, err := core.NewAuthenticator(filepath.Join(resource.DataDir, "msa_cache.json"))
+	auth, err := core.NewAuthenticator(filepath.Join(resource.DataDir, "msa_cache"))
 	if err != nil {
 		log.Fatalf("failed to initialize authenticator: %v", err)
 	}
