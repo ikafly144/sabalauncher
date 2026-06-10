@@ -56,6 +56,16 @@ func printEditUsage() {
 	fmt.Println("      Upsert files entry by path using metadata fetched from URL (repeatable)")
 	fmt.Println("  -dropfile <path>")
 	fmt.Println("      Remove files entry by path (repeatable)")
+	fmt.Println("  -icon <path>")
+	fmt.Println("      Set pack icon path")
+	fmt.Println("  -description <text>")
+	fmt.Println("      Set pack description")
+	fmt.Println("  -memory <mb>")
+	fmt.Println("      Set recommended memory in MB")
+	fmt.Println("  -quick-multi <address>")
+	fmt.Println("      Set quick launch multiplayer server address")
+	fmt.Println("  -quick-single <world>")
+	fmt.Println("      Set quick launch singleplayer world name/id")
 	fmt.Println("  -print")
 	fmt.Println("      Print resulting JSON to stdout without writing file")
 }
@@ -84,6 +94,14 @@ func executeEdit(args []string, out io.Writer) error {
 	fs.Var(&requireSpecs, "require", "set dependency id=version (repeatable)")
 	fs.Var(&dropRequires, "droprequire", "remove dependency id (repeatable)")
 	fs.Var(&dropFiles, "dropfile", "remove files entry by path (repeatable)")
+
+	// Properties
+	icon := fs.String("icon", "", "set pack icon path")
+	desc := fs.String("description", "", "set pack description")
+	memory := fs.Int("memory", 0, "set recommended memory in MB")
+	quickMulti := fs.String("quick-multi", "", "set quick launch multiplayer server address")
+	quickSingle := fs.String("quick-single", "", "set quick launch singleplayer world name/id")
+
 	fs.BoolVar(&printOnly, "print", false, "print resulting JSON without writing file")
 
 	if err := fs.Parse(args); err != nil {
@@ -94,7 +112,8 @@ func executeEdit(args []string, out io.Writer) error {
 	}
 
 	if name == "" && idStr == "" && len(requireSpecs) == 0 && len(dropRequires) == 0 &&
-		len(fileEdits) == 0 && len(dropFiles) == 0 {
+		len(fileEdits) == 0 && len(dropFiles) == 0 &&
+		*icon == "" && *desc == "" && *memory == 0 && *quickMulti == "" && *quickSingle == "" {
 		return fmt.Errorf("no edit flags provided")
 	}
 
@@ -103,7 +122,7 @@ func executeEdit(args []string, out io.Writer) error {
 		return fmt.Errorf("failed to read %s: %w", indexPath, err)
 	}
 
-	var index resource.SBIndex
+	var index resource.SBPackIndex
 	if err := json.Unmarshal(indexBytes, &index); err != nil {
 		return fmt.Errorf("failed to parse %s: %w", indexPath, err)
 	}
@@ -121,6 +140,23 @@ func executeEdit(args []string, out io.Writer) error {
 			return fmt.Errorf("invalid UUID provided for -id: %w", err)
 		}
 		index.ID = newID
+	}
+
+	// Apply properties
+	if *icon != "" {
+		index.Properties.Icon = *icon
+	}
+	if *desc != "" {
+		index.Properties.Description = *desc
+	}
+	if *memory != 0 {
+		index.Properties.Memory = *memory
+	}
+	if *quickMulti != "" {
+		index.Properties.QuickLaunch.MultiPlayer = *quickMulti
+	}
+	if *quickSingle != "" {
+		index.Properties.QuickLaunch.SinglePlayer = *quickSingle
 	}
 
 	for _, spec := range requireSpecs {

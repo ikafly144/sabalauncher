@@ -74,7 +74,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	v2ID, _ := uuid.NewV7()
 
 	// 2. Create .sbpack
-	index := resource.SBIndex{
+	index := resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Test Pack",
 		ID:            v1ID,
@@ -127,7 +127,7 @@ func TestSBPackImportAndUpdate(t *testing.T) {
 	}
 
 	// 4. Create .sbpatch
-	patchIndex := resource.SBIndex{
+	patchIndex := resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Test Pack",
 		ID:            v2ID,
@@ -200,7 +200,7 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	// 1. Create base instance
 	v1Content := []byte("original content for binary patching test")
 	v1Data := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03}
-	v1Index := resource.SBIndex{
+	v1Index := resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Binary Patch Test",
 		ID:            v1ID,
@@ -238,7 +238,7 @@ func TestSBPatchBinaryPatch(t *testing.T) {
 	patch := resource.SBPatch{
 		FormatVersion: resource.SBPatchFormatVersion,
 		BaseID:        v1ID,
-		Index: resource.SBIndex{
+		Index: resource.SBPackIndex{
 			FormatVersion: resource.SBPackFormatVersion,
 			ID:            v2ID,
 		},
@@ -281,7 +281,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 	v2ID, _ := uuid.NewV7()
 
 	// Pre-calculate ZIP contents so we can pre-calculate hashes for the manifest
-	v1Index := resource.SBIndex{
+	v1Index := resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Remote Pack",
 		ID:            v1ID,
@@ -299,7 +299,7 @@ func TestImportRemoteSBPack(t *testing.T) {
 	v11Patch := resource.SBPatch{
 		FormatVersion: resource.SBPatchFormatVersion,
 		BaseID:        v1ID,
-		Index: resource.SBIndex{
+		Index: resource.SBPackIndex{
 			FormatVersion: resource.SBPackFormatVersion,
 			Name:          "Remote Pack",
 			ID:            v2ID,
@@ -359,14 +359,14 @@ func TestImportRemoteSBPack(t *testing.T) {
 				Patches: []resource.SBRepoPatch{
 					{
 						ID:         v1ID.String(),
-						Type:       "sbpack",
+						Type:       resource.SBPatchTypePack,
 						Hash:       map[string]string{"sha256": calculateSHA256(v1Hash)},
 						RemotePath: fmt.Sprintf("http://%s/repo/v1.sbpack", r.Host),
 						Timestamp:  100,
 					},
 					{
 						ID:         v2ID.String(),
-						Type:       "sbpatch",
+						Type:       resource.SBPatchTypePatch,
 						Hash:       map[string]string{"sha256": calculateSHA256(v11Hash)},
 						RemotePath: fmt.Sprintf("http://%s/repo/v1.1.sbpatch", r.Host),
 						Timestamp:  200,

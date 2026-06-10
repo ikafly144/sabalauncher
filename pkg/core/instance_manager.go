@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -57,42 +56,6 @@ func (im *instanceManager) GetInstance(id uuid.UUID) (*resource.Instance, error)
 		}
 	}
 	return nil, fmt.Errorf("instance not found: %s", id)
-}
-
-func copyDir(src, dst string) error {
-	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		relPath, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-		destPath := filepath.Join(dst, relPath)
-
-		if d.IsDir() {
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			return os.MkdirAll(destPath, info.Mode())
-		}
-
-		srcF, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer srcF.Close()
-
-		dstF, err := os.Create(destPath)
-		if err != nil {
-			return err
-		}
-		defer dstF.Close()
-
-		_, err = io.Copy(dstF, srcF)
-		return err
-	})
 }
 
 func (im *instanceManager) ImportInstance(ctx context.Context, packPath string) error {

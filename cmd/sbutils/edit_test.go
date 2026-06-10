@@ -29,7 +29,7 @@ func sha256Hex(data []byte) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func writeSBIndex(t *testing.T, path string, index resource.SBIndex) {
+func writeSBIndex(t *testing.T, path string, index resource.SBPackIndex) {
 	t.Helper()
 	b, err := json.MarshalIndent(index, "", "  ")
 	if err != nil {
@@ -40,13 +40,13 @@ func writeSBIndex(t *testing.T, path string, index resource.SBIndex) {
 	}
 }
 
-func readSBIndex(t *testing.T, path string) resource.SBIndex {
+func readSBIndex(t *testing.T, path string) resource.SBPackIndex {
 	t.Helper()
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("failed to read test index: %v", err)
 	}
-	var index resource.SBIndex
+	var index resource.SBPackIndex
 	if err := json.Unmarshal(b, &index); err != nil {
 		t.Fatalf("failed to unmarshal test index: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestExecuteEdit_UpdatesFields(t *testing.T) {
 	v1ID, _ := uuid.NewV7()
 	v2ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
-	writeSBIndex(t, path, resource.SBIndex{
+	writeSBIndex(t, path, resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Old Name",
 		ID:            v1ID,
@@ -111,7 +111,7 @@ func TestExecuteEdit_PrintDoesNotWriteFile(t *testing.T) {
 	v1ID, _ := uuid.NewV7()
 	v2ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
-	writeSBIndex(t, path, resource.SBIndex{
+	writeSBIndex(t, path, resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
 		ID:            v1ID,
@@ -138,7 +138,7 @@ func TestExecuteEdit_PrintDoesNotWriteFile(t *testing.T) {
 func TestExecuteEdit_InvalidRequire(t *testing.T) {
 	v1ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
-	writeSBIndex(t, path, resource.SBIndex{
+	writeSBIndex(t, path, resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
 		ID:            v1ID,
@@ -167,7 +167,7 @@ func TestExecuteEdit_FileUpsertAndDrop(t *testing.T) {
 
 	v1ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
-	writeSBIndex(t, path, resource.SBIndex{
+	writeSBIndex(t, path, resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
 		ID:            v1ID,
@@ -246,7 +246,7 @@ func TestExecuteEdit_FileUpsertAndDrop(t *testing.T) {
 func TestExecuteEdit_FileRequiresPathAndURL(t *testing.T) {
 	v1ID, _ := uuid.NewV7()
 	path := filepath.Join(t.TempDir(), "sb.index.json")
-	writeSBIndex(t, path, resource.SBIndex{
+	writeSBIndex(t, path, resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          "Pack",
 		ID:            v1ID,

@@ -47,7 +47,7 @@ func runDiff(args []string) {
 		os.Exit(1)
 	}
 
-	var oldIndex, newIndex resource.SBIndex
+	var oldIndex, newIndex resource.SBPackIndex
 	oldBytes, err := os.ReadFile(filepath.Join(oldDir, "sb.index.json"))
 	if err != nil {
 		fmt.Printf("Failed to read old index: %v\n", err)

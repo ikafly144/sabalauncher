@@ -36,7 +36,7 @@ func TestRepoCommands(t *testing.T) {
 	testFilePath := "test_file.sbpack"
 	_ = os.WriteFile(testFilePath, []byte("dummy data"), 0644)
 
-	runRepoAdd([]string{"1.0.0", "sbpack", testFilePath, "http://example.com/v1.sbpack", "local_v1.sbpack"})
+	runRepoAdd([]string{"1.0.0", string(resource.SBPatchTypePack), testFilePath, "http://example.com/v1.sbpack", "local_v1.sbpack"})
 
 	manifestBytes, _ = os.ReadFile("manifest.json")
 	_ = json.Unmarshal(manifestBytes, &repo)
@@ -46,7 +46,7 @@ func TestRepoCommands(t *testing.T) {
 	}
 
 	patch := repo.Patches[0]
-	if patch.ID != "1.0.0" || patch.Type != "sbpack" || patch.RemotePath != "http://example.com/v1.sbpack" || patch.LocalPath != "local_v1.sbpack" {
+	if patch.ID != "1.0.0" || patch.Type != resource.SBPatchTypePack || patch.RemotePath != "http://example.com/v1.sbpack" || patch.LocalPath != "local_v1.sbpack" {
 		t.Errorf("patch data incorrect: %+v", patch)
 	}
 	if patch.Hash["sha256"] == "" {

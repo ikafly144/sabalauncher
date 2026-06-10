@@ -16,8 +16,8 @@ type mockGameRunner struct {
 	mock.Mock
 }
 
-func (m *mockGameRunner) Launch(instanceID uuid.UUID) error {
-	args := m.Called(instanceID)
+func (m *mockGameRunner) Launch(instanceID uuid.UUID, options *core.LaunchOptions) error {
+	args := m.Called(instanceID, options)
 	return args.Error(0)
 }
 

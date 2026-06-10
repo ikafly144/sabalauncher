@@ -16,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"github.com/google/uuid"
+	"github.com/ikafly144/sabalauncher/v2/pkg/core"
 	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
@@ -123,7 +124,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		// Action Buttons for current instance
 		isRemote := currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != ""
 
-		playBtn := widget.NewButton(i18n.T("play_btn"), func() {
+		launchFunc := func(opts *core.LaunchOptions) {
 			ctx, closeOverlay := ui.showLaunchOverlay()
 			go func() {
 				if isRemote {
@@ -141,7 +142,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 				}
 
 				_ = ui.discord.SetActivity(currentInstance.UID)
-				if err := ui.runner.Launch(currentInstance.UID); err != nil {
+				if err := ui.runner.Launch(currentInstance.UID, opts); err != nil {
 					fyne.Do(func() {
 						dialog.ShowError(err, ui.window)
 					})
@@ -152,8 +153,40 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 					ui.showMainView()
 				})
 			}()
-		})
-		playBtn.Importance = widget.HighImportance
+		}
+
+		var playBtn fyne.CanvasObject
+		if currentInstance.Properties.QuickLaunch.MultiPlayer != "" || currentInstance.Properties.QuickLaunch.SinglePlayer != "" {
+			options := []string{i18n.T("normal_play")}
+			if currentInstance.Properties.QuickLaunch.MultiPlayer != "" {
+				options = append(options, i18n.T("quick_launch_multiplayer_label"))
+			}
+			if currentInstance.Properties.QuickLaunch.SinglePlayer != "" {
+				options = append(options, i18n.T("quick_launch_singleplayer_label"))
+			}
+
+			sel := widget.NewSelect(options, nil)
+			sel.SetSelected(options[0])
+			sel.Alignment = fyne.TextAlignTrailing
+
+			btn := widget.NewButton(i18n.T("play_btn"), func() {
+				var opts *core.LaunchOptions
+				if sel.Selected == i18n.T("quick_launch_multiplayer_label") {
+					opts = &core.LaunchOptions{QuickPlayMultiplayer: currentInstance.Properties.QuickLaunch.MultiPlayer}
+				} else if sel.Selected == i18n.T("quick_launch_singleplayer_label") {
+					opts = &core.LaunchOptions{QuickPlaySingleplayer: currentInstance.Properties.QuickLaunch.SinglePlayer}
+				}
+				launchFunc(opts)
+			})
+			btn.Importance = widget.HighImportance
+			playBtn = container.NewBorder(nil, nil, nil, sel, btn)
+		} else {
+			btn := widget.NewButton(i18n.T("play_btn"), func() {
+				launchFunc(nil)
+			})
+			btn.Importance = widget.HighImportance
+			playBtn = btn
+		}
 
 		updateBtn := widget.NewButton(i18n.T("update_btn"), func() {
 			ui.showUpdateInstanceDialog(currentInstance.UID)

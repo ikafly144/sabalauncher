@@ -31,7 +31,7 @@ func runInit(args []string) {
 		os.Exit(1)
 	}
 
-	index := resource.SBIndex{
+	index := resource.SBPackIndex{
 		FormatVersion: resource.SBPackFormatVersion,
 		Name:          name,
 		ID:            newID,

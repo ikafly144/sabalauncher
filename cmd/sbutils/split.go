@@ -47,7 +47,7 @@ func runSplit(args []string) {
 	}
 
 	// Read base index
-	var baseIndex resource.SBIndex
+	var baseIndex resource.SBPackIndex
 	baseIndexBytes, err := os.ReadFile(filepath.Join(baseDir, "sb.index.json"))
 	if err != nil {
 		fmt.Printf("Failed to read base index: %v\n", err)

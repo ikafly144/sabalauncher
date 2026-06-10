@@ -43,7 +43,7 @@ func runPatch(args []string) {
 		os.Exit(1)
 	}
 
-	var baseIndex resource.SBIndex
+	var baseIndex resource.SBPackIndex
 	baseBytes, err := os.ReadFile(filepath.Join(baseDir, "sb.index.json"))
 	if err != nil {
 		fmt.Printf("Failed to read base index: %v\n", err)

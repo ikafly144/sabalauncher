@@ -94,7 +94,7 @@ func runAdd(args []string) {
 		os.Exit(1)
 	}
 
-	var index resource.SBIndex
+	var index resource.SBPackIndex
 	if err := json.Unmarshal(indexBytes, &index); err != nil {
 		fmt.Printf("Failed to parse sb.index.json: %v\n", err)
 		os.Exit(1)

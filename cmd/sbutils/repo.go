@@ -83,7 +83,7 @@ func runRepoAdd(args []string) {
 
 	if isFull {
 		id := args[0]
-		typ := args[1]
+		typ := resource.SBPatchType(args[1])
 		filePath := args[2]
 		remoteURL := args[3]
 		var localPath string
@@ -101,7 +101,7 @@ func runRepoAdd(args []string) {
 			ext := filepath.Ext(filename)
 
 			id := strings.TrimSuffix(filename, ext)
-			typ := strings.TrimPrefix(ext, ".")
+			typ := resource.SBPatchType(strings.TrimPrefix(ext, "."))
 			remoteURL := strings.TrimSuffix(remotePrefix, "/") + "/" + filename
 			// localPath := filename
 
@@ -122,8 +122,8 @@ func runRepoAdd(args []string) {
 	writeManifest("manifest.json", repo)
 }
 
-func addFileToManifest(repo *resource.SBRepository, id, typ, filePath, remoteURL, localPath string, timestamp int64) {
-	if typ != "sbpack" && typ != "sbpatch" {
+func addFileToManifest(repo *resource.SBRepository, id string, typ resource.SBPatchType, filePath, remoteURL, localPath string, timestamp int64) {
+	if typ != resource.SBPatchTypePack && typ != resource.SBPatchTypePatch {
 		fmt.Printf("Error: Invalid type '%s' for ID '%s'. Must be 'sbpack' or 'sbpatch'.\n", typ, id)
 		os.Exit(1)
 	}
@@ -194,7 +194,7 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 
 	// Map patch ID (manifest) -> metadata
 	type patchMeta struct {
-		typ    string
+		typ    resource.SBPatchType
 		baseID string
 	}
 	metadata := make(map[string]patchMeta)
@@ -244,7 +244,7 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 				return fmt.Errorf("patch %s is missing from manifest or file not found", curr)
 			}
 
-			if m.typ == "sbpack" {
+			if m.typ == resource.SBPatchTypePack {
 				break
 			}
 
@@ -281,13 +281,13 @@ func peekPatchMetadata(path string) (baseID uuid.UUID, indexID uuid.UUID, err er
 			if err != nil {
 				return uuid.Nil, uuid.Nil, err
 			}
-			var idx resource.SBIndex
-			err = json.NewDecoder(rc).Decode(&idx)
+			var index resource.SBPackIndex
+			err = json.NewDecoder(rc).Decode(&index)
 			rc.Close()
 			if err != nil {
 				return uuid.Nil, uuid.Nil, err
 			}
-			return uuid.Nil, idx.ID, nil
+			return uuid.Nil, index.ID, nil
 		}
 	}
 	return uuid.Nil, uuid.Nil, fmt.Errorf("metadata not found in %s", path)

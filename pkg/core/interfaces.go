@@ -65,10 +65,16 @@ type InstanceManager interface {
 	SubscribeProgress() <-chan ProgressEvent
 }
 
+// LaunchOptions contains options for game launch.
+type LaunchOptions struct {
+	QuickPlayMultiplayer  string
+	QuickPlaySingleplayer string
+}
+
 // GameRunner defines the interface for launching and managing the game process.
 type GameRunner interface {
 	// Launch starts the game with the specified instance.
-	Launch(instanceID uuid.UUID) error
+	Launch(instanceID uuid.UUID, options *LaunchOptions) error
 	// Stop terminates the running game process.
 	Stop() error
 	// IsRunning returns true if the game is currently active.

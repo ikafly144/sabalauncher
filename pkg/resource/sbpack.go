@@ -30,14 +30,32 @@ const (
 	SBPatchFormatVersion = 3
 )
 
-//TODO: rename SBIndex to SBPackIndex
+// SBPackIndex represents the content of sb.index.json
+type SBPackIndex struct {
+	FormatVersion int                   `json:"formatVersion"`
+	Name          string                `json:"name"`
+	ID            uuid.UUID             `json:"id"`
+	Properties    SBPackIndexProperties `json:"properties"`
+	Dependencies  map[string]string     `json:"dependencies"`
+	Files         []SBFile              `json:"files"`
+}
 
-type SBIndex struct {
-	FormatVersion int               `json:"formatVersion"`
-	Name          string            `json:"name"`
-	ID            uuid.UUID         `json:"id"`
-	Dependencies  map[string]string `json:"dependencies"`
-	Files         []SBFile          `json:"files"`
+type SBPackIndexProperties struct {
+	// Path to a preview image for this pack, relative to the instance directory. Optional.
+	Icon string `json:"icon,omitempty"`
+	// A short description of the pack. Optional.
+	Description string `json:"description,omitempty"`
+
+	QuickLaunch SBQuickLaunch `json:"quickLaunch"`
+
+	// Optional recommended memory in MB
+	// min(max(this value, user setting), machine memory) will be used as the instance memory when this pack is applied
+	Memory int `json:"memory,omitempty"`
+}
+
+type SBQuickLaunch struct {
+	MultiPlayer  string `json:"multiplayer,omitempty"`  // Server address for quick multiplayer
+	SinglePlayer string `json:"singleplayer,omitempty"` // Optional command or identifier for quick singleplayer launch
 }
 
 type SBFile struct {
@@ -62,10 +80,10 @@ type SBEnvironment struct {
 }
 
 type SBPatch struct {
-	FormatVersion int       `json:"formatVersion"`
-	BaseID        uuid.UUID `json:"baseID"`
-	Index         SBIndex   `json:"index"`
-	RemovedFiles  []string  `json:"removedFiles"`
+	FormatVersion int         `json:"formatVersion"`
+	BaseID        uuid.UUID   `json:"baseID"`
+	Index         SBPackIndex `json:"index"`
+	RemovedFiles  []string    `json:"removedFiles"`
 }
 
 type SBRepository struct {
@@ -75,12 +93,19 @@ type SBRepository struct {
 
 type SBRepoPatch struct {
 	ID         string            `json:"id"`
-	Type       string            `json:"type"` // "sbpack", "sbpatch"
+	Type       SBPatchType       `json:"type"` // "sbpack", "sbpatch"
 	Hash       map[string]string `json:"hash"`
 	RemotePath string            `json:"remote_path"`
 	LocalPath  string            `json:"local_path,omitempty"`
 	Timestamp  int64             `json:"timestamp"`
 }
+
+type SBPatchType string
+
+const (
+	SBPatchTypePack  SBPatchType = "sbpack"
+	SBPatchTypePatch SBPatchType = "sbpatch"
+)
 
 func FetchRepository(ctx context.Context, url string) (*SBRepository, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -165,7 +190,7 @@ func ImportRemoteSBPack(ctx context.Context, manifestURL string, destDir string,
 	// For simplicity, find the latest sbpack that is <= latest_patch.
 	var initialPatch *SBRepoPatch
 	for i := len(repo.Patches) - 1; i >= 0; i-- {
-		if repo.Patches[i].Type == "sbpack" {
+		if repo.Patches[i].Type == SBPatchTypePack {
 			initialPatch = &repo.Patches[i]
 			break
 		}
@@ -283,11 +308,11 @@ func UpdateInstanceRemoteWithObserver(ctx context.Context, inst *Instance, obser
 		localPath := getRepoPatchLocalPath(p)
 
 		switch p.Type {
-		case "sbpatch":
+		case SBPatchTypePatch:
 			if err := ApplySBPatch(ctx, inst, localPath, observer); err != nil {
 				return err
 			}
-		case "sbpack":
+		case SBPatchTypePack:
 			if err := ApplySBPack(ctx, inst, localPath, observer); err != nil {
 				return err
 			}
@@ -314,7 +339,7 @@ func ImportSBPack(ctx context.Context, packPath string, destDir string, uid uuid
 	}
 	defer reader.Close()
 
-	var index SBIndex
+	var index SBPackIndex
 	var indexFound bool
 
 	// Read index first
@@ -341,13 +366,12 @@ func ImportSBPack(ctx context.Context, packPath string, destDir string, uid uuid
 	if index.FormatVersion < SBPackFormatVersion {
 		return nil, fmt.Errorf("unsupported sbpack format version: %d (requires %d)", index.FormatVersion, SBPackFormatVersion)
 	}
-
 	inst := &Instance{
-		Name:     index.Name,
-		UID:      uid,
-		Versions: make([]InstanceVersion, 0, len(index.Dependencies)),
-		Mods:     []Mod{},
-		Path:     destDir,
+		Name:       index.Name,
+		UID:        uid,
+		Properties: index.Properties,
+		Versions:   make([]InstanceVersion, 0, len(index.Dependencies)),
+		Path:       destDir,
 		Upstream: &Upstream{
 			Version: index.ID.String(),
 		},
@@ -488,7 +512,7 @@ func ApplySBPack(ctx context.Context, inst *Instance, packPath string, observer 
 		}
 		defer reader.Close()
 
-		var newIndex SBIndex
+		var newIndex SBPackIndex
 		var indexFound bool
 		for _, f := range reader.File {
 			if f.Name == "sb.index.json" {
@@ -515,7 +539,7 @@ func ApplySBPack(ctx context.Context, inst *Instance, packPath string, observer 
 		}
 
 		// Load old index to find removed files
-		var oldIndex SBIndex
+		var oldIndex SBPackIndex
 		oldIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
 		if err == nil {
 			_ = json.Unmarshal(oldIndexBytes, &oldIndex)
@@ -641,6 +665,8 @@ func ApplySBPack(ctx context.Context, inst *Instance, packPath string, observer 
 		if inst.Upstream != nil {
 			inst.Upstream.Version = newIndex.ID.String()
 		}
+		inst.Name = newIndex.Name
+		inst.Properties = newIndex.Properties
 		inst.Versions = make([]InstanceVersion, 0, len(newIndex.Dependencies))
 		for id, ver := range newIndex.Dependencies {
 			inst.Versions = append(inst.Versions, InstanceVersion{ID: id, Version: ver})
@@ -712,7 +738,7 @@ func ApplySBPatch(ctx context.Context, inst *Instance, patchPath string, observe
 		}
 
 		// Load current index from disk to check modpack version
-		var currentIndex SBIndex
+		var currentIndex SBPackIndex
 		currentIndexBytes, err := os.ReadFile(filepath.Join(inst.Path, "sb.index.json"))
 		if err != nil {
 			return fmt.Errorf("failed to read current index: %w", err)
@@ -901,6 +927,8 @@ func ApplySBPatch(ctx context.Context, inst *Instance, patchPath string, observe
 		if inst.Upstream != nil {
 			inst.Upstream.Version = patch.Index.ID.String()
 		}
+		inst.Name = patch.Index.Name
+		inst.Properties = patch.Index.Properties
 		inst.Versions = make([]InstanceVersion, 0, len(patch.Index.Dependencies))
 		for id, ver := range patch.Index.Dependencies {
 			inst.Versions = append(inst.Versions, InstanceVersion{

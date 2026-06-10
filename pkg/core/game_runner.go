@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -38,7 +39,7 @@ func NewGameRunner(auth Authenticator, instances InstanceManager, dataDir string
 	}
 }
 
-func (r *gameRunner) Launch(instanceID uuid.UUID) error {
+func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error {
 	r.mu.Lock()
 	if r.running {
 		r.mu.Unlock()
@@ -119,9 +120,47 @@ func (r *gameRunner) Launch(instanceID uuid.UUID) error {
 		"has_custom_resolution": true,
 	}
 
-	config, err := loader.GenerateLaunchConfig(inst, features, r.config.MaxMemory)
+	// Handle quick launch placeholders
+	quickLaunchPlaceholders := map[string]string{}
+	if options != nil {
+		if options.QuickPlayMultiplayer != "" {
+			quickLaunchPlaceholders["quickPlayMultiplayer"] = options.QuickPlayMultiplayer
+		}
+		if options.QuickPlaySingleplayer != "" {
+			quickLaunchPlaceholders["quickPlaySingleplayer"] = options.QuickPlaySingleplayer
+		}
+	}
+
+	maxMemory := r.config.MaxMemory
+	if inst.Properties.Memory > 0 {
+		// memory limit logic: min(max(this value, user setting), machine memory)
+		// For now simple: if pack has recommendation, use it if it's higher than user setting?
+		// User requested: min(max(this value, user setting), machine memory)
+		// I don't have machine memory here easily, but I can use inst.Properties.Memory if it's set.
+		if uint64(inst.Properties.Memory) > maxMemory {
+			maxMemory = uint64(inst.Properties.Memory)
+		}
+	}
+
+	config, err := loader.GenerateLaunchConfig(inst, features, maxMemory)
 	if err != nil {
 		return fmt.Errorf("failed to generate launch config: %w", err)
+	}
+
+	// Apply quick launch placeholders to game arguments
+	for i := range config.GameArguments {
+		for k, v := range quickLaunchPlaceholders {
+			config.GameArguments[i] = strings.ReplaceAll(config.GameArguments[i], "${"+k+"}", v)
+		}
+		// Also handle standard ones if they were missed by loader
+		if options != nil {
+			if options.QuickPlayMultiplayer != "" {
+				config.GameArguments[i] = strings.ReplaceAll(config.GameArguments[i], "--quickPlayMultiplayer", options.QuickPlayMultiplayer)
+			}
+			if options.QuickPlaySingleplayer != "" {
+				config.GameArguments[i] = strings.ReplaceAll(config.GameArguments[i], "--quickPlaySingleplayer", options.QuickPlaySingleplayer)
+			}
+		}
 	}
 
 	manifest, err := resource.GetClientManifestForInstance(inst)
