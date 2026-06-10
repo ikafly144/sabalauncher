@@ -4,7 +4,6 @@ go 1.26.4
 
 require (
 	fyne.io/fyne/v2 v2.7.4
-	gioui.org v0.10.0
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.7.2
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Xuanwo/go-locale v1.1.3
@@ -17,7 +16,6 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/ulikunitz/xz v0.5.15
 	golang.org/x/exp v0.0.0-20260603202125-055de637280b
-	golang.org/x/exp/shiny v0.0.0-20251125195548-87e1e737ad39
 )
 
 require (
