@@ -14,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/core"
@@ -201,6 +202,10 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			ui.showUpdateInstanceDialog(currentInstance.UID)
 		})
 
+		repairBtn := widget.NewButton(i18n.T("repair_btn"), func() {
+			ui.showRepairInstanceDialog(currentInstance.UID)
+		})
+
 		deleteBtn := widget.NewButton(i18n.T("delete_instance_btn"), func() {
 			dialog.ShowConfirm(i18n.T("delete_instance_confirm_title"), i18n.T("delete_instance_confirm_body", currentInstance.Name), func(ok bool) {
 				if ok {
@@ -215,12 +220,23 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		})
 		deleteBtn.Importance = widget.DangerImportance
 
-		var actions fyne.CanvasObject
-		if isRemote {
-			actions = container.NewBorder(nil, nil, nil, deleteBtn, playBtn)
-		} else {
-			actions = container.NewBorder(nil, nil, nil, container.NewHBox(updateBtn, deleteBtn), playBtn)
+		// Create Actions button with popup menu
+		menu := fyne.NewMenu("",
+			fyne.NewMenuItem(i18n.T("repair_btn"), repairBtn.OnTapped),
+			fyne.NewMenuItem(i18n.T("delete_instance_btn"), deleteBtn.OnTapped),
+		)
+		if !isRemote {
+			menu.Items = append([]*fyne.MenuItem{fyne.NewMenuItem(i18n.T("update_btn"), updateBtn.OnTapped)}, menu.Items...)
 		}
+
+		actionsBtn := widget.NewButtonWithIcon("", theme.MenuIcon(), nil)
+		actionsBtn.OnTapped = func() {
+			position := fyne.CurrentApp().Driver().AbsolutePositionForObject(actionsBtn)
+			widget.ShowPopUpMenuAtPosition(menu, ui.window.Canvas(), position)
+		}
+
+		var actions fyne.CanvasObject
+		actions = container.NewBorder(nil, nil, nil, actionsBtn, playBtn)
 
 		detailContainer := container.NewVBox(
 			detailTitle,

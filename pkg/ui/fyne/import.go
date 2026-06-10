@@ -134,6 +134,52 @@ func (ui *FyneUI) showRegisterRemoteModpackDialog() {
 	d.Show()
 }
 
+func (ui *FyneUI) showRepairInstanceDialog(instanceID uuid.UUID) {
+	minWidth := canvas.NewRectangle(color.Transparent)
+	minWidth.SetMinSize(fyne.NewSize(400, 0))
+	multiProg := NewMultiProgress(i18n.T("repairing_progress"))
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	progress := dialog.NewCustom(i18n.T("repairing_progress"), i18n.T("cancel"), container.NewStack(minWidth, multiProg), ui.window)
+	progress.SetOnClosed(func() {
+		cancel()
+	})
+	progress.Show()
+
+	go func() {
+		pChan := ui.instances.SubscribeProgress()
+		done := make(chan bool)
+		go func() {
+			for {
+				select {
+				case p := <-pChan:
+					fyne.Do(func() {
+						multiProg.Update(p)
+					})
+				case <-done:
+					return
+				}
+			}
+		}()
+
+		err := ui.instances.RepairInstance(ctx, instanceID)
+		done <- true
+		fyne.Do(progress.Hide)
+		if err != nil {
+			fyne.Do(func() {
+				if !errors.Is(err, context.Canceled) {
+					dialog.ShowError(err, ui.window)
+				}
+			})
+		} else {
+			fyne.Do(func() {
+				ui.showMainView()
+			})
+		}
+	}()
+}
+
 func (ui *FyneUI) showUpdateInstanceDialog(instanceID uuid.UUID) {
 	path, err := browser.SelectFile(0, "Update files (*.sbpatch, *.sbpack)|*.sbpatch;*.sbpack")
 	if err != nil {

@@ -3,6 +3,8 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -104,6 +106,24 @@ func runDiff(args []string) {
 	}
 
 	// Create patch JSON
+	// Collect hashes for the new index
+	newHashes := make(map[string]string)
+	for name, f := range newFiles {
+		if !strings.HasPrefix(name, "overrides/") || f.FileInfo().IsDir() {
+			continue
+		}
+		rel := strings.TrimPrefix(name, "overrides/")
+		// We could optimize this by not reading everything, but for small files it's fine.
+		// Actually, we already have the hash if we extracted it, but we are avoiding extraction.
+		// Let's just calculate it for now.
+		rc, _ := f.Open()
+		h := sha256.New()
+		io.Copy(h, rc)
+		rc.Close()
+		newHashes[rel] = hex.EncodeToString(h.Sum(nil))
+	}
+	newIndex.Hashes = newHashes
+
 	patch := resource.SBPatch{
 		FormatVersion: resource.SBPatchFormatVersion,
 		BaseID:        oldIndex.ID,

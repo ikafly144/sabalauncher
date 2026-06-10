@@ -35,9 +35,10 @@ type SBPackIndex struct {
 	FormatVersion int                   `json:"formatVersion"`
 	Name          string                `json:"name"`
 	ID            uuid.UUID             `json:"id"`
-	Properties    SBPackIndexProperties `json:"properties"`
+	Properties    SBPackIndexProperties `json:"properties,omitzero"`
 	Dependencies  map[string]string     `json:"dependencies"`
 	Files         []SBFile              `json:"files"`
+	Hashes        map[string]string     `json:"hashes,omitempty"`
 }
 
 type SBPackIndexProperties struct {
@@ -46,7 +47,7 @@ type SBPackIndexProperties struct {
 	// A short description of the pack. Optional.
 	Description string `json:"description,omitempty"`
 
-	QuickLaunch SBQuickLaunch `json:"quickLaunch"`
+	QuickLaunch SBQuickLaunch `json:"quickLaunch,omitzero"`
 
 	// Optional recommended memory in MB
 	// min(max(this value, user setting), machine memory) will be used as the instance memory when this pack is applied
@@ -1054,5 +1055,156 @@ func verifyHashes(path string, hashes map[string]string) error {
 		}
 	}
 
+	return nil
+}
+
+// RepairInstance verifies all files in the instance index and re-downloads any that are missing or corrupted.
+func RepairInstance(ctx context.Context, inst *Instance, observer ProgressObserver) error {
+	if observer == nil {
+		observer = &NopProgressObserver{}
+	}
+
+	// 1. Load sb.index.json
+	indexPath := filepath.Join(inst.Path, "sb.index.json")
+	var index SBPackIndex
+	indexBytes, err := os.ReadFile(indexPath)
+	if err != nil {
+		return fmt.Errorf("failed to read sb.index.json: %w", err)
+	}
+	if err := json.Unmarshal(indexBytes, &index); err != nil {
+		return fmt.Errorf("failed to parse sb.index.json: %w", err)
+	}
+
+	// 2. Identify corrupted/missing files from index
+	toRepair := []SBFile{}
+	for _, f := range index.Files {
+		targetPath := filepath.Join(inst.Path, f.Path)
+		if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+			toRepair = append(toRepair, f)
+			continue
+		}
+
+		if err := verifyHashes(targetPath, f.Hashes); err != nil {
+			slog.Warn("File corruption detected", "path", f.Path, "err", err)
+			toRepair = append(toRepair, f)
+		}
+	}
+
+	corruptedOverrides := []string{}
+	for rel, expectedHash := range index.Hashes {
+		targetPath := filepath.Join(inst.Path, rel)
+		if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+			corruptedOverrides = append(corruptedOverrides, rel)
+			continue
+		}
+
+		if err := verifyHashes(targetPath, map[string]string{"sha256": expectedHash}); err != nil {
+			slog.Warn("Override corruption detected", "path", rel, "err", err)
+			corruptedOverrides = append(corruptedOverrides, rel)
+		}
+	}
+
+	if len(toRepair) == 0 && len(corruptedOverrides) == 0 {
+		observer.OnProgress("All files verified, no repair needed", 100, "Done", "main")
+		return nil
+	}
+
+	// 3. Repair SBFiles (downloads)
+	totalRepair := len(toRepair)
+	for i, f := range toRepair {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		percentage := float64(i) / float64(totalRepair) * 100.0
+		observer.OnProgress(fmt.Sprintf("Repairing mod %d/%d: %s", i+1, totalRepair, filepath.Base(f.Path)), percentage, "", "main")
+
+		targetPath := filepath.Join(inst.Path, f.Path)
+		_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
+
+		var downloadErr error
+		for _, url := range f.Downloads {
+			downloadErr = downloadWithVerify(ctx, url, targetPath, f.Hashes, observer, "Downloading "+filepath.Base(f.Path), "repair")
+			if downloadErr == nil {
+				break
+			}
+		}
+
+		if downloadErr != nil {
+			return fmt.Errorf("failed to repair file %s: %w", f.Path, downloadErr)
+		}
+	}
+
+	// 4. Repair Overrides (for remote instances)
+	if len(corruptedOverrides) > 0 {
+		if inst.Upstream == nil || inst.Upstream.ManifestURL == "" {
+			slog.Warn("Cannot repair local overrides without a remote repository", "count", len(corruptedOverrides))
+		} else {
+			observer.OnProgress("Repairing local files from repository", 0, "", "main")
+			repo, err := FetchRepository(ctx, inst.Upstream.ManifestURL)
+			if err != nil {
+				return fmt.Errorf("failed to fetch repository for repair: %w", err)
+			}
+
+			// We need to re-download patches and re-extract corrupted files.
+			// This is a bit heavy, but safe.
+			// TODO: Optimize by only downloading relevant patches if possible.
+			for _, p := range repo.Patches {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+
+				// Check if this patch contains any of our corrupted files
+				// Since we don't have a file-to-patch map, we have to check them all or re-apply.
+				// For simplicity, re-extract from all patches if needed.
+				localPath, err := downloadAndVerifyRepoPatch(ctx, p, observer)
+				if err != nil {
+					return fmt.Errorf("failed to download patch for repair: %w", err)
+				}
+
+				reader, err := zip.OpenReader(localPath)
+				if err != nil {
+					continue
+				}
+
+				for _, zf := range reader.File {
+					var rel string
+					if name, ok := strings.CutPrefix(zf.Name, "overrides/"); ok {
+						rel = name
+					} else if _, ok := strings.CutPrefix(zf.Name, "patches/"); ok {
+						// Binary patches are tricky because they depend on the base.
+						// If an override is corrupted, and it was last modified by a patch,
+						// we might need to re-apply the patch chain.
+						// For now, let's focus on direct overrides.
+						continue
+					} else {
+						continue
+					}
+
+					isCorrupted := false
+					for _, c := range corruptedOverrides {
+						if c == rel {
+							isCorrupted = true
+							break
+						}
+					}
+
+					if isCorrupted {
+						targetPath := filepath.Join(inst.Path, rel)
+						_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
+						rc, _ := zf.Open()
+						out, _ := os.Create(targetPath)
+						io.Copy(out, rc)
+						rc.Close()
+						out.Close()
+						slog.Info("Repaired override from patch", "path", rel, "patch", p.ID)
+					}
+				}
+				reader.Close()
+			}
+		}
+	}
+
+	observer.OnProgress("Repair complete", 100, "Done", "main")
 	return nil
 }

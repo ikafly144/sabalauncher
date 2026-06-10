@@ -63,6 +63,8 @@ type InstanceManager interface {
 	UpdateInstance(ctx context.Context, instanceID uuid.UUID, patchPath string) error
 	// CheckUpdate checks if a remote update is available for the instance.
 	CheckUpdate(ctx context.Context, instanceID uuid.UUID) (bool, error)
+	// RepairInstance verifies and repairs instance files.
+	RepairInstance(ctx context.Context, instanceID uuid.UUID) error
 	// SubscribeProgress returns a channel that receives progress updates.
 	SubscribeProgress() <-chan ProgressEvent
 }

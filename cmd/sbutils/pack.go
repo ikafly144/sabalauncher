@@ -50,6 +50,25 @@ func runPack(args []string) {
 	}
 	index.ID = newID
 
+	// Collect override hashes
+	hashes := make(map[string]string)
+	overridesDir := filepath.Join(dir, "overrides")
+	if _, err := os.Stat(overridesDir); err == nil {
+		_ = filepath.WalkDir(overridesDir, func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			rel, _ := filepath.Rel(dir, path)
+			rel = filepath.ToSlash(rel)
+			h, err := hashFile(path)
+			if err == nil {
+				hashes[rel] = h
+			}
+			return nil
+		})
+	}
+	index.Hashes = hashes
+
 	// Write updated index back to source
 	updatedIndexBytes, _ := json.MarshalIndent(index, "", "  ")
 	if err := os.WriteFile(indexPath, updatedIndexBytes, 0644); err != nil {
@@ -74,7 +93,6 @@ func runPack(args []string) {
 	}
 
 	// Add overrides
-	overridesDir := filepath.Join(dir, "overrides")
 	if _, err := os.Stat(overridesDir); err == nil {
 		type task struct {
 			path    string
@@ -87,11 +105,6 @@ func runPack(args []string) {
 			err     error
 		}, 100)
 		var wg sync.WaitGroup
-
-		// We use a limited number of workers to avoid OOM if files are large,
-		// but for many small files this is very fast.
-		// For very large files, we should probably stick to sequential or use a different approach.
-		// Let's use a simpler approach: just parallelize the directory walk and use a single writer.
 
 		go func() {
 			_ = filepath.WalkDir(overridesDir, func(path string, d os.DirEntry, err error) error {
@@ -106,8 +119,10 @@ func runPack(args []string) {
 		}()
 
 		numWorkers := runtime.NumCPU()
-		for range numWorkers {
-			wg.Go(func() {
+		for i := 0; i < numWorkers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 				for t := range tasks {
 					data, err := os.ReadFile(t.path)
 					results <- struct {
@@ -116,7 +131,7 @@ func runPack(args []string) {
 						err     error
 					}{t.relPath, data, err}
 				}
-			})
+			}()
 		}
 
 		go func() {

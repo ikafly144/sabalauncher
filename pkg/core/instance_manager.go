@@ -131,6 +131,15 @@ func (im *instanceManager) CheckUpdate(ctx context.Context, instanceID uuid.UUID
 	return inst.Upstream.Version != latestPatchID, nil
 }
 
+func (im *instanceManager) RepairInstance(ctx context.Context, instanceID uuid.UUID) error {
+	inst, err := im.GetInstance(instanceID)
+	if err != nil {
+		return err
+	}
+
+	return resource.RepairInstance(ctx, inst, &progressBridge{ch: im.progressChan})
+}
+
 func (im *instanceManager) UpdateInstance(ctx context.Context, instanceID uuid.UUID, path string) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()
