@@ -73,10 +73,8 @@ func extractZip(src, dest string) error {
 	var lastErr error
 	var errMu sync.Mutex
 
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range numWorkers {
+		wg.Go(func() {
 			for t := range tasks {
 				f := t.f
 				fpath := filepath.Join(dest, f.Name)
@@ -125,7 +123,7 @@ func extractZip(src, dest string) error {
 					errMu.Unlock()
 				}
 			}
-		}()
+		})
 	}
 
 	for _, f := range r.File {

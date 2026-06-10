@@ -120,23 +120,17 @@ func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error 
 		"has_custom_resolution": true,
 	}
 
-	// Handle quick launch placeholders
-	quickLaunchPlaceholders := map[string]string{}
 	if options != nil {
 		if options.QuickPlayMultiplayer != "" {
-			quickLaunchPlaceholders["quickPlayMultiplayer"] = options.QuickPlayMultiplayer
+			features["is_quick_play_multiplayer"] = true
 		}
 		if options.QuickPlaySingleplayer != "" {
-			quickLaunchPlaceholders["quickPlaySingleplayer"] = options.QuickPlaySingleplayer
+			features["is_quick_play_singleplayer"] = true
 		}
 	}
 
 	maxMemory := r.config.MaxMemory
 	if inst.Properties.Memory > 0 {
-		// memory limit logic: min(max(this value, user setting), machine memory)
-		// For now simple: if pack has recommendation, use it if it's higher than user setting?
-		// User requested: min(max(this value, user setting), machine memory)
-		// I don't have machine memory here easily, but I can use inst.Properties.Memory if it's set.
 		if uint64(inst.Properties.Memory) > maxMemory {
 			maxMemory = uint64(inst.Properties.Memory)
 		}
@@ -147,10 +141,30 @@ func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error 
 		return fmt.Errorf("failed to generate launch config: %w", err)
 	}
 
-	// Apply quick launch placeholders to game arguments
+	// Handle quick launch:
+	// 1. Replace placeholders if they exist (modern versions)
+	quickPlayHandled := false
 	for i := range config.GameArguments {
-		for k, v := range quickLaunchPlaceholders {
-			config.GameArguments[i] = strings.ReplaceAll(config.GameArguments[i], "${"+k+"}", v)
+		if options != nil && options.QuickPlayMultiplayer != "" {
+			if strings.Contains(config.GameArguments[i], "${quickPlayMultiplayer}") {
+				config.GameArguments[i] = strings.ReplaceAll(config.GameArguments[i], "${quickPlayMultiplayer}", options.QuickPlayMultiplayer)
+				quickPlayHandled = true
+			}
+		}
+		if options != nil && options.QuickPlaySingleplayer != "" {
+			if strings.Contains(config.GameArguments[i], "${quickPlaySingleplayer}") {
+				config.GameArguments[i] = strings.ReplaceAll(config.GameArguments[i], "${quickPlaySingleplayer}", options.QuickPlaySingleplayer)
+				quickPlayHandled = true
+			}
+		}
+	}
+
+	// 2. If not handled by placeholders, append flags manually (fallback/legacy)
+	if options != nil && !quickPlayHandled {
+		if options.QuickPlayMultiplayer != "" {
+			config.GameArguments = append(config.GameArguments, "--server", options.QuickPlayMultiplayer)
+		} else if options.QuickPlaySingleplayer != "" {
+			config.GameArguments = append(config.GameArguments, "--quickPlaySingleplayer", options.QuickPlaySingleplayer)
 		}
 	}
 

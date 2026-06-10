@@ -79,8 +79,8 @@ func runPatch(args []string) {
 
 	patchedSet := make(map[string]struct{})
 	for name := range patchFiles {
-		if strings.HasPrefix(name, "patches/") {
-			rel := strings.TrimPrefix(name, "patches/")
+		if after, ok := strings.CutPrefix(name, "patches/"); ok {
+			rel := after
 			patchedSet["overrides/"+rel] = struct{}{}
 		}
 	}
