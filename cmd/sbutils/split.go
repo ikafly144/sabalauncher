@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -19,55 +18,43 @@ func runSplit(args []string) {
 		os.Exit(1)
 	}
 
-	basePack := args[0]
-	largePatch := args[1]
+	basePackPath := args[0]
+	largePatchPath := args[1]
 	outPrefix := args[2]
 	maxSizeMB, _ := strconv.ParseInt(args[3], 10, 64)
 	maxSizeBytes := maxSizeMB * 1024 * 1024
 
-	tempDir, err := os.MkdirTemp("", "sbutils-split-*")
+	baseZip, err := zip.OpenReader(basePackPath)
 	if err != nil {
-		fmt.Printf("Failed to create temp dir: %v\n", err)
+		fmt.Printf("Failed to open base pack: %v\n", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(tempDir)
+	defer baseZip.Close()
 
-	baseDir := filepath.Join(tempDir, "base")
-	patchDir := filepath.Join(tempDir, "patch")
+	largePatchZip, err := zip.OpenReader(largePatchPath)
+	if err != nil {
+		fmt.Printf("Failed to open large patch: %v\n", err)
+		os.Exit(1)
+	}
+	defer largePatchZip.Close()
 
-	fmt.Println("Extracting base pack...")
-	if err := extractZip(basePack, baseDir); err != nil {
-		fmt.Printf("Failed to extract base pack: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println("Extracting large patch...")
-	if err := extractZip(largePatch, patchDir); err != nil {
-		fmt.Printf("Failed to extract large patch: %v\n", err)
-		os.Exit(1)
-	}
+	baseFiles := mapZipFiles(baseZip.Reader)
+	patchFiles := mapZipFiles(largePatchZip.Reader)
 
 	// Read base index
 	var baseIndex resource.SBPackIndex
-	baseIndexBytes, err := os.ReadFile(filepath.Join(baseDir, "sb.index.json"))
-	if err != nil {
-		fmt.Printf("Failed to read base index: %v\n", err)
-		os.Exit(1)
-	}
-	if err := json.Unmarshal(baseIndexBytes, &baseIndex); err != nil {
-		fmt.Printf("Failed to parse base index: %v\n", err)
-		os.Exit(1)
+	if f, ok := baseFiles["sb.index.json"]; ok {
+		rc, _ := f.Open()
+		json.NewDecoder(rc).Decode(&baseIndex)
+		rc.Close()
 	}
 
 	// Read large patch metadata
 	var largeP resource.SBPatch
-	largePBytes, err := os.ReadFile(filepath.Join(patchDir, "sb.patch.json"))
-	if err != nil {
-		fmt.Printf("Failed to read patch metadata: %v\n", err)
-		os.Exit(1)
-	}
-	if err := json.Unmarshal(largePBytes, &largeP); err != nil {
-		fmt.Printf("Failed to parse patch metadata: %v\n", err)
-		os.Exit(1)
+	if f, ok := patchFiles["sb.patch.json"]; ok {
+		rc, _ := f.Open()
+		json.NewDecoder(rc).Decode(&largeP)
+		rc.Close()
 	}
 
 	if baseIndex.ID != largeP.BaseID {
@@ -75,71 +62,49 @@ func runSplit(args []string) {
 		os.Exit(1)
 	}
 
-	// Collect all files to be included in the patch
-	type patchFile struct {
-		relPath string // Relative to instance root (e.g., "overrides/config/test.txt")
-		isPatch bool   // True if it's in patches/ (binary diff)
+	// Collect all files to be included in the patch from the ZIP
+	type patchFileEntry struct {
+		name    string
+		isPatch bool
 		size    int64
 	}
-	allFiles := []patchFile{}
+	allEntries := []patchFileEntry{}
 
-	// 1. Overrides
-	patchOverridesDir := filepath.Join(patchDir, "overrides")
-	if _, err := os.Stat(patchOverridesDir); err == nil {
-		_ = filepath.WalkDir(patchOverridesDir, func(path string, d os.DirEntry, err error) error {
-			if err != nil || d.IsDir() {
-				return err
-			}
-			rel, _ := filepath.Rel(patchOverridesDir, path)
-			info, _ := d.Info()
-			allFiles = append(allFiles, patchFile{
-				relPath: filepath.ToSlash(filepath.Join("overrides", rel)),
-				isPatch: false,
-				size:    info.Size(),
-			})
-			return nil
-		})
-	}
-
-	// 2. Binary Patches
-	patchPatchesDir := filepath.Join(patchDir, "patches")
-	if _, err := os.Stat(patchPatchesDir); err == nil {
-		_ = filepath.WalkDir(patchPatchesDir, func(path string, d os.DirEntry, err error) error {
-			if err != nil || d.IsDir() {
-				return err
-			}
-			rel, _ := filepath.Rel(patchPatchesDir, path)
-			info, _ := d.Info()
-			allFiles = append(allFiles, patchFile{
-				relPath: filepath.ToSlash(filepath.Join("patches", rel)),
-				isPatch: true,
-				size:    info.Size(),
-			})
-			return nil
-		})
-	}
-
-	// 3. Removed Files (treat as small size)
+	// 1. Removed Files (from metadata)
 	for _, rf := range largeP.RemovedFiles {
-		allFiles = append(allFiles, patchFile{
-			relPath: "REMOVE:" + rf,
-			size:    100, // Minimal overhead
+		allEntries = append(allEntries, patchFileEntry{
+			name: "REMOVE:" + rf,
+			size: 100,
 		})
+	}
+
+	// 2. Overrides and Patches (from ZIP)
+	for name, f := range patchFiles {
+		if strings.HasPrefix(name, "overrides/") || strings.HasPrefix(name, "patches/") {
+			if f.FileInfo().IsDir() {
+				continue
+			}
+			allEntries = append(allEntries, patchFileEntry{
+				name:    name,
+				isPatch: strings.HasPrefix(name, "patches/"),
+				size:    int64(f.UncompressedSize64),
+			})
+		}
 	}
 
 	// Split into chunks
-	var chunks [][]patchFile
-	var currentChunk []patchFile
+	var chunks [][]patchFileEntry
+	var currentChunk []patchFileEntry
 	var currentSize int64
 
-	for _, f := range allFiles {
-		if currentSize > 0 && currentSize+f.size > maxSizeBytes {
+	for _, e := range allEntries {
+		if currentSize > 0 && currentSize+e.size > maxSizeBytes {
 			chunks = append(chunks, currentChunk)
 			currentChunk = nil
 			currentSize = 0
 		}
-		currentChunk = append(currentChunk, f)
-		currentSize += f.size
+		currentChunk = append(currentChunk, e)
+		currentSize += e.size
 	}
 	if len(currentChunk) > 0 {
 		chunks = append(chunks, currentChunk)
@@ -173,7 +138,7 @@ func runSplit(args []string) {
 		var chunkP resource.SBPatch
 		chunkP.FormatVersion = resource.SBPatchFormatVersion
 		chunkP.BaseID = currentBaseID
-		chunkP.Index = currentIndex // Start with current
+		chunkP.Index = currentIndex
 		chunkP.Index.ID = nextID
 		chunkP.RemovedFiles = []string{}
 
@@ -187,18 +152,17 @@ func runSplit(args []string) {
 		outFile, _ := os.Create(outName)
 		w := zip.NewWriter(outFile)
 
-		for _, f := range chunk {
-			if after, ok := strings.CutPrefix(f.relPath, "REMOVE:"); ok {
+		for _, e := range chunk {
+			if after, ok := strings.CutPrefix(e.name, "REMOVE:"); ok {
 				path := after
 				chunkP.RemovedFiles = append(chunkP.RemovedFiles, path)
 				delete(newFiles, path)
 			} else {
-				srcPath := filepath.Join(patchDir, filepath.FromSlash(f.relPath))
-				_ = addFileToZip(w, srcPath, f.relPath)
+				f := patchFiles[e.name]
+				_ = copyZipFile(w, f)
 
-				// Update index file entry from final state
-				// We need to strip "overrides/" or "patches/" to get instance path
-				instPath := f.relPath
+				// Update index file entry
+				instPath := e.name
 				if after, ok := strings.CutPrefix(instPath, "overrides/"); ok {
 					instPath = after
 				} else if after, ok := strings.CutPrefix(instPath, "patches/"); ok {
@@ -219,9 +183,7 @@ func runSplit(args []string) {
 
 		// Add patch JSON to ZIP
 		pb, _ := json.MarshalIndent(chunkP, "", "  ")
-		header := &zip.FileHeader{Name: "sb.patch.json", Method: zip.Deflate}
-		pw, _ := w.CreateHeader(header)
-		_, _ = pw.Write(pb)
+		_ = addDataToZip(w, pb, "sb.patch.json")
 
 		w.Close()
 		outFile.Close()

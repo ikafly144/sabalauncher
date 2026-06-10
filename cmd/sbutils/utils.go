@@ -2,9 +2,14 @@ package main
 
 import (
 	"archive/zip"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 )
 
@@ -21,49 +26,126 @@ func addDataToZip(w *zip.Writer, data []byte, zipPath string) error {
 	return err
 }
 
-func parallelHashOverrides(baseDir string) map[string]string {
-	results := make(map[string]string)
-	var mu sync.Mutex
-
-	if _, err := os.Stat(baseDir); err != nil {
-		return results
+func mapZipFiles(r zip.Reader) map[string]*zip.File {
+	m := make(map[string]*zip.File)
+	for _, f := range r.File {
+		m[f.Name] = f
 	}
+	return m
+}
+
+func copyZipFile(w *zip.Writer, f *zip.File) error {
+	relPath := f.Name
+	rc, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+
+	header, err := zip.FileInfoHeader(f.FileInfo())
+	if err != nil {
+		return err
+	}
+	header.Name = relPath
+	header.Method = zip.Deflate
+
+	writer, err := w.CreateHeader(header)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(writer, rc)
+	return err
+}
+
+func extractZip(src, dest string) error {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
 
 	numWorkers := runtime.NumCPU()
-	paths := make(chan string, 100)
+	type task struct {
+		f *zip.File
+	}
+	tasks := make(chan task, len(r.File))
 	var wg sync.WaitGroup
+	var lastErr error
+	var errMu sync.Mutex
 
-	for range numWorkers {
-		wg.Go(func() {
-			for path := range paths {
-				hash, err := hashFile(path)
-				if err != nil {
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for t := range tasks {
+				f := t.f
+				fpath := filepath.Join(dest, f.Name)
+				if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
+					errMu.Lock()
+					lastErr = fmt.Errorf("illegal file path: %s", fpath)
+					errMu.Unlock()
 					continue
 				}
-				rel, err := filepath.Rel(baseDir, path)
-				if err != nil {
+
+				if f.FileInfo().IsDir() {
+					_ = os.MkdirAll(fpath, os.ModePerm)
 					continue
 				}
-				rel = filepath.ToSlash(rel)
 
-				mu.Lock()
-				results[rel] = hash
-				mu.Unlock()
+				if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+					errMu.Lock()
+					lastErr = err
+					errMu.Unlock()
+					continue
+				}
+
+				outFile, err := os.Create(fpath)
+				if err != nil {
+					errMu.Lock()
+					lastErr = err
+					errMu.Unlock()
+					continue
+				}
+
+				rc, err := f.Open()
+				if err != nil {
+					outFile.Close()
+					errMu.Lock()
+					lastErr = err
+					errMu.Unlock()
+					continue
+				}
+
+				_, err = io.Copy(outFile, rc)
+				outFile.Close()
+				rc.Close()
+				if err != nil {
+					errMu.Lock()
+					lastErr = err
+					errMu.Unlock()
+				}
 			}
-		})
+		}()
 	}
 
-	_ = filepath.WalkDir(baseDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			paths <- path
-		}
-		return nil
-	})
-	close(paths)
+	for _, f := range r.File {
+		tasks <- task{f}
+	}
+	close(tasks)
 	wg.Wait()
 
-	return results
+	return lastErr
+}
+
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

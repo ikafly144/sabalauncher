@@ -2,13 +2,11 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
-	"runtime"
-	"sync"
+	"strings"
 
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 	"github.com/kr/binarydist"
@@ -20,45 +18,43 @@ func runPatch(args []string) {
 		os.Exit(1)
 	}
 
-	basePack := args[0]
-	patchPack := args[1]
-	outPack := args[2]
+	basePackPath := args[0]
+	patchPackPath := args[1]
+	outPackPath := args[2]
 
-	tempDir, err := os.MkdirTemp("", "sbutils-patch-*")
+	baseZip, err := zip.OpenReader(basePackPath)
 	if err != nil {
-		fmt.Printf("Failed to create temp dir: %v\n", err)
+		fmt.Printf("Failed to open base pack: %v\n", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(tempDir)
+	defer baseZip.Close()
 
-	baseDir := filepath.Join(tempDir, "base")
-	patchDir := filepath.Join(tempDir, "patch")
-
-	if err := extractZip(basePack, baseDir); err != nil {
-		fmt.Printf("Failed to extract base pack: %v\n", err)
-		os.Exit(1)
-	}
-	if err := extractZip(patchPack, patchDir); err != nil {
-		fmt.Printf("Failed to extract patch pack: %v\n", err)
-		os.Exit(1)
-	}
-
-	var baseIndex resource.SBPackIndex
-	baseBytes, err := os.ReadFile(filepath.Join(baseDir, "sb.index.json"))
+	patchZip, err := zip.OpenReader(patchPackPath)
 	if err != nil {
-		fmt.Printf("Failed to read base index: %v\n", err)
+		fmt.Printf("Failed to open patch pack: %v\n", err)
 		os.Exit(1)
 	}
-	if err := json.Unmarshal(baseBytes, &baseIndex); err != nil {
-		fmt.Printf("Failed to parse base index: %v\n", err)
-		os.Exit(1)
-	}
+	defer patchZip.Close()
+
+	baseFiles := mapZipFiles(baseZip.Reader)
+	patchFiles := mapZipFiles(patchZip.Reader)
 
 	var patch resource.SBPatch
-	patchBytes, _ := os.ReadFile(filepath.Join(patchDir, "sb.patch.json"))
-	if err := json.Unmarshal(patchBytes, &patch); err != nil {
-		fmt.Printf("Failed to parse sb.patch.json: %v\n", err)
+	if f, ok := patchFiles["sb.patch.json"]; ok {
+		rc, _ := f.Open()
+		json.NewDecoder(rc).Decode(&patch)
+		rc.Close()
+	} else {
+		fmt.Println("Error: patch missing sb.patch.json")
 		os.Exit(1)
+	}
+
+	// Verify base ID
+	var baseIndex resource.SBPackIndex
+	if f, ok := baseFiles["sb.index.json"]; ok {
+		rc, _ := f.Open()
+		json.NewDecoder(rc).Decode(&baseIndex)
+		rc.Close()
 	}
 
 	if baseIndex.ID != patch.BaseID {
@@ -66,103 +62,7 @@ func runPatch(args []string) {
 		os.Exit(1)
 	}
 
-	// Remove files
-	for _, f := range patch.RemovedFiles {
-		_ = os.Remove(filepath.Join(baseDir, filepath.FromSlash(f)))
-	}
-
-	// Copy overrides from patch to base
-	patchOverrides := filepath.Join(patchDir, "overrides")
-	if _, err := os.Stat(patchOverrides); err == nil {
-		if err := filepath.WalkDir(patchOverrides, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if !d.IsDir() {
-				rel, _ := filepath.Rel(patchOverrides, path)
-				destPath := filepath.Join(baseDir, "overrides", rel)
-				if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-					return err
-				}
-				return copyFile(path, destPath)
-			}
-			return nil
-		}); err != nil {
-			fmt.Printf("Failed to copy overrides: %v\n", err)
-			os.Exit(1)
-		}
-	}
-
-	// Apply patches from patch to base
-	if patch.FormatVersion >= resource.SBPatchFormatVersion {
-		patchPatches := filepath.Join(patchDir, "patches")
-		if _, err := os.Stat(patchPatches); err == nil {
-			if err := filepath.Walk(patchPatches, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if !info.IsDir() {
-					rel, _ := filepath.Rel(patchPatches, path)
-					targetPath := filepath.Join(baseDir, "overrides", rel)
-
-					if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-						return err
-					}
-
-					oldFile, err := os.Open(targetPath)
-					if err != nil {
-						fmt.Printf("Warning: failed to open base file %s for patching: %v\n", rel, err)
-						return nil
-					}
-					patchFile, err := os.Open(path)
-					if err != nil {
-						oldFile.Close()
-						fmt.Printf("Warning: failed to open patch file %s: %v\n", rel, err)
-						return nil
-					}
-
-					tempFile, err := os.CreateTemp("", "sbpatch-*")
-					if err != nil {
-						oldFile.Close()
-						patchFile.Close()
-						return err
-					}
-
-					if err := binarydist.Patch(oldFile, tempFile, patchFile); err != nil {
-						oldFile.Close()
-						patchFile.Close()
-						tempFile.Close()
-						_ = os.Remove(tempFile.Name())
-						fmt.Printf("Warning: failed to apply patch to %s: %v\n", rel, err)
-						return nil
-					}
-
-					oldFile.Close()
-					patchFile.Close()
-					tempFile.Close()
-
-					_ = os.Remove(targetPath)
-					if err := os.Rename(tempFile.Name(), targetPath); err != nil {
-						fmt.Printf("Warning: failed to rename patched file %s: %v\n", rel, err)
-					}
-				}
-				return nil
-			}); err != nil {
-				fmt.Printf("Failed to apply patches: %v\n", err)
-				os.Exit(1)
-			}
-		}
-	}
-
-	// Write new index
-	newIndexBytes, _ := json.MarshalIndent(patch.Index, "", "  ")
-	if err := os.WriteFile(filepath.Join(baseDir, "sb.index.json"), newIndexBytes, 0644); err != nil {
-		fmt.Printf("Failed to write new index: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Create output pack
-	outFile, err := os.Create(outPack)
+	outFile, err := os.Create(outPackPath)
 	if err != nil {
 		fmt.Printf("Failed to create output file: %v\n", err)
 		os.Exit(1)
@@ -172,84 +72,95 @@ func runPatch(args []string) {
 	w := zip.NewWriter(outFile)
 	defer w.Close()
 
-	// Add new sb.index.json
-	if err := addFileToZip(w, filepath.Join(baseDir, "sb.index.json"), "sb.index.json"); err != nil {
-		fmt.Printf("Failed to add index to pack: %v\n", err)
+	removedSet := make(map[string]struct{})
+	for _, f := range patch.RemovedFiles {
+		removedSet[f] = struct{}{}
 	}
 
-	// Add updated overrides (parallelize)
-	baseOverrides := filepath.Join(baseDir, "overrides")
-	if _, err := os.Stat(baseOverrides); err == nil {
-		type task struct {
-			path    string
-			relPath string
-		}
-		tasks := make(chan task, 100)
-		results := make(chan struct {
-			relPath string
-			data    []byte
-			err     error
-		}, 100)
-		var wg sync.WaitGroup
-
-		go func() {
-			_ = filepath.WalkDir(baseOverrides, func(path string, d os.DirEntry, err error) error {
-				if err != nil || d.IsDir() {
-					return err
-				}
-				rel, _ := filepath.Rel(baseDir, path)
-				tasks <- task{path: path, relPath: filepath.ToSlash(rel)}
-				return nil
-			})
-			close(tasks)
-		}()
-
-		numWorkers := runtime.NumCPU()
-		for range numWorkers {
-			wg.Go(func() {
-				for t := range tasks {
-					data, err := os.ReadFile(t.path)
-					results <- struct {
-						relPath string
-						data    []byte
-						err     error
-					}{t.relPath, data, err}
-				}
-			})
-		}
-
-		go func() {
-			wg.Wait()
-			close(results)
-		}()
-
-		for res := range results {
-			if res.err != nil {
-				fmt.Printf("Failed to read updated override %s: %v\n", res.relPath, res.err)
-				continue
-			}
-			if err := addDataToZip(w, res.data, res.relPath); err != nil {
-				fmt.Printf("Failed to add updated override %s to zip: %v\n", res.relPath, err)
-			}
+	patchedSet := make(map[string]struct{})
+	for name := range patchFiles {
+		if strings.HasPrefix(name, "patches/") {
+			rel := strings.TrimPrefix(name, "patches/")
+			patchedSet["overrides/"+rel] = struct{}{}
 		}
 	}
 
-	fmt.Printf("Successfully patched to %s\n", outPack)
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
+	addedSet := make(map[string]struct{})
+	for name := range patchFiles {
+		if strings.HasPrefix(name, "overrides/") {
+			addedSet[name] = struct{}{}
+		}
 	}
-	defer in.Close()
 
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
+	// 1. Copy unchanged files from base
+	for name, f := range baseFiles {
+		if name == "sb.index.json" {
+			continue
+		}
+		if _, removed := removedSet[name]; removed {
+			continue
+		}
+		if _, patched := patchedSet[name]; patched {
+			continue
+		}
+		if _, added := addedSet[name]; added {
+			// If it's in addedSet, it means the patch overwrites it directly
+			continue
+		}
+
+		if err := copyZipFile(w, f); err != nil {
+			fmt.Printf("Failed to copy %s: %v\n", name, err)
+		}
 	}
-	defer out.Close()
 
-	_, err = io.Copy(out, in)
-	return err
+	// 2. Apply patches
+	for name, f := range patchFiles {
+		if !strings.HasPrefix(name, "patches/") || f.FileInfo().IsDir() {
+			continue
+		}
+		rel := strings.TrimPrefix(name, "patches/")
+		baseF, ok := baseFiles["overrides/"+rel]
+		if !ok {
+			fmt.Printf("Warning: base file missing for patch %s\n", rel)
+			continue
+		}
+
+		baseRc, _ := baseF.Open()
+		patchRc, _ := f.Open()
+
+		// Use a pipe or buffer to apply patch
+		// For safety with binarydist, let's use a buffer or temp file if needed.
+		// binarydist.Patch(old, new, patch)
+		var outBuf bytes.Buffer
+		if err := binarydist.Patch(baseRc, &outBuf, patchRc); err != nil {
+			fmt.Printf("Failed to apply patch to %s: %v\n", rel, err)
+			baseRc.Close()
+			patchRc.Close()
+			continue
+		}
+		baseRc.Close()
+		patchRc.Close()
+
+		if err := addDataToZip(w, outBuf.Bytes(), "overrides/"+rel); err != nil {
+			fmt.Printf("Failed to add patched file %s to zip: %v\n", rel, err)
+		}
+	}
+
+	// 3. Add added/overwritten files from patch
+	for name, f := range patchFiles {
+		if !strings.HasPrefix(name, "overrides/") || f.FileInfo().IsDir() {
+			continue
+		}
+		if err := copyZipFile(w, f); err != nil {
+			fmt.Printf("Failed to add %s: %v\n", name, err)
+		}
+	}
+
+	// 4. Add new sb.index.json
+	newIndexBytes, _ := json.MarshalIndent(patch.Index, "", "  ")
+	if err := addDataToZip(w, newIndexBytes, "sb.index.json"); err != nil {
+		fmt.Printf("Failed to add new index: %v\n", err)
+	}
+
+	fmt.Printf("Successfully patched to %s\n", outPackPath)
 }
