@@ -46,5 +46,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: SabaLauncher Snapshot Installer
+          archive: false
           path: |
             dist/SabaLauncher.msi

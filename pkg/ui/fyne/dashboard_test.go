@@ -46,7 +46,6 @@ func (m *mockGameRunner) Stop() error {
 
 func TestShowDashboardView(t *testing.T) {
 	a := test.NewApp()
-	w := a.NewWindow("Test")
 
 	mp := new(mockInstanceManager)
 	mp.On("GetInstances").Return([]*resource.Instance{
@@ -61,15 +60,7 @@ func TestShowDashboardView(t *testing.T) {
 	ma.On("GetUserDisplay").Return("TestUser")
 	ma.On("GetMinecraftProfile").Return(&msa.MinecraftProfile{Username: "TestUser", UUID: uuid.New()}, nil).Maybe()
 
-	ui := &FyneUI{
-		app:       a,
-		window:    w,
-		instances: mp,
-		runner:    mr,
-		auth:      ma,
-		discord:   new(mockDiscordManager),
-		config:    core.DefaultConfig(),
-	}
+	ui := NewFyneUI(a, ma, mp, mr, new(mockDiscordManager), core.DefaultConfig(), "0.1.0")
 
 	ui.showDashboardView()
 
