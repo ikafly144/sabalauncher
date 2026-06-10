@@ -25,6 +25,7 @@ type MmapLogView struct {
 	mu       sync.RWMutex
 	lines    []int64
 	fileSize int64
+	maxChars int
 
 	scroll *container.Scroll
 }
@@ -41,6 +42,7 @@ func NewMmapLogView(logFile io.ReadCloser) *MmapLogView {
 	l := &MmapLogView{
 		filePath: path,
 		lines:    []int64{0},
+		maxChars: 0,
 	}
 
 	content := &logContent{view: l}
@@ -89,8 +91,20 @@ func (l *MmapLogView) watchFile() {
 			offset := l.fileSize
 			for i, b := range buf {
 				if b == '\n' {
+					lineStart := l.lines[len(l.lines)-1]
+					lineEnd := offset + int64(i)
+					lineLen := int(lineEnd - lineStart)
+					if lineLen > l.maxChars {
+						l.maxChars = min(lineLen, 2048)
+					}
 					l.lines = append(l.lines, offset+int64(i)+1)
 				}
+			}
+
+			// Check current last line
+			lastLineLen := int(newSize - l.lines[len(l.lines)-1])
+			if lastLineLen > l.maxChars {
+				l.maxChars = min(lastLineLen, 2048)
 			}
 
 			// Auto-scroll if we were near the bottom
@@ -137,8 +151,16 @@ func (r *logContentRenderer) Layout(size fyne.Size) {}
 func (r *logContentRenderer) MinSize() fyne.Size {
 	r.c.view.mu.RLock()
 	defer r.c.view.mu.RUnlock()
-	// Use a large width to allow horizontal scrolling for long lines
-	return fyne.NewSize(4000, float32(len(r.c.view.lines))*logLineHeight)
+
+	// Calculate width based on maxChars and monospace font size
+	// 0.6 is a common width/height ratio for monospace fonts
+	charWidth := theme.TextSize() * 0.6
+	width := float32(r.c.view.maxChars) * charWidth
+
+	// Add some padding
+	width += theme.Padding() * 2
+
+	return fyne.NewSize(width, float32(len(r.c.view.lines))*logLineHeight)
 }
 
 func (r *logContentRenderer) Objects() []fyne.CanvasObject {
