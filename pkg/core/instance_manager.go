@@ -108,6 +108,29 @@ func (p *progressBridge) OnProgress(taskName string, percentage float64, status 
 	}
 }
 
+func (im *instanceManager) CheckUpdate(ctx context.Context, instanceID uuid.UUID) (bool, error) {
+	inst, err := im.GetInstance(instanceID)
+	if err != nil {
+		return false, err
+	}
+
+	if inst.Upstream == nil || inst.Upstream.ManifestURL == "" {
+		return false, nil
+	}
+
+	repo, err := resource.FetchRepository(ctx, inst.Upstream.ManifestURL)
+	if err != nil {
+		return false, fmt.Errorf("failed to fetch repository manifest: %w", err)
+	}
+
+	if len(repo.Patches) == 0 {
+		return false, nil
+	}
+
+	latestPatchID := repo.Patches[len(repo.Patches)-1].ID
+	return inst.Upstream.Version != latestPatchID, nil
+}
+
 func (im *instanceManager) UpdateInstance(ctx context.Context, instanceID uuid.UUID, path string) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()

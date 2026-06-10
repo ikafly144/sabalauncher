@@ -19,6 +19,9 @@ type FyneUI struct {
 
 	version             string
 	selectedInstanceUID uuid.UUID
+
+	instanceUpdateAvailable map[uuid.UUID]bool
+	checkingUpdate          map[uuid.UUID]bool
 }
 
 func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManager, runner core.GameRunner, discord core.DiscordManager, config *core.LauncherConfig, version string) *FyneUI {
@@ -36,6 +39,9 @@ func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManag
 		discord:   discord,
 		config:    config,
 		version:   version,
+
+		instanceUpdateAvailable: make(map[uuid.UUID]bool),
+		checkingUpdate:          make(map[uuid.UUID]bool),
 	}
 }
 

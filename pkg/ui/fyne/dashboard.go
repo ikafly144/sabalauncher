@@ -41,6 +41,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 
 	if ui.selectedInstanceUID == uuid.Nil && len(instances) > 0 {
 		ui.selectedInstanceUID = instances[0].UID
+		ui.checkForInstanceUpdate(ui.selectedInstanceUID)
 	}
 
 	// Instance selection (left side) with Icons
@@ -74,6 +75,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	)
 	instanceList.OnSelected = func(id widget.ListItemID) {
 		ui.selectedInstanceUID = instances[id].UID
+		ui.checkForInstanceUpdate(ui.selectedInstanceUID)
 		ui.showMainView()
 	}
 
@@ -123,6 +125,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		detailVersion.Wrapping = fyne.TextWrapBreak
 		// Action Buttons for current instance
 		isRemote := currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != ""
+		updateAvailable := ui.instanceUpdateAvailable[currentInstance.UID]
 
 		launchFunc := func(opts *core.LaunchOptions) {
 			ctx, closeOverlay := ui.showLaunchOverlay()
@@ -156,7 +159,13 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		}
 
 		var playBtn fyne.CanvasObject
-		if currentInstance.Properties.QuickLaunch.MultiPlayer != "" || currentInstance.Properties.QuickLaunch.SinglePlayer != "" {
+		if isRemote && updateAvailable {
+			btn := widget.NewButton(i18n.T("update_btn"), func() {
+				ui.startUpdate(currentInstance.UID, "")
+			})
+			btn.Importance = widget.HighImportance
+			playBtn = btn
+		} else if currentInstance.Properties.QuickLaunch.MultiPlayer != "" || currentInstance.Properties.QuickLaunch.SinglePlayer != "" {
 			options := []string{i18n.T("normal_play")}
 			if currentInstance.Properties.QuickLaunch.MultiPlayer != "" {
 				options = append(options, i18n.T("quick_launch_multiplayer_label"))
@@ -351,4 +360,23 @@ func (ui *FyneUI) showLaunchOverlay() (context.Context, func()) {
 	return ctx, func() {
 		cancel()
 	}
+}
+
+func (ui *FyneUI) checkForInstanceUpdate(uid uuid.UUID) {
+	if ui.checkingUpdate[uid] {
+		return
+	}
+	ui.checkingUpdate[uid] = true
+	go func() {
+		available, err := ui.instances.CheckUpdate(context.Background(), uid)
+		fyne.Do(func() {
+			ui.checkingUpdate[uid] = false
+			if err == nil {
+				ui.instanceUpdateAvailable[uid] = available
+				if uid == ui.selectedInstanceUID {
+					ui.showMainView()
+				}
+			}
+		})
+	}()
 }

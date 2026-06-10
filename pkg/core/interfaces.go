@@ -61,6 +61,8 @@ type InstanceManager interface {
 	AddRemoteInstance(ctx context.Context, manifestURL string) error
 	// UpdateInstance updates an instance using an .sbpatch file.
 	UpdateInstance(ctx context.Context, instanceID uuid.UUID, patchPath string) error
+	// CheckUpdate checks if a remote update is available for the instance.
+	CheckUpdate(ctx context.Context, instanceID uuid.UUID) (bool, error)
 	// SubscribeProgress returns a channel that receives progress updates.
 	SubscribeProgress() <-chan ProgressEvent
 }

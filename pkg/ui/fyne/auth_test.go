@@ -58,6 +58,11 @@ func (m *mockInstanceManager) UpdateInstance(ctx context.Context, instanceID uui
 	return args.Error(0)
 }
 
+func (m *mockInstanceManager) CheckUpdate(ctx context.Context, instanceID uuid.UUID) (bool, error) {
+	args := m.Called(ctx, instanceID)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *mockInstanceManager) SubscribeProgress() <-chan core.ProgressEvent {
 	args := m.Called()
 	return args.Get(0).(chan core.ProgressEvent)

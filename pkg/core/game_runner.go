@@ -152,15 +152,6 @@ func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error 
 		for k, v := range quickLaunchPlaceholders {
 			config.GameArguments[i] = strings.ReplaceAll(config.GameArguments[i], "${"+k+"}", v)
 		}
-		// Also handle standard ones if they were missed by loader
-		if options != nil {
-			if options.QuickPlayMultiplayer != "" {
-				config.GameArguments[i] = strings.ReplaceAll(config.GameArguments[i], "--quickPlayMultiplayer", options.QuickPlayMultiplayer)
-			}
-			if options.QuickPlaySingleplayer != "" {
-				config.GameArguments[i] = strings.ReplaceAll(config.GameArguments[i], "--quickPlaySingleplayer", options.QuickPlaySingleplayer)
-			}
-		}
 	}
 
 	manifest, err := resource.GetClientManifestForInstance(inst)

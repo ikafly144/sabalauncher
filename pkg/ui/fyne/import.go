@@ -187,6 +187,7 @@ func (ui *FyneUI) startUpdate(instanceID uuid.UUID, path string) {
 			})
 		} else {
 			fyne.Do(func() {
+				ui.instanceUpdateAvailable[instanceID] = false
 				ui.showMainView()
 			})
 		}
