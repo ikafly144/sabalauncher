@@ -1181,13 +1181,7 @@ func RepairInstance(ctx context.Context, inst *Instance, observer ProgressObserv
 						continue
 					}
 
-					isCorrupted := false
-					for _, c := range corruptedOverrides {
-						if c == rel {
-							isCorrupted = true
-							break
-						}
-					}
+					isCorrupted := slices.Contains(corruptedOverrides, rel)
 
 					if isCorrupted {
 						targetPath := filepath.Join(inst.Path, rel)

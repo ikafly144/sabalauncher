@@ -119,10 +119,8 @@ func runPack(args []string) {
 		}()
 
 		numWorkers := runtime.NumCPU()
-		for i := 0; i < numWorkers; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		for range numWorkers {
+			wg.Go(func() {
 				for t := range tasks {
 					data, err := os.ReadFile(t.path)
 					results <- struct {
@@ -131,7 +129,7 @@ func runPack(args []string) {
 						err     error
 					}{t.relPath, data, err}
 				}
-			}()
+			})
 		}
 
 		go func() {
