@@ -58,7 +58,7 @@ func runPack(args []string) {
 			if err != nil || d.IsDir() {
 				return err
 			}
-			rel, _ := filepath.Rel(dir, path)
+			rel, _ := filepath.Rel(overridesDir, path)
 			rel = filepath.ToSlash(rel)
 			h, err := hashFile(path)
 			if err == nil {
@@ -111,7 +111,7 @@ func runPack(args []string) {
 				if err != nil || d.IsDir() {
 					return err
 				}
-				relPath, _ := filepath.Rel(dir, path)
+				relPath, _ := filepath.Rel(overridesDir, path)
 				tasks <- task{path: path, relPath: filepath.ToSlash(relPath)}
 				return nil
 			})
