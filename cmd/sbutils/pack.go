@@ -111,7 +111,7 @@ func runPack(args []string) {
 				if err != nil || d.IsDir() {
 					return err
 				}
-				relPath, _ := filepath.Rel(overridesDir, path)
+				relPath, _ := filepath.Rel(dir, path)
 				tasks <- task{path: path, relPath: filepath.ToSlash(relPath)}
 				return nil
 			})

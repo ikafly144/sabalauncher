@@ -38,8 +38,8 @@ func runSplit(args []string) {
 	}
 	defer largePatchZip.Close()
 
-	baseFiles := mapZipFiles(baseZip.Reader)
-	patchFiles := mapZipFiles(largePatchZip.Reader)
+	baseFiles := mapZipFiles(&baseZip.Reader)
+	patchFiles := mapZipFiles(&largePatchZip.Reader)
 
 	// Read base index
 	var baseIndex resource.SBPackIndex

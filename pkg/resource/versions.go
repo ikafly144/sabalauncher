@@ -577,10 +577,12 @@ func BootGame(ctx context.Context, clientManifest *ClientManifest, inst *Instanc
 	for _, library := range clientManifest.Libraries {
 		if library.Downloads.Classifiers != nil {
 			for _, classifier := range library.Downloads.Classifiers {
-				classpath.WriteString(classpathSeparator + filepath.Join(dataDir, "libraries", classifier.Path))
+				classpath.WriteString(classpathSeparator)
+				classpath.WriteString(filepath.Join(dataDir, "libraries", classifier.Path))
 			}
 		}
-		classpath.WriteString(classpathSeparator + filepath.Join(dataDir, "libraries", library.Downloads.Artifact.Path))
+		classpath.WriteString(classpathSeparator)
+		classpath.WriteString(filepath.Join(dataDir, "libraries", library.Downloads.Artifact.Path))
 	}
 
 	cmdMap := map[string]string{

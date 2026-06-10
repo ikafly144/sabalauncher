@@ -39,8 +39,8 @@ func runDiff(args []string) {
 	}
 	defer newZip.Close()
 
-	oldFiles := mapZipFiles(oldZip.Reader)
-	newFiles := mapZipFiles(newZip.Reader)
+	oldFiles := mapZipFiles(&oldZip.Reader)
+	newFiles := mapZipFiles(&newZip.Reader)
 
 	var oldIndex, newIndex resource.SBPackIndex
 	if f, ok := oldFiles["sb.index.json"]; ok {

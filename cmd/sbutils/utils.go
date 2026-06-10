@@ -26,7 +26,7 @@ func addDataToZip(w *zip.Writer, data []byte, zipPath string) error {
 	return err
 }
 
-func mapZipFiles(r zip.Reader) map[string]*zip.File {
+func mapZipFiles(r *zip.Reader) map[string]*zip.File {
 	m := make(map[string]*zip.File)
 	for _, f := range r.File {
 		m[f.Name] = f

@@ -36,8 +36,8 @@ func runPatch(args []string) {
 	}
 	defer patchZip.Close()
 
-	baseFiles := mapZipFiles(baseZip.Reader)
-	patchFiles := mapZipFiles(patchZip.Reader)
+	baseFiles := mapZipFiles(&baseZip.Reader)
+	patchFiles := mapZipFiles(&patchZip.Reader)
 
 	var patch resource.SBPatch
 	if f, ok := patchFiles["sb.patch.json"]; ok {
