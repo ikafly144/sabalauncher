@@ -56,6 +56,8 @@ var dictEN = map[string]string{
 	// import.go
 	"importing_progress":    "Importing...",
 	"cancel":                "Cancel",
+	"yes":                   "Yes",
+	"no":                    "No",
 	"registering_progress":  "Registering...",
 	"register_remote_title": "Register Remote Modpack",
 	"register_btn":          "Register",
@@ -65,8 +67,9 @@ var dictEN = map[string]string{
 	"downloading_update":    "Downloading Update",
 
 	// updater.go
-	"update_available_title": "Update Available",
-	"update_available_body":  "A new version (%s) is available.\nWould you like to update now?\n\nRelease Notes:\n%s",
+	"update_available_title":  "Update Available",
+	"update_available_header": "A new version (%s) is available. Would you like to update now?",
+	"update_available_body":   "A new version (%s) is available.\nWould you like to update now?\n\nRelease Notes:\n%s",
 
 	// instance_setup.go & setup_state.go
 	"setup_instance_name": "Setup %s",

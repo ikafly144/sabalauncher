@@ -56,6 +56,8 @@ var dictJA = map[string]string{
 	// import.go
 	"importing_progress":    "インポート中...",
 	"cancel":                "キャンセル",
+	"yes":                   "はい",
+	"no":                    "いいえ",
 	"registering_progress":  "登録中...",
 	"register_remote_title": "リモートModpackの登録",
 	"register_btn":          "登録",
@@ -65,8 +67,9 @@ var dictJA = map[string]string{
 	"downloading_update":    "アップデートをダウンロード中",
 
 	// updater.go
-	"update_available_title": "アップデート利用可能",
-	"update_available_body":  "新しいバージョン (%s) が利用可能です。\n今すぐアップデートしますか？\n\nリリースノート:\n%s",
+	"update_available_title":  "アップデート利用可能",
+	"update_available_header": "新しいバージョン (%s) が利用可能です。今すぐアップデートしますか？",
+	"update_available_body":   "新しいバージョン (%s) が利用可能です。\n今すぐアップデートしますか？\n\nリリースノート:\n%s",
 
 	// instance_setup.go & setup_state.go
 	"setup_instance_name": "%s のセットアップ",

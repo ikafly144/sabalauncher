@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ikafly144/sabalauncher/v2/pkg/core"
@@ -30,9 +31,19 @@ func (ui *FyneUI) CheckForUpdates(currentVersion string) {
 }
 
 func (ui *FyneUI) showUpdatePrompt(update *core.UpdateInfo) {
-	msg := i18n.T("update_available_body", update.Version, update.ReleaseNotes)
+	title := i18n.T("update_available_title")
+	header := widget.NewLabel(i18n.T("update_available_header", update.Version))
+	header.TextStyle = fyne.TextStyle{Bold: true}
 
-	d := dialog.NewConfirm(i18n.T("update_available_title"), msg, func(ok bool) {
+	changelog := widget.NewRichTextFromMarkdown(update.ReleaseNotes)
+	changelog.Wrapping = fyne.TextWrapWord
+
+	scroll := container.NewScroll(changelog)
+	scroll.SetMinSize(fyne.NewSize(400, 300))
+
+	content := container.NewBorder(header, nil, nil, nil, scroll)
+
+	d := dialog.NewCustomConfirm(title, i18n.T("yes"), i18n.T("no"), content, func(ok bool) {
 		if ok {
 			ui.startUpdateDownload(update.DownloadURL)
 		}
