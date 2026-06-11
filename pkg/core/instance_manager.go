@@ -157,17 +157,19 @@ func (im *instanceManager) UpdateInstance(ctx context.Context, instanceID uuid.U
 	}
 
 	var err error
+	observer := &progressBridge{ch: im.progressChan}
+
 	if path == "" {
 		// Remote update
 		if targetInst.Upstream == nil || targetInst.Upstream.ManifestURL == "" {
 			err = fmt.Errorf("instance does not have a remote manifest, please provide a patch file")
 		} else {
-			err = resource.UpdateInstanceRemote(ctx, targetInst)
+			err = resource.UpdateInstanceRemote(ctx, targetInst, observer)
 		}
 	} else if strings.HasSuffix(strings.ToLower(path), ".sbpatch") {
-		err = resource.ApplySBPatch(ctx, targetInst, path, nil)
+		err = resource.ApplySBPatch(ctx, targetInst, path, observer)
 	} else if strings.HasSuffix(strings.ToLower(path), ".sbpack") {
-		err = resource.ApplySBPack(ctx, targetInst, path, nil)
+		err = resource.ApplySBPack(ctx, targetInst, path, observer)
 	} else {
 		err = fmt.Errorf("unsupported file format: %s (expected .sbpack or .sbpatch)", filepath.Base(path))
 	}

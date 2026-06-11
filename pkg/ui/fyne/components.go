@@ -55,7 +55,7 @@ func NewMultiProgress(defaultText string) *MultiProgress {
 	m.barsContainer = container.NewVBox()
 	m.scrollBars = container.NewScroll(m.barsContainer)
 	// Give it some sensible height, it will be wrapped by other layouts usually
-	m.scrollBars.SetMinSize(fyne.NewSize(300, 400))
+	m.scrollBars.SetMinSize(fyne.NewSize(300, 150))
 	m.scrollBars.Hide() // Hide initially if empty
 
 	m.container = container.NewVBox(
@@ -93,13 +93,13 @@ func (m *MultiProgress) Update(p core.ProgressEvent) {
 			tb = &taskBar{label: lbl, progress: prog, vbox: vb}
 			m.bars[p.TaskName] = tb
 			m.barsContainer.Add(vb)
+			m.scrollBars.SetMinSize(fyne.NewSize(300, min(float32(len(m.bars))*vb.MinSize().Height, 400)))
 
 			if len(m.bars) == 1 {
 				m.scrollBars.Show()
 			}
 
 			m.barsContainer.Refresh()
-			m.scrollBars.ScrollToBottom()
 		}
 
 		tb.progress.SetValue(p.Percentage / 100.0)

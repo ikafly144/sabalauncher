@@ -220,7 +220,7 @@ func ImportRemoteSBPack(ctx context.Context, manifestURL string, destDir string,
 	latestPatchID := repo.Patches[len(repo.Patches)-1].ID
 	if inst.Upstream.Version != latestPatchID {
 		observer.OnProgress("Applying updates", 50, "", "main")
-		if err := UpdateInstanceRemoteWithObserver(ctx, inst, observer); err != nil {
+		if err := UpdateInstanceRemote(ctx, inst, observer); err != nil {
 			return nil, fmt.Errorf("failed to apply initial patches: %w", err)
 		}
 	}
@@ -229,11 +229,10 @@ func ImportRemoteSBPack(ctx context.Context, manifestURL string, destDir string,
 	return inst, nil
 }
 
-func UpdateInstanceRemote(ctx context.Context, inst *Instance) error {
-	return UpdateInstanceRemoteWithObserver(ctx, inst, &NopProgressObserver{})
-}
-
-func UpdateInstanceRemoteWithObserver(ctx context.Context, inst *Instance, observer ProgressObserver) error {
+func UpdateInstanceRemote(ctx context.Context, inst *Instance, observer ProgressObserver) error {
+	if observer == nil {
+		observer = &NopProgressObserver{}
+	}
 	if inst.Upstream == nil || inst.Upstream.ManifestURL == "" {
 		return fmt.Errorf("instance does not have a remote manifest")
 	}
