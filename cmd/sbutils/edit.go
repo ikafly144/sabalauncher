@@ -58,14 +58,24 @@ func printEditUsage() {
 	fmt.Println("      Remove files entry by path (repeatable)")
 	fmt.Println("  -icon <path>")
 	fmt.Println("      Set pack icon path")
+	fmt.Println("  -dropicon")
+	fmt.Println("      Clear pack icon path")
 	fmt.Println("  -description <text>")
 	fmt.Println("      Set pack description")
+	fmt.Println("  -dropdescription")
+	fmt.Println("      Clear pack description")
 	fmt.Println("  -memory <mb>")
 	fmt.Println("      Set recommended memory in MB")
+	fmt.Println("  -dropmemory")
+	fmt.Println("      Clear recommended memory")
 	fmt.Println("  -quick-multi <address>")
 	fmt.Println("      Set quick launch multiplayer server address")
+	fmt.Println("  -dropquick-multi")
+	fmt.Println("      Clear quick launch multiplayer server address")
 	fmt.Println("  -quick-single <world>")
 	fmt.Println("      Set quick launch singleplayer world name/id")
+	fmt.Println("  -dropquick-single")
+	fmt.Println("      Clear quick launch singleplayer world name/id")
 	fmt.Println("  -print")
 	fmt.Println("      Print resulting JSON to stdout without writing file")
 }
@@ -97,10 +107,15 @@ func executeEdit(args []string, out io.Writer) error {
 
 	// Properties
 	icon := fs.String("icon", "", "set pack icon path")
+	dropIcon := fs.Bool("dropicon", false, "clear pack icon path")
 	desc := fs.String("description", "", "set pack description")
+	dropDesc := fs.Bool("dropdescription", false, "clear pack description")
 	memory := fs.Int("memory", 0, "set recommended memory in MB")
+	dropMemory := fs.Bool("dropmemory", false, "clear recommended memory")
 	quickMulti := fs.String("quick-multi", "", "set quick launch multiplayer server address")
+	dropQuickMulti := fs.Bool("dropquick-multi", false, "clear quick launch multiplayer server address")
 	quickSingle := fs.String("quick-single", "", "set quick launch singleplayer world name/id")
+	dropQuickSingle := fs.Bool("dropquick-single", false, "clear quick launch singleplayer world name/id")
 
 	fs.BoolVar(&printOnly, "print", false, "print resulting JSON without writing file")
 
@@ -113,7 +128,9 @@ func executeEdit(args []string, out io.Writer) error {
 
 	if name == "" && idStr == "" && len(requireSpecs) == 0 && len(dropRequires) == 0 &&
 		len(fileEdits) == 0 && len(dropFiles) == 0 &&
-		*icon == "" && *desc == "" && *memory == 0 && *quickMulti == "" && *quickSingle == "" {
+		*icon == "" && !*dropIcon && *desc == "" && !*dropDesc &&
+		*memory == 0 && !*dropMemory && *quickMulti == "" && !*dropQuickMulti &&
+		*quickSingle == "" && !*dropQuickSingle {
 		return fmt.Errorf("no edit flags provided")
 	}
 
@@ -143,19 +160,33 @@ func executeEdit(args []string, out io.Writer) error {
 	}
 
 	// Apply properties
-	if *icon != "" {
+	if *dropIcon {
+		index.Properties.Icon = ""
+	} else if *icon != "" {
 		index.Properties.Icon = *icon
 	}
-	if *desc != "" {
+
+	if *dropDesc {
+		index.Properties.Description = ""
+	} else if *desc != "" {
 		index.Properties.Description = *desc
 	}
-	if *memory != 0 {
+
+	if *dropMemory {
+		index.Properties.Memory = 0
+	} else if *memory != 0 {
 		index.Properties.Memory = *memory
 	}
-	if *quickMulti != "" {
+
+	if *dropQuickMulti {
+		index.Properties.QuickLaunch.MultiPlayer = ""
+	} else if *quickMulti != "" {
 		index.Properties.QuickLaunch.MultiPlayer = *quickMulti
 	}
-	if *quickSingle != "" {
+
+	if *dropQuickSingle {
+		index.Properties.QuickLaunch.SinglePlayer = ""
+	} else if *quickSingle != "" {
 		index.Properties.QuickLaunch.SinglePlayer = *quickSingle
 	}
 
