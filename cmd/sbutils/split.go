@@ -45,7 +45,10 @@ func runSplit(args []string) {
 	var baseIndex resource.SBPackIndex
 	if f, ok := baseFiles["sb.index.json"]; ok {
 		rc, _ := f.Open()
-		json.NewDecoder(rc).Decode(&baseIndex)
+		if err := json.NewDecoder(rc).Decode(&baseIndex); err != nil {
+			fmt.Printf("Failed to decode base index: %v\n", err)
+			os.Exit(1)
+		}
 		rc.Close()
 	}
 
@@ -53,7 +56,10 @@ func runSplit(args []string) {
 	var largeP resource.SBPatch
 	if f, ok := patchFiles["sb.patch.json"]; ok {
 		rc, _ := f.Open()
-		json.NewDecoder(rc).Decode(&largeP)
+		if err := json.NewDecoder(rc).Decode(&largeP); err != nil {
+			fmt.Printf("Failed to decode large patch: %v\n", err)
+			os.Exit(1)
+		}
 		rc.Close()
 	}
 

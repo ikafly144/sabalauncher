@@ -1220,9 +1220,23 @@ func RepairInstance(ctx context.Context, inst *Instance, observer ProgressObserv
 						if slices.Contains(corruptedOverrides, rel) {
 							targetPath := filepath.Join(inst.Path, rel)
 							_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
-							rc, _ := zf.Open()
-							out, _ := os.Create(targetPath)
-							io.Copy(out, rc)
+							rc, err := zf.Open()
+							if err != nil {
+								slog.Error("Failed to open file for repaired override", "path", rel, "patch", p.ID, "err", err)
+								continue
+							}
+							out, err := os.Create(targetPath)
+							if err != nil {
+								slog.Error("Failed to create file for repaired override", "path", rel, "patch", p.ID, "err", err)
+								rc.Close()
+								continue
+							}
+							if _, err := io.Copy(out, rc); err != nil {
+								slog.Error("Failed to copy repaired override", "path", rel, "patch", p.ID, "err", err)
+								out.Close()
+								rc.Close()
+								continue
+							}
 							rc.Close()
 							out.Close()
 							slog.Info("Repaired override from patch", "path", rel, "patch", p.ID)

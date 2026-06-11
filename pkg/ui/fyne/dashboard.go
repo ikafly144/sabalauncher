@@ -289,8 +289,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			widget.ShowPopUpMenuAtPosition(menu, ui.window.Canvas(), position)
 		}
 
-		var actions fyne.CanvasObject
-		actions = container.NewBorder(nil, nil, nil, actionsBtn, playBtn)
+		var actions fyne.CanvasObject = container.NewBorder(nil, nil, nil, actionsBtn, playBtn)
 
 		detailContainer := container.NewVBox(
 			container.NewHBox(largeIcon, detailTitle),

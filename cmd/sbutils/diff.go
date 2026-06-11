@@ -45,7 +45,10 @@ func runDiff(args []string) {
 	var oldIndex, newIndex resource.SBPackIndex
 	if f, ok := oldFiles["sb.index.json"]; ok {
 		rc, _ := f.Open()
-		json.NewDecoder(rc).Decode(&oldIndex)
+		if err := json.NewDecoder(rc).Decode(&oldIndex); err != nil {
+			fmt.Printf("Failed to decode old index: %v\n", err)
+			os.Exit(1)
+		}
 		rc.Close()
 	} else {
 		fmt.Println("Error: old pack missing sb.index.json")
@@ -53,8 +56,16 @@ func runDiff(args []string) {
 	}
 
 	if f, ok := newFiles["sb.index.json"]; ok {
-		rc, _ := f.Open()
-		json.NewDecoder(rc).Decode(&newIndex)
+		rc, err := f.Open()
+		if err != nil {
+			fmt.Printf("Failed to open new index: %v\n", err)
+			os.Exit(1)
+		}
+		if err := json.NewDecoder(rc).Decode(&newIndex); err != nil {
+			rc.Close()
+			fmt.Printf("Failed to decode new index: %v\n", err)
+			os.Exit(1)
+		}
 		rc.Close()
 	} else {
 		fmt.Println("Error: new pack missing sb.index.json")
@@ -116,9 +127,16 @@ func runDiff(args []string) {
 		// We could optimize this by not reading everything, but for small files it's fine.
 		// Actually, we already have the hash if we extracted it, but we are avoiding extraction.
 		// Let's just calculate it for now.
-		rc, _ := f.Open()
+		rc, err := f.Open()
+		if err != nil {
+			fmt.Printf("Failed to open file %s: %v\n", name, err)
+			os.Exit(1)
+		}
 		h := sha256.New()
-		io.Copy(h, rc)
+		if _, err = io.Copy(h, rc); err != nil {
+			fmt.Printf("Failed to read file %s: %v\n", name, err)
+			os.Exit(1)
+		}
 		rc.Close()
 		newHashes[rel] = hex.EncodeToString(h.Sum(nil))
 	}
