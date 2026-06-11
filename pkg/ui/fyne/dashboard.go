@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -32,6 +34,18 @@ func (ui *FyneUI) showMainView() {
 
 func (ui *FyneUI) showDashboardView() {
 	ui.showMainView()
+}
+
+func (ui *FyneUI) getInstanceIcon(inst *resource.Instance) fyne.Resource {
+	if inst.Properties.Icon != "" {
+		iconPath := filepath.Join(inst.Path, inst.Properties.Icon)
+		if _, err := os.Stat(iconPath); err == nil {
+			if res, err := fyne.LoadResourceFromPath(iconPath); err == nil {
+				return res
+			}
+		}
+	}
+	return resourceDefaultIcon
 }
 
 func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
@@ -63,7 +77,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 			icon := box.Objects[0].(*canvas.Image)
 			label := box.Objects[1].(*widget.Label)
 
-			icon.Resource = resourceDefaultIcon
+			icon.Resource = ui.getInstanceIcon(p)
 			icon.Refresh()
 
 			label.SetText(p.Name)
@@ -104,6 +118,11 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	if found {
 		detailTitle := widget.NewLabelWithStyle(currentInstance.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 
+		// Icon
+		largeIcon := canvas.NewImageFromResource(ui.getInstanceIcon(currentInstance))
+		largeIcon.SetMinSize(fyne.NewSize(64, 64))
+		largeIcon.FillMode = canvas.ImageFillContain
+
 		versionStr := i18n.T("unknown_version")
 		if currentInstance.Upstream != nil && currentInstance.Upstream.Version != "" {
 			patchVer := currentInstance.Upstream.Version
@@ -124,6 +143,17 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 
 		detailVersion := widget.NewLabel(i18n.T("version_label", versionStr))
 		detailVersion.Wrapping = fyne.TextWrapBreak
+
+		// Description
+		var description fyne.CanvasObject
+		if currentInstance.Properties.Description != "" {
+			desc := widget.NewRichTextFromMarkdown(currentInstance.Properties.Description)
+			desc.Wrapping = fyne.TextWrapWord
+			description = desc
+		} else {
+			description = layout.NewSpacer()
+		}
+
 		// Action Buttons for current instance
 		isRemote := currentInstance.Upstream != nil && currentInstance.Upstream.ManifestURL != ""
 		updateAvailable := ui.instanceUpdateAvailable[currentInstance.UID]
@@ -239,9 +269,10 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		actions = container.NewBorder(nil, nil, nil, actionsBtn, playBtn)
 
 		detailContainer := container.NewVBox(
-			detailTitle,
+			container.NewHBox(largeIcon, detailTitle),
 			detailVersion,
 			widget.NewSeparator(),
+			description,
 			layout.NewSpacer(),
 			container.NewPadded(actions),
 		)
