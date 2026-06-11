@@ -26,8 +26,9 @@ import (
 const uiMaxFilenameLength = 30
 
 const (
-	SBPackFormatVersion  = 2
-	SBPatchFormatVersion = 3
+	SBPackFormatVersion    = 2
+	SBPatchFormatVersion   = 3
+	MaxConcurrentDownloads = 5
 )
 
 // SBPackIndex represents the content of sb.index.json
@@ -275,11 +276,14 @@ func UpdateInstanceRemoteWithObserver(ctx context.Context, inst *Instance, obser
 	// 1. Parallel Download all patches
 	var wg sync.WaitGroup
 	downloadErrs := make(chan error, totalPatches)
+	sem := make(chan struct{}, MaxConcurrentDownloads)
 
 	for _, p := range patchesToApply {
 		wg.Add(1)
 		go func(p SBRepoPatch) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			_, err := downloadAndVerifyRepoPatch(ctx, p, observer)
 			if err != nil {
 				downloadErrs <- fmt.Errorf("failed to download patch %s: %w", p.ID, err)
@@ -1077,7 +1081,14 @@ func RepairInstance(ctx context.Context, inst *Instance, observer ProgressObserv
 
 	// 2. Identify corrupted/missing files from index
 	toRepair := []SBFile{}
+	totalVerify := len(index.Files) + len(index.Hashes)
+	verifiedCount := 0
+
 	for _, f := range index.Files {
+		verifiedCount++
+		percentage := float64(verifiedCount) / float64(totalVerify) * 100.0
+		observer.OnProgress(fmt.Sprintf("Verifying %s", filepath.Base(f.Path)), percentage, "", "main")
+
 		targetPath := filepath.Join(inst.Path, f.Path)
 		if _, err := os.Stat(targetPath); os.IsNotExist(err) {
 			toRepair = append(toRepair, f)
@@ -1092,6 +1103,10 @@ func RepairInstance(ctx context.Context, inst *Instance, observer ProgressObserv
 
 	corruptedOverrides := []string{}
 	for rel, expectedHash := range index.Hashes {
+		verifiedCount++
+		percentage := float64(verifiedCount) / float64(totalVerify) * 100.0
+		observer.OnProgress(fmt.Sprintf("Verifying %s", filepath.Base(rel)), percentage, "", "main")
+
 		targetPath := filepath.Join(inst.Path, rel)
 		if _, err := os.Stat(targetPath); os.IsNotExist(err) {
 			corruptedOverrides = append(corruptedOverrides, rel)
@@ -1111,27 +1126,47 @@ func RepairInstance(ctx context.Context, inst *Instance, observer ProgressObserv
 
 	// 3. Repair SBFiles (downloads)
 	totalRepair := len(toRepair)
+	var repairWg sync.WaitGroup
+	repairErrs := make(chan error, totalRepair)
+	repairSem := make(chan struct{}, MaxConcurrentDownloads)
+
 	for i, f := range toRepair {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
+		repairWg.Add(1)
+		go func(i int, f SBFile) {
+			defer repairWg.Done()
+			repairSem <- struct{}{}
+			defer func() { <-repairSem }()
 
-		percentage := float64(i) / float64(totalRepair) * 100.0
-		observer.OnProgress(fmt.Sprintf("Repairing mod %d/%d: %s", i+1, totalRepair, filepath.Base(f.Path)), percentage, "", "main")
-
-		targetPath := filepath.Join(inst.Path, f.Path)
-		_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
-
-		var downloadErr error
-		for _, url := range f.Downloads {
-			downloadErr = downloadWithVerify(ctx, url, targetPath, f.Hashes, observer, "Downloading "+filepath.Base(f.Path), "repair")
-			if downloadErr == nil {
-				break
+			if err := ctx.Err(); err != nil {
+				repairErrs <- err
+				return
 			}
-		}
 
-		if downloadErr != nil {
-			return fmt.Errorf("failed to repair file %s: %w", f.Path, downloadErr)
+			percentage := float64(i) / float64(totalRepair) * 100.0
+			observer.OnProgress(fmt.Sprintf("Repairing mod %d/%d: %s", i+1, totalRepair, filepath.Base(f.Path)), percentage, "", "main")
+
+			targetPath := filepath.Join(inst.Path, f.Path)
+			_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
+
+			var downloadErr error
+			for _, url := range f.Downloads {
+				downloadErr = downloadWithVerify(ctx, url, targetPath, f.Hashes, observer, "Downloading "+filepath.Base(f.Path), "repair")
+				if downloadErr == nil {
+					break
+				}
+			}
+
+			if downloadErr != nil {
+				repairErrs <- fmt.Errorf("failed to repair file %s: %w", f.Path, downloadErr)
+			}
+		}(i, f)
+	}
+
+	repairWg.Wait()
+	close(repairErrs)
+	for err := range repairErrs {
+		if err != nil {
+			return err
 		}
 	}
 
@@ -1147,54 +1182,62 @@ func RepairInstance(ctx context.Context, inst *Instance, observer ProgressObserv
 			}
 
 			// We need to re-download patches and re-extract corrupted files.
-			// This is a bit heavy, but safe.
-			// TODO: Optimize by only downloading relevant patches if possible.
+			var patchWg sync.WaitGroup
+			patchErrs := make(chan error, len(repo.Patches))
+			patchSem := make(chan struct{}, MaxConcurrentDownloads)
+
 			for _, p := range repo.Patches {
-				if err := ctx.Err(); err != nil {
+				patchWg.Add(1)
+				go func(p SBRepoPatch) {
+					defer patchWg.Done()
+					patchSem <- struct{}{}
+					defer func() { <-patchSem }()
+
+					if err := ctx.Err(); err != nil {
+						patchErrs <- err
+						return
+					}
+
+					localPath, err := downloadAndVerifyRepoPatch(ctx, p, observer)
+					if err != nil {
+						patchErrs <- fmt.Errorf("failed to download patch for repair: %w", err)
+						return
+					}
+
+					reader, err := zip.OpenReader(localPath)
+					if err != nil {
+						return
+					}
+					defer reader.Close()
+
+					for _, zf := range reader.File {
+						var rel string
+						if name, ok := strings.CutPrefix(zf.Name, "overrides/"); ok {
+							rel = name
+						} else {
+							continue
+						}
+
+						if slices.Contains(corruptedOverrides, rel) {
+							targetPath := filepath.Join(inst.Path, rel)
+							_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
+							rc, _ := zf.Open()
+							out, _ := os.Create(targetPath)
+							io.Copy(out, rc)
+							rc.Close()
+							out.Close()
+							slog.Info("Repaired override from patch", "path", rel, "patch", p.ID)
+						}
+					}
+				}(p)
+			}
+
+			patchWg.Wait()
+			close(patchErrs)
+			for err := range patchErrs {
+				if err != nil {
 					return err
 				}
-
-				// Check if this patch contains any of our corrupted files
-				// Since we don't have a file-to-patch map, we have to check them all or re-apply.
-				// For simplicity, re-extract from all patches if needed.
-				localPath, err := downloadAndVerifyRepoPatch(ctx, p, observer)
-				if err != nil {
-					return fmt.Errorf("failed to download patch for repair: %w", err)
-				}
-
-				reader, err := zip.OpenReader(localPath)
-				if err != nil {
-					continue
-				}
-
-				for _, zf := range reader.File {
-					var rel string
-					if name, ok := strings.CutPrefix(zf.Name, "overrides/"); ok {
-						rel = name
-					} else if _, ok := strings.CutPrefix(zf.Name, "patches/"); ok {
-						// Binary patches are tricky because they depend on the base.
-						// If an override is corrupted, and it was last modified by a patch,
-						// we might need to re-apply the patch chain.
-						// For now, let's focus on direct overrides.
-						continue
-					} else {
-						continue
-					}
-
-					isCorrupted := slices.Contains(corruptedOverrides, rel)
-
-					if isCorrupted {
-						targetPath := filepath.Join(inst.Path, rel)
-						_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
-						rc, _ := zf.Open()
-						out, _ := os.Create(targetPath)
-						io.Copy(out, rc)
-						rc.Close()
-						out.Close()
-						slog.Info("Repaired override from patch", "path", rel, "patch", p.ID)
-					}
-				}
-				reader.Close()
 			}
 		}
 	}
