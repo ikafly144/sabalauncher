@@ -208,10 +208,21 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 		}
 
 		if path == "" {
-			if _, err := os.Stat(p.ID + ".sbpack"); err == nil {
-				path = p.ID + ".sbpack"
-			} else if _, err := os.Stat(p.ID + ".sbpatch"); err == nil {
-				path = p.ID + ".sbpatch"
+			ext := ".sbpatch"
+			if p.Type == resource.SBPatchTypePack {
+				ext = ".sbpack"
+			}
+			if _, err := os.Stat(p.ID + ext); err == nil {
+				path = p.ID + ext
+			} else {
+				// Fallback to other extension if primary not found
+				altExt := ".sbpack"
+				if ext == ".sbpack" {
+					altExt = ".sbpatch"
+				}
+				if _, err := os.Stat(p.ID + altExt); err == nil {
+					path = p.ID + altExt
+				}
 			}
 		}
 
@@ -248,7 +259,11 @@ func validateRepoGraph(repo *resource.SBRepository, currentFile string) error {
 				break
 			}
 
-			curr = internalToManifest[m.baseID]
+			next, ok := internalToManifest[m.baseID]
+			if !ok {
+				return fmt.Errorf("reached dead end at %s: baseID %s not found in manifest", curr, m.baseID)
+			}
+			curr = next
 		}
 	}
 
