@@ -46,6 +46,8 @@ var dictJA = map[string]string{
 	"account_section_title":           "アカウント",
 	"launcher_section_title":          "ランチャー設定",
 	"max_memory_label":                "最大割り当てメモリ (MB)",
+	"memory_limit_title":              "メモリ割り当ての制限",
+	"memory_limit_body":               "システム安定のため、割り当てメモリを搭載メモリの80%%に制限しました。\n予定: %d MB -> 制限後: %d MB",
 	"username_label":                  "ユーザー名: %s",
 	"uuid_label":                      "UUID: %s",
 

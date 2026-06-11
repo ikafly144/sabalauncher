@@ -73,6 +73,7 @@ type InstanceManager interface {
 type LaunchOptions struct {
 	QuickPlayMultiplayer  string
 	QuickPlaySingleplayer string
+	MemoryMB              uint64
 }
 
 // GameRunner defines the interface for launching and managing the game process.

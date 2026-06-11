@@ -130,7 +130,9 @@ func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error 
 	}
 
 	maxMemory := r.config.MaxMemory
-	if inst.Properties.Memory > 0 {
+	if options != nil && options.MemoryMB > 0 {
+		maxMemory = options.MemoryMB
+	} else if inst.Properties.Memory > 0 {
 		if uint64(inst.Properties.Memory) > maxMemory {
 			maxMemory = uint64(inst.Properties.Memory)
 		}

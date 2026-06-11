@@ -3,5 +3,13 @@
 package osinfo
 
 func osInfo() OsInfo {
-	panic("osInfo not implemented for this platform")
+	return OsInfo{
+		Name:    "Other",
+		Version: "unknown",
+	}
+}
+
+func getTotalPhysicalMemory() uint64 {
+	// Fallback: return 0 or a large value? 0 means we can't check.
+	return 0
 }

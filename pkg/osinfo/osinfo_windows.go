@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"regexp"
 	"syscall"
+	"unsafe"
 )
 
 func osInfo() OsInfo {
@@ -32,4 +33,29 @@ func getWindowsVersion() string {
 		return ""
 	}
 	return matches[0]
+}
+
+type memoryStatusEx struct {
+	cbSize                  uint32
+	dwMemoryLoad            uint32
+	ullTotalPhys            uint64
+	ullAvailPhys            uint64
+	ullTotalPageFile        uint64
+	ullAvailPageFile        uint64
+	ullTotalVirtual         uint64
+	ullAvailVirtual         uint64
+	ullAvailExtendedVirtual uint64
+}
+
+func getTotalPhysicalMemory() uint64 {
+	kernel32 := syscall.NewLazyDLL("kernel32.dll")
+	globalMemoryStatusEx := kernel32.NewProc("GlobalMemoryStatusEx")
+
+	var ms memoryStatusEx
+	ms.cbSize = uint32(unsafe.Sizeof(ms))
+	ret, _, _ := globalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&ms)))
+	if ret == 0 {
+		return 0
+	}
+	return ms.ullTotalPhys
 }

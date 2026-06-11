@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ikafly144/sabalauncher/v2/pkg/core"
 	"github.com/ikafly144/sabalauncher/v2/pkg/i18n"
+	"github.com/ikafly144/sabalauncher/v2/pkg/osinfo"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 )
 
@@ -159,34 +160,57 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		updateAvailable := ui.instanceUpdateAvailable[currentInstance.UID]
 
 		launchFunc := func(opts *core.LaunchOptions) {
-			ctx, closeOverlay := ui.showLaunchOverlay()
-			go func() {
-				if isRemote {
-					// Force update before launch
-					if err := ui.instances.UpdateInstance(ctx, currentInstance.UID, ""); err != nil {
-						fyne.Do(func() {
-							closeOverlay()
-							if !errors.Is(err, context.Canceled) {
-								dialog.ShowError(fmt.Errorf("failed to update before play: %w", err), ui.window)
-							}
-							ui.showMainView()
-						})
-						return
-					}
-				}
+			if opts == nil {
+				opts = &core.LaunchOptions{}
+			}
 
-				_ = ui.discord.SetActivity(currentInstance.UID)
-				if err := ui.runner.Launch(currentInstance.UID, opts); err != nil {
+			intendedMemory := ui.config.MaxMemory
+			if currentInstance.Properties.Memory > 0 && uint64(currentInstance.Properties.Memory) > intendedMemory {
+				intendedMemory = uint64(currentInstance.Properties.Memory)
+			}
+
+			totalMemory := osinfo.GetTotalPhysicalMemory()
+			limitMB := uint64(float64(totalMemory) * 0.8 / (1024 * 1024))
+
+			doLaunch := func() {
+				ctx, closeOverlay := ui.showLaunchOverlay()
+				go func() {
+					if isRemote {
+						// Force update before launch
+						if err := ui.instances.UpdateInstance(ctx, currentInstance.UID, ""); err != nil {
+							fyne.Do(func() {
+								closeOverlay()
+								if !errors.Is(err, context.Canceled) {
+									dialog.ShowError(fmt.Errorf("failed to update before play: %w", err), ui.window)
+								}
+								ui.showMainView()
+							})
+							return
+						}
+					}
+
+					_ = ui.discord.SetActivity(currentInstance.UID)
+					if err := ui.runner.Launch(currentInstance.UID, opts); err != nil {
+						fyne.Do(func() {
+							dialog.ShowError(err, ui.window)
+						})
+					}
+					_ = ui.discord.ClearActivity()
 					fyne.Do(func() {
-						dialog.ShowError(err, ui.window)
+						closeOverlay()
+						ui.showMainView()
 					})
-				}
-				_ = ui.discord.ClearActivity()
-				fyne.Do(func() {
-					closeOverlay()
-					ui.showMainView()
-				})
-			}()
+				}()
+			}
+
+			if totalMemory > 0 && intendedMemory > limitMB {
+				opts.MemoryMB = limitMB
+				d := dialog.NewInformation(i18n.T("memory_limit_title"), i18n.T("memory_limit_body", intendedMemory, limitMB), ui.window)
+				d.SetOnClosed(doLaunch)
+				d.Show()
+			} else {
+				doLaunch()
+			}
 		}
 
 		var playBtn fyne.CanvasObject

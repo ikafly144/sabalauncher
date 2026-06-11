@@ -46,6 +46,8 @@ var dictEN = map[string]string{
 	"account_section_title":           "Account",
 	"launcher_section_title":          "Launcher Settings",
 	"max_memory_label":                "Max Memory (MB)",
+	"memory_limit_title":              "Memory Allocation Limited",
+	"memory_limit_body":               "To ensure system stability, memory allocation has been limited to 80%% of physical memory.\nRequested: %d MB -> Capped: %d MB",
 	"username_label":                  "Username: %s",
 	"uuid_label":                      "UUID: %s",
 
