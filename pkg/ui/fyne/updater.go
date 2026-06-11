@@ -53,11 +53,16 @@ func (ui *FyneUI) showUpdatePrompt(update *core.UpdateInfo) {
 }
 
 func (ui *FyneUI) startUpdateDownload(url string) {
-	progress := dialog.NewCustom(i18n.T("downloading_update"), i18n.T("cancel"), widget.NewProgressBarInfinite(), ui.window)
+	prog := widget.NewProgressBar()
+	progress := dialog.NewCustom(i18n.T("downloading_update"), i18n.T("cancel"), prog, ui.window)
 	progress.Show()
 
 	go func() {
-		err := core.DownloadAndRunInstaller(url)
+		err := core.DownloadAndRunInstaller(url, func(percentage float64) {
+			fyne.Do(func() {
+				prog.SetValue(percentage / 100.0)
+			})
+		})
 		if err != nil {
 			fyne.Do(func() {
 				progress.Hide()

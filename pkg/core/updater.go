@@ -78,7 +78,7 @@ func CheckForUpdate(currentVersionStr string) (*UpdateInfo, error) {
 	}, nil
 }
 
-func DownloadAndRunInstaller(downloadURL string) error {
+func DownloadAndRunInstaller(downloadURL string, onProgress func(percentage float64)) error {
 	slog.Info("Downloading installer", "url", downloadURL)
 	resp, err := http.Get(downloadURL)
 	if err != nil {
@@ -99,9 +99,27 @@ func DownloadAndRunInstaller(downloadURL string) error {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to save installer: %w", err)
+	total := resp.ContentLength
+	var downloaded int64
+
+	buffer := make([]byte, 32*1024)
+	for {
+		n, err := resp.Body.Read(buffer)
+		if n > 0 {
+			if _, werr := out.Write(buffer[:n]); werr != nil {
+				return fmt.Errorf("failed to write to temp file: %w", werr)
+			}
+			downloaded += int64(n)
+			if total > 0 && onProgress != nil {
+				onProgress(float64(downloaded) / float64(total) * 100.0)
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read download stream: %w", err)
+		}
 	}
 	out.Close()
 
