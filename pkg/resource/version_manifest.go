@@ -119,7 +119,7 @@ func EvaluateGameArguments(args []GameArgument, features map[string]bool) []stri
 				if rule.Features != nil {
 					for featureName, required := range rule.Features {
 						enabled := features[featureName]
-						if enabled != required {
+						if !enabled && required {
 							ruleMatched = false
 							break
 						}
