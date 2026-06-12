@@ -116,6 +116,7 @@ func runPatch(args []string) {
 
 		if err := copyZipFile(w, f); err != nil {
 			fmt.Printf("Failed to copy %s: %v\n", name, err)
+			os.Exit(1)
 		}
 	}
 
