@@ -4,7 +4,10 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -125,7 +128,7 @@ func runSplit(args []string) {
 	// Map of final index files for easy lookup
 	finalFilesMap := make(map[string]resource.SBFile)
 	for _, f := range largeP.Index.Files {
-		finalFilesMap[f.Path] = f
+		finalFilesMap[filepath.ToSlash(f.Path)] = f
 	}
 
 	for i, chunk := range chunks {
@@ -148,10 +151,19 @@ func runSplit(args []string) {
 		chunkP.Index.ID = nextID
 		chunkP.RemovedFiles = []string{}
 
+		// If it's the last chunk, ensure all other metadata fields are updated to final state
+		if isLast {
+			chunkP.Index.Name = largeP.Index.Name
+			chunkP.Index.FormatVersion = largeP.Index.FormatVersion
+			chunkP.Index.Properties = largeP.Index.Properties
+			chunkP.Index.Dependencies = largeP.Index.Dependencies
+			chunkP.Index.Hashes = largeP.Index.Hashes
+		}
+
 		// Update index files and collect items for ZIP
 		newFiles := make(map[string]resource.SBFile)
 		for _, f := range currentIndex.Files {
-			newFiles[f.Path] = f
+			newFiles[filepath.ToSlash(f.Path)] = f
 		}
 
 		// Prepare ZIP
@@ -160,7 +172,7 @@ func runSplit(args []string) {
 
 		for _, e := range chunk {
 			if after, ok := strings.CutPrefix(e.name, "REMOVE:"); ok {
-				path := after
+				path := filepath.ToSlash(after)
 				chunkP.RemovedFiles = append(chunkP.RemovedFiles, path)
 				delete(newFiles, path)
 			} else {
@@ -174,6 +186,7 @@ func runSplit(args []string) {
 				} else if after, ok := strings.CutPrefix(instPath, "patches/"); ok {
 					instPath = after
 				}
+				instPath = filepath.ToSlash(instPath)
 
 				if finalF, ok := finalFilesMap[instPath]; ok {
 					newFiles[instPath] = finalF
@@ -183,8 +196,10 @@ func runSplit(args []string) {
 
 		// Rebuild index files slice
 		chunkP.Index.Files = make([]resource.SBFile, 0, len(newFiles))
-		for _, f := range newFiles {
-			chunkP.Index.Files = append(chunkP.Index.Files, f)
+		// Sort keys for deterministic output
+		paths := slices.Sorted(maps.Keys(newFiles))
+		for _, p := range paths {
+			chunkP.Index.Files = append(chunkP.Index.Files, newFiles[p])
 		}
 
 		// Add patch JSON to ZIP
@@ -201,3 +216,4 @@ func runSplit(args []string) {
 
 	fmt.Println("Successfully split patch.")
 }
+
