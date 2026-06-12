@@ -2,9 +2,9 @@ package main
 
 import (
 	"archive/zip"
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -131,23 +131,55 @@ func runPatch(args []string) {
 			continue
 		}
 
-		baseRc, _ := baseF.Open()
-		patchRc, _ := f.Open()
+		baseRc, err := baseF.Open()
+		if err != nil {
+			fmt.Printf("Failed to open base file %s: %v\n", rel, err)
+			continue
+		}
+		patchRc, err := f.Open()
+		if err != nil {
+			baseRc.Close()
+			fmt.Printf("Failed to open patch file %s: %v\n", name, err)
+			continue
+		}
 
-		// Use a pipe or buffer to apply patch
-		// For safety with binarydist, let's use a buffer or temp file if needed.
-		// binarydist.Patch(old, new, patch)
-		var outBuf bytes.Buffer
-		if err := binarydist.Patch(baseRc, &outBuf, patchRc); err != nil {
+		// Use a temp file to apply patch safely
+		tempFile, err := os.CreateTemp("", "sbpatch-*")
+		if err != nil {
+			baseRc.Close()
+			patchRc.Close()
+			fmt.Printf("Failed to create temp file for patch %s: %v\n", rel, err)
+			continue
+		}
+
+		if err := binarydist.Patch(baseRc, tempFile, patchRc); err != nil {
 			fmt.Printf("Failed to apply patch to %s: %v\n", rel, err)
 			baseRc.Close()
 			patchRc.Close()
+			tempFile.Close()
+			_ = os.Remove(tempFile.Name())
 			continue
 		}
 		baseRc.Close()
 		patchRc.Close()
 
-		if err := addDataToZip(w, outBuf.Bytes(), "overrides/"+rel); err != nil {
+		// Read patched data from temp file
+		if _, err := tempFile.Seek(0, 0); err != nil {
+			fmt.Printf("Failed to seek temp file for %s: %v\n", rel, err)
+			tempFile.Close()
+			_ = os.Remove(tempFile.Name())
+			continue
+		}
+
+		patchedData, err := io.ReadAll(tempFile)
+		tempFile.Close()
+		_ = os.Remove(tempFile.Name())
+		if err != nil {
+			fmt.Printf("Failed to read patched data for %s: %v\n", rel, err)
+			continue
+		}
+
+		if err := addDataToZip(w, patchedData, "overrides/"+rel); err != nil {
 			fmt.Printf("Failed to add patched file %s to zip: %v\n", rel, err)
 		}
 	}

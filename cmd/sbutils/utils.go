@@ -30,21 +30,16 @@ func mapZipFiles(r *zip.Reader) map[string]*zip.File {
 }
 
 func copyZipFile(w *zip.Writer, f *zip.File) error {
-	relPath := f.Name
 	rc, err := f.Open()
 	if err != nil {
 		return err
 	}
 	defer rc.Close()
 
-	header, err := zip.FileInfoHeader(f.FileInfo())
-	if err != nil {
-		return err
-	}
-	header.Name = relPath
+	header := f.FileHeader
 	header.Method = zip.Deflate
 
-	writer, err := w.CreateHeader(header)
+	writer, err := w.CreateHeader(&header)
 	if err != nil {
 		return err
 	}
