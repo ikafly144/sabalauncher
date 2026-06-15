@@ -21,6 +21,13 @@ type ProgressEvent struct {
 	Category   ProgressCategory // Helps UI decide how to display this (e.g. multi-bar for parallel downloads)
 }
 
+// NotificationEvent represents a notification to be displayed to the user.
+type NotificationEvent struct {
+	Title    string
+	Message  string
+	Duration time.Duration
+}
+
 // LogLevel represents the severity of a log entry.
 type LogLevel string
 

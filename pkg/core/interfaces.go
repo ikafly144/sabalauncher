@@ -88,6 +88,8 @@ type GameRunner interface {
 	IsRunning() bool
 	// SubscribeProgress returns a channel that receives progress updates.
 	SubscribeProgress() <-chan ProgressEvent
+	// SubscribeNotifications returns a channel that receives notification events.
+	SubscribeNotifications() <-chan NotificationEvent
 	// GetLogReader returns an io.ReadCloser to read game logs.
 	GetLogReader() (io.ReadCloser, error)
 }

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -102,7 +103,18 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 	registerRemoteBtn := widget.NewButton(i18n.T("register_remote"), func() {
 		ui.showRegisterRemoteModpackDialog()
 	})
-	sidebar := container.NewBorder(nil, container.NewVBox(container.NewPadded(importBtn), container.NewPadded(registerRemoteBtn)), nil, nil, instanceList)
+
+	var debugButtons fyne.CanvasObject
+	if ui.version == "0.0.0-indev" {
+		testOverlayBtn := widget.NewButton("Test Overlay", func() {
+			ui.showOverlayNotification("Debug Title", "This is a test notification overlay.", 5*time.Second)
+		})
+		debugButtons = container.NewVBox(widget.NewLabel("Debug Tools"), testOverlayBtn)
+	} else {
+		debugButtons = container.NewStack()
+	}
+
+	sidebar := container.NewBorder(nil, container.NewVBox(container.NewPadded(importBtn), container.NewPadded(registerRemoteBtn), container.NewPadded(debugButtons)), nil, nil, instanceList)
 
 	// Right side: Detail View
 	var currentInstance *resource.Instance

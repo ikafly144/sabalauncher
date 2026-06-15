@@ -89,4 +89,7 @@ var dictEN = map[string]string{
 	// versions.go
 	"playing_state":   "Playing %s",
 	"playing_details": "Playing Minecraft",
+
+	"playtime_milestone_title": "Playtime Milestone!",
+	"playtime_milestone_msg":   "You've played for %d hours!",
 }

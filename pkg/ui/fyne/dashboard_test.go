@@ -26,6 +26,11 @@ func (m *mockGameRunner) SubscribeProgress() <-chan core.ProgressEvent {
 	return args.Get(0).(<-chan core.ProgressEvent)
 }
 
+func (m *mockGameRunner) SubscribeNotifications() <-chan core.NotificationEvent {
+	args := m.Called()
+	return args.Get(0).(<-chan core.NotificationEvent)
+}
+
 func (m *mockGameRunner) GetLogReader() (io.ReadCloser, error) {
 	args := m.Called()
 	if args.Get(0) == nil {
@@ -55,6 +60,7 @@ func TestShowDashboardView(t *testing.T) {
 	mp.On("CheckUpdate", mock.Anything, mock.Anything).Return(false, nil).Maybe()
 
 	mr := new(mockGameRunner)
+	mr.On("SubscribeNotifications").Return(make(chan core.NotificationEvent))
 	ma := new(mockAuthenticator)
 	ma.On("GetStatus").Return(core.AuthStatusLoggedIn)
 	ma.On("GetUserDisplay").Return("TestUser")
@@ -76,6 +82,7 @@ func TestShowLaunchOverlay(t *testing.T) {
 	pChan := make(chan core.ProgressEvent, 1)
 	mr := new(mockGameRunner)
 	mr.On("SubscribeProgress").Return((<-chan core.ProgressEvent)(pChan))
+	mr.On("SubscribeNotifications").Return(make(chan core.NotificationEvent))
 	mr.On("GetLogReader").Return(nil, nil)
 	mr.On("IsRunning").Return(true)
 	mr.On("Stop").Return(nil)

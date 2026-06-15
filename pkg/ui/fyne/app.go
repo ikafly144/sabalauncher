@@ -47,6 +47,15 @@ func NewFyneUI(a fyne.App, auth core.Authenticator, instances core.InstanceManag
 
 func (ui *FyneUI) Run() {
 	ui.CheckForUpdates(ui.version)
+
+	// Start notification listener
+	go func() {
+		nChan := ui.runner.SubscribeNotifications()
+		for n := range nChan {
+			ui.showOverlayNotification(n.Title, n.Message, n.Duration)
+		}
+	}()
+
 	if ui.auth.GetStatus() == core.AuthStatusLoggedIn {
 		ui.showMainView()
 	} else {

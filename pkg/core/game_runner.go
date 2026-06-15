@@ -22,8 +22,9 @@ type gameRunner struct {
 	dataPath  string
 	config    *LauncherConfig
 
-	progressChan chan ProgressEvent
-	logFile      *os.File
+	progressChan     chan ProgressEvent
+	notificationChan chan NotificationEvent
+	logFile          *os.File
 
 	running bool
 	cancel  context.CancelFunc
@@ -32,11 +33,12 @@ type gameRunner struct {
 
 func NewGameRunner(auth Authenticator, instances InstanceManager, dataDir string, config *LauncherConfig) GameRunner {
 	return &gameRunner{
-		auth:         auth,
-		instances:    instances,
-		dataPath:     dataDir,
-		config:       config,
-		progressChan: make(chan ProgressEvent, 100),
+		auth:             auth,
+		instances:        instances,
+		dataPath:         dataDir,
+		config:           config,
+		progressChan:     make(chan ProgressEvent, 100),
+		notificationChan: make(chan NotificationEvent, 100),
 	}
 }
 
@@ -192,6 +194,33 @@ func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error 
 	}
 
 	start := time.Now()
+
+	// Start playtime monitor
+	monitorCtx, monitorCancel := context.WithCancel(ctx)
+	defer monitorCancel()
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		lastMilestoneHours := inst.PlayTimeSeconds / 3600
+		for {
+			select {
+			case <-monitorCtx.Done():
+				return
+			case <-ticker.C:
+				currentTotalSeconds := inst.PlayTimeSeconds + int64(time.Since(start).Seconds())
+				currentHours := currentTotalSeconds / 3600
+				if currentHours > lastMilestoneHours {
+					lastMilestoneHours = currentHours
+					r.notificationChan <- NotificationEvent{
+						Title:    i18n.T("playtime_milestone_title"),
+						Message:  i18n.T("playtime_milestone_msg", currentHours),
+						Duration: 5 * time.Second,
+					}
+				}
+			}
+		}
+	}()
+
 	err = resource.BootGameFromConfig(ctx, javaPath, config, manifest, inst, profile, mcAccount.AccessToken, r.logFile, r.logFile)
 	duration := time.Since(start)
 
@@ -229,6 +258,10 @@ func (r *gameRunner) IsRunning() bool {
 
 func (r *gameRunner) SubscribeProgress() <-chan ProgressEvent {
 	return r.progressChan
+}
+
+func (r *gameRunner) SubscribeNotifications() <-chan NotificationEvent {
+	return r.notificationChan
 }
 
 func (r *gameRunner) GetLogReader() (io.ReadCloser, error) {

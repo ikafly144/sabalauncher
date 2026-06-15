@@ -89,4 +89,7 @@ var dictJA = map[string]string{
 	// versions.go
 	"playing_state":   "%sをプレイ中",
 	"playing_details": "SabaLauncherでプレイ中",
+
+	"playtime_milestone_title": "プレイ時間のマイルストーン達成！",
+	"playtime_milestone_msg":   "累計プレイ時間が %d 時間に達しました！",
 }
