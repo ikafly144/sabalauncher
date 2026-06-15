@@ -21,12 +21,13 @@ type Upstream struct {
 }
 
 type Instance struct {
-	Name       string                `json:"name"`
-	UID        uuid.UUID             `json:"uid"`
-	Properties SBPackIndexProperties `json:"properties"`
-	Versions   []InstanceVersion     `json:"versions"`
-	Mods       []Mod                 `json:"mods"`
-	Upstream   *Upstream             `json:"upstream,omitempty"`
+	Name            string                `json:"name"`
+	UID             uuid.UUID             `json:"uid"`
+	Properties      SBPackIndexProperties `json:"properties"`
+	Versions        []InstanceVersion     `json:"versions"`
+	Mods            []Mod                 `json:"mods"`
+	Upstream        *Upstream             `json:"upstream,omitempty"`
+	PlayTimeSeconds int64                 `json:"play_time_seconds,omitempty"`
 
 	// Internal runtime fields
 	Path string `json:"-"`

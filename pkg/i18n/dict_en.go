@@ -30,6 +30,7 @@ var dictEN = map[string]string{
 	"import_modpack":                  "Import Modpack",
 	"register_remote":                 "Register Remote",
 	"version_label":                   "Version: %s",
+	"playtime_label":                  "Playtime: %s",
 	"unknown_version":                 "Unknown Version",
 	"play_btn":                        "PLAY",
 	"normal_play":                     "Normal Play",

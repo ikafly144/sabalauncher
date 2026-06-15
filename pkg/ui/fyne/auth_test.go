@@ -68,6 +68,11 @@ func (m *mockInstanceManager) RepairInstance(ctx context.Context, instanceID uui
 	return args.Error(0)
 }
 
+func (m *mockInstanceManager) SaveInstance(inst *resource.Instance) error {
+	args := m.Called(inst)
+	return args.Error(0)
+}
+
 func (m *mockInstanceManager) SubscribeProgress() <-chan core.ProgressEvent {
 	args := m.Called()
 	return args.Get(0).(chan core.ProgressEvent)

@@ -140,6 +140,19 @@ func (im *instanceManager) RepairInstance(ctx context.Context, instanceID uuid.U
 	return resource.RepairInstance(ctx, inst, &progressBridge{ch: im.progressChan})
 }
 
+func (im *instanceManager) SaveInstance(inst *resource.Instance) error {
+	im.mu.Lock()
+	defer im.mu.Unlock()
+
+	for i, existing := range im.instances {
+		if existing.UID == inst.UID {
+			im.instances[i] = inst
+			return im.saveInstances()
+		}
+	}
+	return fmt.Errorf("instance not found: %s", inst.UID)
+}
+
 func (im *instanceManager) UpdateInstance(ctx context.Context, instanceID uuid.UUID, path string) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()

@@ -216,4 +216,3 @@ func runSplit(args []string) {
 
 	fmt.Println("Successfully split patch.")
 }
-

@@ -65,6 +65,8 @@ type InstanceManager interface {
 	CheckUpdate(ctx context.Context, instanceID uuid.UUID) (bool, error)
 	// RepairInstance verifies and repairs instance files.
 	RepairInstance(ctx context.Context, instanceID uuid.UUID) error
+	// SaveInstance saves the current state of an instance.
+	SaveInstance(inst *resource.Instance) error
 	// SubscribeProgress returns a channel that receives progress updates.
 	SubscribeProgress() <-chan ProgressEvent
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -190,7 +191,17 @@ func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error 
 		return fmt.Errorf("failed to get minecraft profile: %w", err)
 	}
 
-	if err := resource.BootGameFromConfig(ctx, javaPath, config, manifest, inst, profile, mcAccount.AccessToken, r.logFile, r.logFile); err != nil {
+	start := time.Now()
+	err = resource.BootGameFromConfig(ctx, javaPath, config, manifest, inst, profile, mcAccount.AccessToken, r.logFile, r.logFile)
+	duration := time.Since(start)
+
+	// Update playtime
+	inst.PlayTimeSeconds += int64(duration.Seconds())
+	if saveErr := r.instances.SaveInstance(inst); saveErr != nil {
+		slog.Error("Failed to save instance playtime", "error", saveErr)
+	}
+
+	if err != nil {
 		return fmt.Errorf("boot failed: %w", err)
 	}
 

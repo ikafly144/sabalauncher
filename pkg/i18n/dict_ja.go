@@ -30,6 +30,7 @@ var dictJA = map[string]string{
 	"import_modpack":                  "Modpackをインポート",
 	"register_remote":                 "リモート登録",
 	"version_label":                   "バージョン: %s",
+	"playtime_label":                  "プレイ時間: %s",
 	"unknown_version":                 "不明なバージョン",
 	"play_btn":                        "プレイ",
 	"normal_play":                     "タイトルへ起動",
