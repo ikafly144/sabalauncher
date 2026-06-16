@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"github.com/Masterminds/semver/v3"
 	"github.com/Microsoft/go-winio"
@@ -21,7 +22,7 @@ import (
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
 	"github.com/ikafly144/sabalauncher/v2/pkg/resource"
 	"github.com/ikafly144/sabalauncher/v2/pkg/rpc"
-	"github.com/ikafly144/sabalauncher/v2/pkg/ui/fyne"
+	uifyne "github.com/ikafly144/sabalauncher/v2/pkg/ui/fyne"
 	"github.com/ikafly144/sabalauncher/v2/secret"
 )
 
@@ -98,7 +99,7 @@ func main() {
 
 	// Initialize Fyne App
 	a := app.NewWithID("net.sabafly.sabalauncher")
-	ui := fyne.NewFyneUI(a, auth, instances, runner, discord, config, version)
+	ui := uifyne.NewFyneUI(a, auth, instances, runner, discord, config, version)
 
 	// Start IPC listener
 	go startIPCListener(ui)
@@ -122,7 +123,7 @@ func checkExistingInstance() bool {
 	return true
 }
 
-func startIPCListener(ui *fyne.FyneUI) {
+func startIPCListener(ui *uifyne.FyneUI) {
 	l, err := winio.ListenPipe(pipeName, nil)
 	if err != nil {
 		slog.Error("failed to listen on pipe", "err", err)
@@ -145,7 +146,7 @@ func startIPCListener(ui *fyne.FyneUI) {
 				return
 			}
 			if string(buf[:n]) == "show" {
-				ui.ShowWindow()
+				fyne.Do(ui.ShowWindow)
 			}
 		}(conn)
 	}
