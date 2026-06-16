@@ -93,10 +93,7 @@ func (l *MmapLogView) watchFile() {
 			remaining := newSize - l.fileSize
 			currentOffset := l.fileSize
 			for remaining > 0 {
-				toRead := int64(len(l.readBuf))
-				if remaining < toRead {
-					toRead = remaining
-				}
+				toRead := min(remaining, int64(len(l.readBuf)))
 				_, _ = l.reader.ReadAt(l.readBuf[:toRead], currentOffset)
 
 				for i := int64(0); i < toRead; i++ {
@@ -188,14 +185,8 @@ func (r *logContentRenderer) Objects() []fyne.CanvasObject {
 	offsetY := scroll.Offset.Y
 	viewHeight := scroll.Size().Height
 
-	startLine := int(offsetY / logLineHeight)
-	if startLine < 0 {
-		startLine = 0
-	}
-	numLines := int(viewHeight/logLineHeight) + 2
-	if numLines < 0 {
-		numLines = 0
-	}
+	startLine := max(int(offsetY/logLineHeight), 0)
+	numLines := max(int(viewHeight/logLineHeight)+2, 0)
 
 	view.mu.RLock()
 	defer view.mu.RUnlock()
@@ -226,7 +217,7 @@ func (r *logContentRenderer) Objects() []fyne.CanvasObject {
 		r.lineBuf = make([]byte, 2048)
 	}
 
-	for i := 0; i < needed; i++ {
+	for i := range needed {
 		lineIdx := startLine + i
 		start := view.lines[lineIdx]
 
