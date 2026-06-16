@@ -92,4 +92,7 @@ var dictEN = map[string]string{
 
 	"playtime_milestone_title": "Playtime Milestone!",
 	"playtime_milestone_msg":   "You've played for %d hours!",
+
+	"systray_show": "Show",
+	"systray_quit": "Quit",
 }

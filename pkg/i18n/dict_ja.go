@@ -92,4 +92,7 @@ var dictJA = map[string]string{
 
 	"playtime_milestone_title": "プレイ時間のマイルストーン達成！",
 	"playtime_milestone_msg":   "累計プレイ時間が %d 時間に達しました！",
+
+	"systray_show": "表示",
+	"systray_quit": "終了",
 }
