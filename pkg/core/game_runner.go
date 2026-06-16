@@ -207,8 +207,15 @@ func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error 
 			case <-monitorCtx.Done():
 				return
 			case <-ticker.C:
-				currentTotalSeconds := inst.PlayTimeSeconds + int64(time.Since(start).Seconds())
-				currentHours := currentTotalSeconds / 3600
+				elapsed := int64(time.Since(start).Seconds())
+				inst.PlayTimeSeconds += elapsed
+				start = time.Now()
+
+				if err := r.instances.SaveInstance(inst); err != nil {
+					slog.Error("Failed to save periodic playtime", "error", err)
+				}
+
+				currentHours := inst.PlayTimeSeconds / 3600
 				if currentHours > lastMilestoneHours {
 					lastMilestoneHours = currentHours
 					r.notificationChan <- NotificationEvent{
@@ -224,7 +231,7 @@ func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error 
 	err = resource.BootGameFromConfig(ctx, javaPath, config, manifest, inst, profile, mcAccount.AccessToken, r.logFile, r.logFile)
 	duration := time.Since(start)
 
-	// Update playtime
+	// Update final playtime
 	inst.PlayTimeSeconds += int64(duration.Seconds())
 	if saveErr := r.instances.SaveInstance(inst); saveErr != nil {
 		slog.Error("Failed to save instance playtime", "error", saveErr)

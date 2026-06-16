@@ -13,9 +13,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Microsoft/go-winio"
 	"fyne.io/fyne/v2/app"
 	"github.com/Masterminds/semver/v3"
+	"github.com/Microsoft/go-winio"
 	"github.com/bugph0bia/go-logging"
 	"github.com/ikafly144/sabalauncher/v2/pkg/core"
 	"github.com/ikafly144/sabalauncher/v2/pkg/msa"
@@ -150,4 +150,3 @@ func startIPCListener(ui *fyne.FyneUI) {
 		}(conn)
 	}
 }
-

@@ -96,7 +96,7 @@ func (l *MmapLogView) watchFile() {
 				toRead := min(remaining, int64(len(l.readBuf)))
 				_, _ = l.reader.ReadAt(l.readBuf[:toRead], currentOffset)
 
-				for i := int64(0); i < toRead; i++ {
+				for i := range toRead {
 					if l.readBuf[i] == '\n' {
 						lastLineStart := l.lines[len(l.lines)-1]
 						lineEnd := currentOffset + i

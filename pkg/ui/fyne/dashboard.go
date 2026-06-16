@@ -157,7 +157,7 @@ func (ui *FyneUI) makeDashboardView() fyne.CanvasObject {
 		detailVersion := widget.NewLabel(i18n.T("version_label", versionStr))
 		detailVersion.Wrapping = fyne.TextWrapBreak
 
-		playTimeStr := formatPlayTime(currentInstance.PlayTimeSeconds)
+		playTimeStr := resource.FormatPlayTime(currentInstance.PlayTimeSeconds)
 		detailPlayTime := widget.NewLabel(i18n.T("playtime_label", playTimeStr))
 
 		// Description
@@ -465,16 +465,4 @@ func (ui *FyneUI) checkForInstanceUpdate(uid uuid.UUID) {
 			}
 		})
 	}()
-}
-
-func formatPlayTime(seconds int64) string {
-	if seconds == 0 {
-		return "0m"
-	}
-	h := seconds / 3600
-	m := (seconds % 3600) / 60
-	if h > 0 {
-		return fmt.Sprintf("%dh %dm", h, m)
-	}
-	return fmt.Sprintf("%dm", m)
 }

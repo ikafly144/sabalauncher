@@ -37,12 +37,11 @@ func ClearActivity() error {
 
 func mapActivity(inst resource.Instance, mcProfile *msa.MinecraftProfile) client.Activity {
 	t := time.Now()
-	// Removed unused version variable since it's not being formatting locally
 	return client.Activity{
 		State:      i18n.T("playing_state", inst.Name),
-		Details:    i18n.T("playing_details"),
+		Details:    i18n.T("playtime_label", resource.FormatPlayTime(inst.PlayTimeSeconds)),
 		LargeImage: "launcher_icon",
-		LargeText:  i18n.T("app_title"),
+		LargeText:  buildinfo.LauncherName + " " + buildinfo.LauncherVersion,
 		Timestamps: &client.Timestamps{
 			Start: &t,
 		},
