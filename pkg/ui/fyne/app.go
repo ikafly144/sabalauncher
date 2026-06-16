@@ -78,7 +78,7 @@ func (ui *FyneUI) setupSystray() {
 	if desk, ok := ui.app.(desktop.App); ok {
 		m := fyne.NewMenu(i18n.T("app_title"),
 			fyne.NewMenuItem(i18n.T("systray_show"), func() {
-				ui.window.Show()
+				ui.ShowWindow()
 			}),
 			fyne.NewMenuItemSeparator(),
 			fyne.NewMenuItem(i18n.T("systray_quit"), func() {
@@ -87,4 +87,9 @@ func (ui *FyneUI) setupSystray() {
 		)
 		desk.SetSystemTrayMenu(m)
 	}
+}
+
+func (ui *FyneUI) ShowWindow() {
+	ui.window.Show()
+	ui.window.RequestFocus()
 }

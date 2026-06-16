@@ -6,10 +6,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
+	"net"
+	"os"
 	"path/filepath"
 
+	"github.com/Microsoft/go-winio"
 	"fyne.io/fyne/v2/app"
 	"github.com/Masterminds/semver/v3"
 	"github.com/bugph0bia/go-logging"
@@ -21,7 +25,10 @@ import (
 	"github.com/ikafly144/sabalauncher/v2/secret"
 )
 
-const devVersion = "0.0.0-indev"
+const (
+	devVersion = "0.0.0-indev"
+	pipeName   = `\\.\pipe\sabalauncher-ipc`
+)
 
 var (
 	_              = appName
@@ -62,6 +69,11 @@ func init() {
 func main() {
 	flag.Parse()
 
+	// Single instance check
+	if checkExistingInstance() {
+		os.Exit(0)
+	}
+
 	// Initialize Core Services
 	auth, err := core.NewAuthenticator(filepath.Join(resource.DataDir, "msa_cache"))
 	if err != nil {
@@ -88,9 +100,54 @@ func main() {
 	a := app.NewWithID("net.sabafly.sabalauncher")
 	ui := fyne.NewFyneUI(a, auth, instances, runner, discord, config, version)
 
+	// Start IPC listener
+	go startIPCListener(ui)
+
 	// Run UI
 	ui.Run()
 
 	// Cleanup
 	rpc.Logout()
 }
+
+func checkExistingInstance() bool {
+	conn, err := winio.DialPipe(pipeName, nil)
+	if err != nil {
+		return false
+	}
+	defer conn.Close()
+
+	slog.Info("Existing instance detected, sending show command")
+	_, _ = conn.Write([]byte("show"))
+	return true
+}
+
+func startIPCListener(ui *fyne.FyneUI) {
+	l, err := winio.ListenPipe(pipeName, nil)
+	if err != nil {
+		slog.Error("failed to listen on pipe", "err", err)
+		return
+	}
+	defer l.Close()
+
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			slog.Error("failed to accept pipe connection", "err", err)
+			continue
+		}
+
+		go func(c net.Conn) {
+			defer c.Close()
+			buf := make([]byte, 1024)
+			n, err := c.Read(buf)
+			if err != nil && err != io.EOF {
+				return
+			}
+			if string(buf[:n]) == "show" {
+				ui.ShowWindow()
+			}
+		}(conn)
+	}
+}
+
