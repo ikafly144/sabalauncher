@@ -51,7 +51,7 @@ func (r *gameRunner) Launch(instanceID uuid.UUID, options *LaunchOptions) error 
 
 	// Create temporary log file
 	logPath := filepath.Join(os.TempDir(), fmt.Sprintf("saba-game-%s.log", time.Now().Format("20060102-150405")))
-	f, err := os.Create(logPath)
+	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		r.mu.Unlock()
 		return fmt.Errorf("failed to create log file: %w", err)
