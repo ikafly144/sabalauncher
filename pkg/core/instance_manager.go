@@ -32,7 +32,9 @@ func NewInstanceManager(dataDir string) (InstanceManager, error) {
 		progressChan: make(chan ProgressEvent, 100),
 	}
 	if err := im.RefreshInstances(); err != nil {
-		return nil, err
+		// Reset instances to empty slice on error
+		im.instances = []*resource.Instance{}
+		slog.Error("Failed to refresh instances", "error", err)
 	}
 	return im, nil
 }
