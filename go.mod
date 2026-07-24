@@ -17,7 +17,7 @@ require (
 	github.com/kr/binarydist v0.1.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/stretchr/testify v1.11.1
-	github.com/ulikunitz/xz v0.5.15
+	github.com/ulikunitz/xz v0.5.16
 	golang.org/x/exp v0.0.0-20260603202125-055de637280b
 )
 
