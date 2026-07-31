@@ -4,7 +4,7 @@ go 1.26.5
 
 require (
 	fyne.io/fyne/v2 v2.8.0
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.7.2
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.8.0
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/Xuanwo/go-locale v1.1.3
