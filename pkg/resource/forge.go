@@ -43,9 +43,12 @@ func DownloadForge(versionName, forgeDirName, dataPath string) (*DownloadWorker,
 	return &worker, tmpFile.Name(), nil
 }
 
-func InstallForge(installerPath, dataPath string) error {
+func InstallForge(installerPath, dataPath, javaPath string) error {
 	if installerPath == "" {
 		return fmt.Errorf("installer jar path is not set")
+	}
+	if javaPath == "" {
+		return fmt.Errorf("java executable path is not set")
 	}
 	profiles, err := os.Create(filepath.Join(dataPath, "launcher_profiles.json"))
 	if err != nil {
@@ -57,7 +60,7 @@ func InstallForge(installerPath, dataPath string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("java", "-jar", installerPath, "--installClient", dataPath)
+	cmd := exec.Command(javaPath, "-jar", installerPath, "--installClient", dataPath)
 	cmd.Dir = filepath.Join(filepath.Dir(installerPath))
 	cmd.Stdout = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
 	cmd.Stderr = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()

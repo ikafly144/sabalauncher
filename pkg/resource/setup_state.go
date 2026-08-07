@@ -3,6 +3,7 @@ package resource
 import (
 	"archive/zip"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -355,7 +356,14 @@ func (f *ForgeInstallStep) Name() string {
 func (f *ForgeInstallStep) Do(ctx *SetupContext) error {
 	if f.downloadStep.installerPath != nil {
 		f.progress = 0.1
-		err := InstallForge(*f.downloadStep.installerPath, ctx.dataPath)
+		if f.vanillaManifest == nil {
+			return fmt.Errorf("vanilla manifest is required for forge installation")
+		}
+		javaPath, err := GetJavaExecutablePath(f.vanillaManifest.JavaVersion.Component, ctx.dataPath)
+		if err != nil {
+			return fmt.Errorf("failed to get java executable path: %w", err)
+		}
+		err = InstallForge(*f.downloadStep.installerPath, ctx.dataPath, javaPath)
 		if err != nil {
 			return err
 		}

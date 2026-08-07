@@ -105,8 +105,30 @@ func (n *NeoForgeLoader) Install(ctx context.Context, inst *Instance) error {
 		}
 		defer os.Remove(dummyProfiles)
 	}
+	var manifest *ClientManifest
+	if inst != nil {
+		manifest, err = GetClientManifestForInstance(inst)
+	}
+	if manifest == nil && n.VanillaVersion != "" {
+		manifest, err = GetLocalClientManifest(dataPath, n.VanillaVersion)
+		if err != nil {
+			var ver *Version
+			ver, err = GetVersion(n.VanillaVersion)
+			if err == nil {
+				manifest, err = GetClientManifest(ver)
+			}
+		}
+	}
+	if manifest == nil {
+		return fmt.Errorf("failed to get client manifest for java runtime: %w", err)
+	}
 
-	cmd := exec.Command("java", "-jar", tmpFile.Name(), "--installClient", dataPath)
+	javaPath, err := GetJavaExecutablePath(manifest.JavaVersion.Component, dataPath)
+	if err != nil {
+		return fmt.Errorf("failed to get java executable path: %w", err)
+	}
+
+	cmd := exec.Command(javaPath, "-jar", tmpFile.Name(), "--installClient", dataPath)
 	cmd.Stdout = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
 	cmd.Stderr = slog.NewLogLogger(slog.Default().Handler(), slog.LevelInfo).Writer()
 	cmd.SysProcAttr = runcmd.GetSysProcAttr()

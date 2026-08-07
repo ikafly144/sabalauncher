@@ -69,7 +69,14 @@ func (f *ForgeLoader) Install(ctx context.Context, inst *Instance) error {
 
 		// 3. Install Forge
 		f.progress = 0.5
-		if err := InstallForge(installerPath, dataPath); err != nil {
+		if vanillaManifest == nil {
+			return fmt.Errorf("vanilla manifest is required for forge installation")
+		}
+		javaPath, err := GetJavaExecutablePath(vanillaManifest.JavaVersion.Component, dataPath)
+		if err != nil {
+			return fmt.Errorf("failed to get java executable path: %w", err)
+		}
+		if err := InstallForge(installerPath, dataPath, javaPath); err != nil {
 			return fmt.Errorf("failed to install forge: %w", err)
 		}
 		defer os.Remove(installerPath)
