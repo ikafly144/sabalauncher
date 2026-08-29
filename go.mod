@@ -1,6 +1,6 @@
 module github.com/ikafly144/sabalauncher/v2
 
-go 1.26.6
+go 1.27.0
 
 require (
 	fyne.io/fyne/v2 v2.8.1
