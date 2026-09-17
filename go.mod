@@ -12,7 +12,7 @@ require (
 	github.com/gonutz/w32/v2 v2.12.1
 	github.com/google/go-github/v88 v88.0.0
 	github.com/google/go-github/v91 v91.0.0
-	github.com/google/go-github/v91 v91.0.0
+	github.com/google/go-github/v92 v92.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hugolgst/rich-go v0.0.0-20240715122152-74618cc1ace2
 	github.com/kr/binarydist v0.1.0
