@@ -3,7 +3,7 @@ module github.com/ikafly144/sabalauncher/v2
 go 1.27.4
 
 require (
-	fyne.io/fyne/v2 v2.8.2
+	fyne.io/fyne/v2 v2.8.3
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.10.1
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/Microsoft/go-winio v0.6.2
